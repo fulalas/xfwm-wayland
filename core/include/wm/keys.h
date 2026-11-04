@@ -1,0 +1,116 @@
+#ifndef WM_KEYS_H
+#define WM_KEYS_H
+
+#include <stddef.h>
+#include <stdint.h>
+
+enum wm_modifier {
+    WM_MOD_SHIFT = 1 << 0,
+    WM_MOD_CTRL = 1 << 1,
+    WM_MOD_ALT = 1 << 2,
+    WM_MOD_SUPER = 1 << 3,
+    WM_MOD_MOD3 = 1 << 4,
+    WM_MOD_MOD5 = 1 << 5,
+};
+
+enum wm_keysym {
+    WM_KEYSYM_TAB = 0xff09,
+    WM_KEYSYM_ISO_LEFT_TAB = 0xfe20,
+    WM_KEYSYM_RETURN = 0xff0d,
+    WM_KEYSYM_KP_ENTER = 0xff8d,
+    WM_KEYSYM_ESCAPE = 0xff1b,
+    WM_KEYSYM_LEFT = 0xff51,
+    WM_KEYSYM_UP = 0xff52,
+    WM_KEYSYM_RIGHT = 0xff53,
+    WM_KEYSYM_DOWN = 0xff54,
+};
+
+typedef enum wm_action {
+    WM_ACTION_NONE = 0,
+    WM_ACTION_CANCEL,
+    WM_ACTION_DOWN,
+    WM_ACTION_LEFT,
+    WM_ACTION_RIGHT,
+    WM_ACTION_UP,
+    WM_ACTION_ADD_ADJACENT_WORKSPACE,
+    WM_ACTION_ADD_WORKSPACE,
+    WM_ACTION_CLOSE_WINDOW,
+    WM_ACTION_CYCLE_WINDOWS,
+    WM_ACTION_CYCLE_REVERSE_WINDOWS,
+    WM_ACTION_DEL_ACTIVE_WORKSPACE,
+    WM_ACTION_DEL_WORKSPACE,
+    WM_ACTION_DOWN_WORKSPACE,
+    WM_ACTION_FILL_HORIZ,
+    WM_ACTION_FILL_VERT,
+    WM_ACTION_FILL_WINDOW,
+    WM_ACTION_HIDE_WINDOW,
+    WM_ACTION_LEFT_WORKSPACE,
+    WM_ACTION_LOWER_WINDOW,
+    WM_ACTION_MAXIMIZE_HORIZ,
+    WM_ACTION_MAXIMIZE_VERT,
+    WM_ACTION_MAXIMIZE_WINDOW,
+    WM_ACTION_MOVE,
+    WM_ACTION_MOVE_TO_MONITOR_DOWN,
+    WM_ACTION_MOVE_TO_MONITOR_LEFT,
+    WM_ACTION_MOVE_TO_MONITOR_RIGHT,
+    WM_ACTION_MOVE_TO_MONITOR_UP,
+    WM_ACTION_MOVE_DOWN_WORKSPACE,
+    WM_ACTION_MOVE_LEFT_WORKSPACE,
+    WM_ACTION_MOVE_NEXT_WORKSPACE,
+    WM_ACTION_MOVE_PREV_WORKSPACE,
+    WM_ACTION_MOVE_RIGHT_WORKSPACE,
+    WM_ACTION_MOVE_UP_WORKSPACE,
+    WM_ACTION_MOVE_WORKSPACE_1,
+    WM_ACTION_MOVE_WORKSPACE_12 = WM_ACTION_MOVE_WORKSPACE_1 + 11,
+    WM_ACTION_NEXT_WORKSPACE,
+    WM_ACTION_POPUP_MENU,
+    WM_ACTION_PREV_WORKSPACE,
+    WM_ACTION_RAISE_WINDOW,
+    WM_ACTION_RAISELOWER_WINDOW,
+    WM_ACTION_RESIZE,
+    WM_ACTION_RIGHT_WORKSPACE,
+    WM_ACTION_SHADE_WINDOW,
+    WM_ACTION_SHOW_DESKTOP,
+    WM_ACTION_STICK_WINDOW,
+    WM_ACTION_SWITCH_APPLICATION,
+    WM_ACTION_SWITCH_WINDOW,
+    WM_ACTION_TILE_DOWN,
+    WM_ACTION_TILE_LEFT,
+    WM_ACTION_TILE_RIGHT,
+    WM_ACTION_TILE_UP,
+    WM_ACTION_TILE_DOWN_LEFT,
+    WM_ACTION_TILE_DOWN_RIGHT,
+    WM_ACTION_TILE_UP_LEFT,
+    WM_ACTION_TILE_UP_RIGHT,
+    WM_ACTION_TOGGLE_ABOVE,
+    WM_ACTION_TOGGLE_FULLSCREEN,
+    WM_ACTION_UP_WORKSPACE,
+    WM_ACTION_WORKSPACE_1,
+    WM_ACTION_WORKSPACE_12 = WM_ACTION_WORKSPACE_1 + 11,
+} wm_action;
+
+typedef struct wm_key {
+    uint32_t keysym;
+    uint32_t modifiers;
+} wm_key;
+
+typedef struct wm_key_binding {
+    wm_key key;
+    wm_action action;
+} wm_key_binding;
+
+typedef struct wm_command_binding {
+    wm_key key;
+    const char *command;
+} wm_command_binding;
+
+typedef struct wm_keymap {
+    const wm_key_binding *bindings;
+    size_t binding_count;
+    const wm_command_binding *commands;
+    size_t command_count;
+} wm_keymap;
+
+wm_action wm_action_from_name(const char *name);
+
+#endif

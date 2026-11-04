@@ -1,0 +1,16 @@
+model_sources = files(
+  'config.c',
+  'decor_buttons.c',
+  'decor_extents.c',
+  'decor_frame.c',
+  'decor_images.c',
+  'decor_layout.c',
+  'decor_paint.c',
+  'decor_paint_buttons.c',
+  'decor_paint_title.c',
+  'decor_parts.c',
+  'decor_title.c',
+  'geometry.c',
+  'keys.c',
+  'shadow.c',
+)

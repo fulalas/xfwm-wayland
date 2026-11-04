@@ -1,0 +1,127 @@
+#include "theme_image.h"
+
+#include <stdint.h>
+
+#include <glib.h>
+
+static const char *const overlay_extensions[] = { "svg", "png", "gif", "jpg", "bmp" };
+
+enum {
+    OPAQUE = 0xFF,
+    RED_SHIFT = 16,
+    GREEN_SHIFT = 8,
+    ALPHA_SHIFT = 24,
+    RGBA_CHANNELS = 4,
+    RED_CHANNEL = 0,
+    GREEN_CHANNEL = 1,
+    BLUE_CHANNEL = 2,
+    ALPHA_CHANNEL = 3,
+};
+
+static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf);
+static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
+static GdkPixbuf *load_overlay(const char *dir, const char *name);
+static GdkPixbuf *compose(GdkPixbuf *base, GdkPixbuf *overlay);
+static void copy_row(const GdkPixbuf *pixbuf, int y, uint32_t *dest);
+static uint32_t premultiplied_pixel(const guchar *pixel, int channels);
+static uint32_t premultiply(unsigned channel, unsigned alpha);
+
+cairo_surface_t *appearance_theme_image_load(const theme_image_source *source, const char *name)
+{
+    GdkPixbuf *base = load_xpm(source, name);
+    GdkPixbuf *image = compose(base, load_overlay(source->dir, name));
+
+    if (image == NULL) {
+        return NULL;
+    }
+    cairo_surface_t *surface = surface_from_pixbuf(image);
+    g_object_unref(image);
+    return surface;
+}
+
+static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf)
+{
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    unsigned char *data = cairo_image_surface_get_data(surface);
+    int stride = cairo_image_surface_get_stride(surface);
+
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+        return surface;
+    }
+    cairo_surface_flush(surface);
+    for (int y = 0; y < height; y++) {
+        copy_row(pixbuf, y, (uint32_t *) (void *) (data + (size_t) y * (size_t) stride));
+    }
+    cairo_surface_mark_dirty(surface);
+    return surface;
+}
+
+static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name)
+{
+    char *file = g_strdup_printf("%s.xpm", name);
+    char *path = g_build_filename(source->dir, file, NULL);
+    GdkPixbuf *pixbuf = appearance_xpm_load(path, source->symbols);
+
+    g_free(path);
+    g_free(file);
+    return pixbuf;
+}
+
+static GdkPixbuf *load_overlay(const char *dir, const char *name)
+{
+    GdkPixbuf *overlay = NULL;
+
+    for (size_t i = 0; overlay == NULL && i < G_N_ELEMENTS(overlay_extensions); i++) {
+        char *file = g_strdup_printf("%s.%s", name, overlay_extensions[i]);
+        char *path = g_build_filename(dir, file, NULL);
+        if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+            overlay = gdk_pixbuf_new_from_file(path, NULL);
+        }
+        g_free(path);
+        g_free(file);
+    }
+    return overlay;
+}
+
+static GdkPixbuf *compose(GdkPixbuf *base, GdkPixbuf *overlay)
+{
+    if (overlay == NULL) {
+        return base;
+    }
+    if (base == NULL) {
+        return overlay;
+    }
+    int width = MIN(gdk_pixbuf_get_width(base), gdk_pixbuf_get_width(overlay));
+    int height = MIN(gdk_pixbuf_get_height(base), gdk_pixbuf_get_height(overlay));
+    gdk_pixbuf_composite(overlay, base, 0, 0, width, height, 0, 0, 1.0, 1.0,
+                         GDK_INTERP_BILINEAR, OPAQUE);
+    g_object_unref(overlay);
+    return base;
+}
+
+static void copy_row(const GdkPixbuf *pixbuf, int y, uint32_t *dest)
+{
+    int channels = gdk_pixbuf_get_n_channels(pixbuf);
+    size_t stride = (size_t) gdk_pixbuf_get_rowstride(pixbuf);
+    const guchar *source = gdk_pixbuf_read_pixels(pixbuf) + (size_t) y * stride;
+
+    for (int x = 0; x < gdk_pixbuf_get_width(pixbuf); x++) {
+        dest[x] = premultiplied_pixel(source + (size_t) x * (size_t) channels, channels);
+    }
+}
+
+static uint32_t premultiplied_pixel(const guchar *pixel, int channels)
+{
+    unsigned alpha = channels == RGBA_CHANNELS ? pixel[ALPHA_CHANNEL] : OPAQUE;
+
+    return ((uint32_t) alpha << ALPHA_SHIFT) | (premultiply(pixel[RED_CHANNEL], alpha) << RED_SHIFT)
+           | (premultiply(pixel[GREEN_CHANNEL], alpha) << GREEN_SHIFT)
+           | premultiply(pixel[BLUE_CHANNEL], alpha);
+}
+
+static uint32_t premultiply(unsigned channel, unsigned alpha)
+{
+    return (channel * alpha + OPAQUE / 2) / OPAQUE;
+}

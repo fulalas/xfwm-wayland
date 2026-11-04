@@ -1,0 +1,239 @@
+#include <stdlib.h>
+#include <wlr/backend.h>
+#include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_scene.h>
+#include <wlr/util/log.h>
+
+#include "layer_shell.h"
+#include "listener.h"
+#include "output_private.h"
+#include "zoom.h"
+
+static void handle_new_output(struct wl_listener *listener, void *data);
+static void handle_layout_change(struct wl_listener *listener, void *data);
+static void handle_frame(struct wl_listener *listener, void *data);
+static void handle_request_state(struct wl_listener *listener, void *data);
+static void handle_destroy(struct wl_listener *listener, void *data);
+static void handle_arrange_idle(void *data);
+static bool output_enable(struct wlr_output *wlr_output, wm_vblank_mode vblank_mode);
+static bool commit_enable_state(struct wlr_output *wlr_output, bool adaptive);
+static output *output_create(outputs *outputs, struct wlr_output *wlr_output);
+static void output_destroy(output *output);
+
+outputs *outputs_create(compositor *server)
+{
+    outputs *outs = calloc(1, sizeof(*outs));
+    if (outs == NULL) {
+        return NULL;
+    }
+    outs->server = server;
+    outs->max_scale = 1.0;
+    wl_list_init(&outs->list);
+    listener_connect(&outs->new_output, &server->backend->events.new_output, handle_new_output);
+    listener_connect(&outs->layout_change, &server->layout->events.change, handle_layout_change);
+    return outs;
+}
+
+void outputs_destroy(outputs *outs)
+{
+    output *o;
+    output *tmp;
+    wl_list_for_each_safe(o, tmp, &outs->list, link) {
+        output_destroy(o);
+    }
+    listener_disconnect(&outs->new_output);
+    listener_disconnect(&outs->layout_change);
+    if (outs->arrange_idle != NULL) {
+        wl_event_source_remove(outs->arrange_idle);
+    }
+    free(outs);
+}
+
+output *outputs_at_point(const outputs *outs, wm_point point)
+{
+    struct wlr_output *wlr_output =
+        wlr_output_layout_output_at(outs->server->layout, point.x, point.y);
+    return wlr_output != NULL ? output_from_wlr(wlr_output) : NULL;
+}
+
+output *outputs_near_point(const outputs *outs, wm_point point)
+{
+    output *found = outputs_at_point(outs, point);
+    return found != NULL ? found : outputs_at_index(outs, 0);
+}
+
+output *outputs_for_rect(const outputs *outs, const wm_rect *rect)
+{
+    return outputs_near_point(outs, wm_rect_center(rect));
+}
+
+double outputs_max_scale(const outputs *outs)
+{
+    return outs->max_scale;
+}
+
+void outputs_schedule_arrange(outputs *outs)
+{
+    if (outs->arrange_idle == NULL) {
+        outs->arrange_idle = wl_event_loop_add_idle(outs->server->loop, handle_arrange_idle, outs);
+    }
+}
+
+void outputs_mark_changed(outputs *outs)
+{
+    outs->changed = true;
+    outputs_schedule_arrange(outs);
+}
+
+void outputs_schedule_frames(outputs *outs)
+{
+    output *o;
+    wl_list_for_each(o, &outs->list, link) {
+        wlr_output_schedule_frame(o->wlr_output);
+    }
+}
+
+wm_rect output_full(const output *o)
+{
+    struct wlr_box box = {0};
+    wlr_output_layout_get_box(o->server->layout, o->wlr_output, &box);
+    return (wm_rect){box.x, box.y, box.width, box.height};
+}
+
+wm_rect output_usable(const output *o)
+{
+    return o->usable;
+}
+
+struct wlr_output *output_wlr(const output *o)
+{
+    return o->wlr_output;
+}
+
+output *output_from_wlr(struct wlr_output *wlr_output)
+{
+    return wlr_output->data;
+}
+
+static void handle_new_output(struct wl_listener *listener, void *data)
+{
+    outputs *outs = wl_container_of(listener, outs, new_output);
+    compositor *server = outs->server;
+    struct wlr_output *wlr_output = data;
+    if (wlr_output->non_desktop) {
+        return;
+    }
+    if (!wlr_output_init_render(wlr_output, server->allocator, server->renderer)) {
+        wlr_log(WLR_ERROR, "cannot init rendering on output %s", wlr_output->name);
+        return;
+    }
+    if (!output_enable(wlr_output, server->config.compositing.vblank_mode)) {
+        wlr_log(WLR_ERROR, "cannot enable output %s", wlr_output->name);
+    }
+    output *o = output_create(outs, wlr_output);
+    if (o == NULL || !output_attach_auto(o)) {
+        wlr_log(WLR_ERROR, "cannot add output %s to the layout", wlr_output->name);
+        return;
+    }
+    outputs_mark_changed(outs);
+}
+
+static void handle_layout_change(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    outputs *outs = wl_container_of(listener, outs, layout_change);
+    outputs_mark_changed(outs);
+}
+
+static void handle_frame(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    output *o = wl_container_of(listener, o, frame);
+    output_render(o);
+}
+
+static void handle_request_state(struct wl_listener *listener, void *data)
+{
+    output *o = wl_container_of(listener, o, request_state);
+    const struct wlr_output_event_request_state *event = data;
+    if (!wlr_output_commit_state(o->wlr_output, event->state)) {
+        wlr_log(WLR_ERROR, "cannot apply requested state on output %s", o->wlr_output->name);
+    }
+    outputs_mark_changed(o->server->outputs);
+}
+
+static void handle_destroy(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    output *o = wl_container_of(listener, o, destroy);
+    outputs *outs = o->server->outputs;
+    output_destroy(o);
+    outputs_mark_changed(outs);
+}
+
+static void handle_arrange_idle(void *data)
+{
+    outputs *outs = data;
+    outs->arrange_idle = NULL;
+    outputs_arrange(outs);
+}
+
+static bool output_enable(struct wlr_output *wlr_output, wm_vblank_mode vblank_mode)
+{
+    bool adaptive = vblank_mode == WM_VBLANK_ADAPTIVE && wlr_output->adaptive_sync_supported;
+    if (adaptive && commit_enable_state(wlr_output, true)) {
+        return true;
+    }
+    return commit_enable_state(wlr_output, false);
+}
+
+static bool commit_enable_state(struct wlr_output *wlr_output, bool adaptive)
+{
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    wlr_output_state_set_enabled(&state, true);
+    struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
+    if (mode != NULL) {
+        wlr_output_state_set_mode(&state, mode);
+    }
+    if (adaptive) {
+        wlr_output_state_set_adaptive_sync_enabled(&state, true);
+    }
+    bool ok = wlr_output_commit_state(wlr_output, &state);
+    wlr_output_state_finish(&state);
+    return ok;
+}
+
+static output *output_create(outputs *outs, struct wlr_output *wlr_output)
+{
+    output *o = calloc(1, sizeof(*o));
+    if (o == NULL) {
+        return NULL;
+    }
+    o->server = outs->server;
+    o->wlr_output = wlr_output;
+    o->stats = paint_stats_init();
+    wlr_output->data = o;
+    wl_list_init(&o->scene_destroy.link);
+    listener_connect(&o->frame, &wlr_output->events.frame, handle_frame);
+    listener_connect(&o->request_state, &wlr_output->events.request_state, handle_request_state);
+    listener_connect(&o->destroy, &wlr_output->events.destroy, handle_destroy);
+    wl_list_insert(outs->list.prev, &o->link);
+    return o;
+}
+
+static void output_destroy(output *o)
+{
+    zoom_release(o);
+    if (o->server->layer_shell != NULL) {
+        layer_shell_output_destroyed(o->server->layer_shell, o);
+    }
+    listener_disconnect(&o->frame);
+    listener_disconnect(&o->request_state);
+    listener_disconnect(&o->destroy);
+    listener_disconnect(&o->scene_destroy);
+    o->wlr_output->data = NULL;
+    wl_list_remove(&o->link);
+    free(o);
+}
