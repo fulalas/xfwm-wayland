@@ -34,6 +34,7 @@ static void announce(const displays *displays);
 static void note_configured(const displays *displays, output *output);
 static void save(const displays *displays);
 static bool any_enabled(const display_batch *batch);
+static void displays_settle(displays *displays);
 
 displays *displays_create(compositor *server)
 {
@@ -73,7 +74,7 @@ void displays_start(displays *d)
     outputs_arrange(d->server->outputs);
 }
 
-void displays_settle(displays *d)
+static void displays_settle(displays *d)
 {
     if (d->settle_idle != NULL) {
         wl_event_source_remove(d->settle_idle);

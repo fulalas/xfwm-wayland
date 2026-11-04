@@ -1,6 +1,7 @@
 #include "gtk_bridge.h"
 
 #include <glib.h>
+#include <stdbool.h>
 
 #include "helper_client.h"
 #include "helper_protocol.h"
@@ -14,16 +15,16 @@ struct gtk_bridge {
     style_state *style;
     icon_lookups *icons;
     terminate_dialogs *dialogs;
-    GArray *unsent_icons;
-    guint fail_icons_id;
+    GHashTable *icon_lines;
+    bool helper_restarted;
 };
 
 static void on_line(void *self, const char *line);
 static void on_stopped(void *self);
 static void handle_message(gtk_bridge *bridge, const helper_message *message);
 static void finish_style(gtk_bridge *bridge, const helper_message *message);
-static void schedule_icon_failure(gtk_bridge *bridge, unsigned id);
-static gboolean on_fail_icons(void *data);
+static void resend_icon_lines(gtk_bridge *bridge);
+static void send_icon_line(void *id, void *line, void *self);
 
 gtk_bridge *gtk_bridge_create(const bridge_listener *listener)
 {
@@ -35,16 +36,14 @@ gtk_bridge *gtk_bridge_create(const bridge_listener *listener)
     bridge->style = style_state_create();
     bridge->icons = icon_lookups_create();
     bridge->dialogs = terminate_dialogs_create();
-    bridge->unsent_icons = g_array_new(FALSE, FALSE, sizeof(unsigned));
+    bridge->icon_lines = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, g_free);
+    bridge->helper_restarted = true;
     return bridge;
 }
 
 void gtk_bridge_destroy(gtk_bridge *bridge)
 {
-    if (bridge->fail_icons_id) {
-        g_source_remove(bridge->fail_icons_id);
-    }
-    g_array_free(bridge->unsent_icons, TRUE);
+    g_hash_table_destroy(bridge->icon_lines);
     helper_client_destroy(bridge->client);
     terminate_dialogs_destroy(bridge->dialogs);
     icon_lookups_destroy(bridge->icons);
@@ -65,15 +64,12 @@ xfce_style gtk_bridge_style(const gtk_bridge *bridge)
 void gtk_bridge_lookup_icon(gtk_bridge *bridge, const icon_request *request)
 {
     unsigned id = icon_lookups_add(bridge->icons, request);
-    char *line;
+    char *line = helper_icon_request_format(id, request);
 
-    if (!helper_client_is_running(bridge->client)) {
-        schedule_icon_failure(bridge, id);
-        return;
+    g_hash_table_insert(bridge->icon_lines, GUINT_TO_POINTER(id), line);
+    if (helper_client_is_running(bridge->client)) {
+        helper_client_send(bridge->client, line);
     }
-    line = helper_icon_request_format(id, request);
-    helper_client_send(bridge->client, line);
-    g_free(line);
 }
 
 void gtk_bridge_cancel_icons(gtk_bridge *bridge, void *context)
@@ -103,12 +99,13 @@ static void on_stopped(void *self)
 {
     gtk_bridge *bridge = self;
 
-    icon_lookups_fail_all(bridge->icons);
+    bridge->helper_restarted = true;
 }
 
 static void handle_message(gtk_bridge *bridge, const helper_message *message)
 {
     if (message->kind == HELPER_MESSAGE_ICON) {
+        g_hash_table_remove(bridge->icon_lines, GUINT_TO_POINTER(message->id));
         icon_lookups_finish(bridge->icons, message->id, message->text);
     } else if (message->kind == HELPER_MESSAGE_STYLE_END) {
         finish_style(bridge, message);
@@ -123,29 +120,25 @@ static void finish_style(gtk_bridge *bridge, const helper_message *message)
 
     style_state_apply(bridge->style, message);
     helper_client_reset_backoff(bridge->client);
+    resend_icon_lines(bridge);
     if (changed && bridge->listener.style_changed) {
         bridge->listener.style_changed(bridge->listener.self);
     }
 }
 
-static void schedule_icon_failure(gtk_bridge *bridge, unsigned id)
+static void resend_icon_lines(gtk_bridge *bridge)
 {
-    g_array_append_val(bridge->unsent_icons, id);
-    if (!bridge->fail_icons_id) {
-        bridge->fail_icons_id = g_idle_add(on_fail_icons, bridge);
+    if (!bridge->helper_restarted) {
+        return;
     }
+    bridge->helper_restarted = false;
+    g_hash_table_foreach(bridge->icon_lines, send_icon_line, bridge);
 }
 
-static gboolean on_fail_icons(void *data)
+static void send_icon_line(void *id, void *line, void *self)
 {
-    gtk_bridge *bridge = data;
-    GArray *unsent = bridge->unsent_icons;
+    gtk_bridge *bridge = self;
 
-    bridge->fail_icons_id = 0;
-    bridge->unsent_icons = g_array_new(FALSE, FALSE, sizeof(unsigned));
-    for (guint i = 0; i < unsent->len; i++) {
-        icon_lookups_finish(bridge->icons, g_array_index(unsent, unsigned, i), NULL);
-    }
-    g_array_free(unsent, TRUE);
-    return G_SOURCE_REMOVE;
+    (void) id;
+    helper_client_send(bridge->client, line);
 }

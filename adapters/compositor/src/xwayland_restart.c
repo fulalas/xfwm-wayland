@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <wlr/util/log.h>
 #include <wlr/xwayland/server.h>
 #include <wlr/xwayland/xwayland.h>
 
+#include "clock.h"
 #include "listener.h"
 #include "xwayland_shell_private.h"
 
@@ -21,7 +21,6 @@ static void check_server(xwayland_shell *shell);
 static void restart_server(xwayland_shell *shell);
 static bool server_is_gone(const struct wlr_xwayland *wlr);
 static void report_display(const xwayland_shell *shell, const char *previous);
-static int64_t now_ms(void);
 
 void xwayland_restart_init(xwayland_shell *shell)
 {
@@ -90,7 +89,7 @@ static void check_server(xwayland_shell *shell)
     if (!server_is_gone(shell->wlr)) {
         return;
     }
-    restart_policy_record_crash(&shell->restart.policy, now_ms());
+    restart_policy_record_crash(&shell->restart.policy, clock_now_ms());
     restart_decision decision = restart_policy_next(&shell->restart.policy);
     if (!decision.restart) {
         wlr_log(WLR_ERROR, "XWayland keeps crashing, X11 applications stay unavailable");
@@ -131,11 +130,4 @@ static void report_display(const xwayland_shell *shell, const char *previous)
     if (listener != NULL && listener->x11_display_changed != NULL) {
         listener->x11_display_changed(listener->self);
     }
-}
-
-static int64_t now_ms(void)
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (int64_t) now.tv_sec * MS_PER_SECOND + now.tv_nsec / NS_PER_MS;
 }

@@ -1,5 +1,6 @@
 #include "commit-timing-v1-protocol.h"
 #include "timing_surface.h"
+#include "resource.h"
 
 enum {
     COMMIT_TIMING_VERSION = 1,
@@ -8,23 +9,21 @@ enum {
 static const int64_t NSEC_PER_SEC = 1000000000;
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void handle_manager_destroy(struct wl_client *client, struct wl_resource *resource);
 static void handle_get_timer(struct wl_client *client, struct wl_resource *resource, uint32_t id,
                              struct wl_resource *surface_resource);
 static void handle_set_timestamp(struct wl_client *client, struct wl_resource *resource,
                                  uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec);
 static int64_t timestamp_ns(uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec);
-static void handle_timer_destroy(struct wl_client *client, struct wl_resource *resource);
 static void handle_resource_destroy(struct wl_resource *resource);
 
 static const struct wp_commit_timing_manager_v1_interface manager_impl = {
-    .destroy = handle_manager_destroy,
+    .destroy = resource_handle_destroy,
     .get_timer = handle_get_timer,
 };
 
 static const struct wp_commit_timer_v1_interface timer_impl = {
     .set_timestamp = handle_set_timestamp,
-    .destroy = handle_timer_destroy,
+    .destroy = resource_handle_destroy,
 };
 
 bool commit_timing_global_create(present_sync *sync)
@@ -44,12 +43,6 @@ static void bind_manager(struct wl_client *client, void *data, uint32_t version,
         return;
     }
     wl_resource_set_implementation(resource, &manager_impl, data, NULL);
-}
-
-static void handle_manager_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_get_timer(struct wl_client *client, struct wl_resource *resource, uint32_t id,
@@ -104,12 +97,6 @@ static int64_t timestamp_ns(uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_
         return INT64_MAX;
     }
     return (int64_t) seconds * NSEC_PER_SEC + tv_nsec;
-}
-
-static void handle_timer_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_resource_destroy(struct wl_resource *resource)

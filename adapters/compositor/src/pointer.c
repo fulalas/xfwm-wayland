@@ -55,6 +55,9 @@ static void deliver_motion(pointer_input *pointer, const pointer_hit *hit, uint3
 static void deliver_grab_motion(pointer_input *pointer, uint32_t time_ms);
 static void leave_surfaces(pointer_input *pointer);
 static void press(pointer_input *pointer, const button_input *input);
+static void press_grabbed(pointer_input *pointer, const pointer_hit *hit,
+                          const button_input *input);
+static bool forward_press(pointer_input *pointer, const button_input *input);
 static void release(pointer_input *pointer, const button_input *input);
 static wm_dispatch dispatch_button(pointer_input *pointer, const pointer_hit *hit,
                                    const button_input *input);
@@ -96,6 +99,9 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
 {
     seat *s = p->seat;
     selection_move_icons(s->selection);
+    if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
+        pointer_input_release_grab(p);
+    }
     if (p->grab_surface != NULL && s->wlr_seat->drag == NULL) {
         deliver_grab_motion(p, time_ms);
         return;
@@ -128,6 +134,15 @@ void pointer_input_surface_gone(pointer_input *p, struct wlr_surface *surface)
     if (p->grab_surface == surface) {
         end_grab(p);
     }
+}
+
+void pointer_input_release_grab(pointer_input *p)
+{
+    if (p->grab_surface == NULL) {
+        return;
+    }
+    end_grab(p);
+    leave_surfaces(p);
 }
 
 static void handle_motion(struct wl_listener *listener, void *data)
@@ -263,6 +278,10 @@ static void leave_surfaces(pointer_input *p)
 static void press(pointer_input *p, const button_input *input)
 {
     pointer_hit hit = hit_at_cursor(p);
+    if (p->grab_surface != NULL) {
+        press_grabbed(p, &hit, input);
+        return;
+    }
     click_focus(p->seat, &hit);
     if (dispatch_button(p, &hit, input) != WM_FORWARD || hit.surface == NULL) {
         return;
@@ -271,12 +290,28 @@ static void press(pointer_input *p, const button_input *input)
     if (wlr_seat->pointer_state.focused_surface != hit.surface) {
         deliver_motion(p, &hit, input->time_ms);
     }
-    if (p->forwarded_count < FORWARDED_BUTTONS_MAX) {
-        p->forwarded[p->forwarded_count++] = input->button;
+    if (!forward_press(p, input)) {
+        return;
     }
     start_grab(p, &hit);
-    wlr_seat_pointer_notify_button(wlr_seat, input->time_ms, input->button,
+}
+
+static void press_grabbed(pointer_input *p, const pointer_hit *hit, const button_input *input)
+{
+    if (dispatch_button(p, hit, input) == WM_FORWARD) {
+        forward_press(p, input);
+    }
+}
+
+static bool forward_press(pointer_input *p, const button_input *input)
+{
+    if (p->forwarded_count == FORWARDED_BUTTONS_MAX) {
+        return false;
+    }
+    p->forwarded[p->forwarded_count++] = input->button;
+    wlr_seat_pointer_notify_button(p->seat->wlr_seat, input->time_ms, input->button,
                                    WL_POINTER_BUTTON_STATE_PRESSED);
+    return true;
 }
 
 static void release(pointer_input *p, const button_input *input)

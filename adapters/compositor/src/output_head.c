@@ -6,17 +6,17 @@
 #include <wlr/types/wlr_output.h>
 
 #include "listener.h"
+#include "resource.h"
 #include "output_setting.h"
 #include "xfce-output-management-private-v1-protocol.h"
 
-static void handle_release(struct wl_client *client, struct wl_resource *resource);
 static void handle_resource_destroy(struct wl_resource *resource);
 static void handle_output_destroy(struct wl_listener *listener, void *data);
 static bool copy_edid(edid_blob *copy, const edid_blob *source);
 static void send_edid(const output_head *head, struct wl_resource *resource);
 
 static const struct xfce_output_head_private_v1_interface head_implementation = {
-    .release = handle_release,
+    .release = resource_handle_destroy,
 };
 
 output_head *output_head_create(output *o, struct wl_list *heads)
@@ -69,12 +69,6 @@ void output_head_destroy(output_head *head)
     edid_release(&head->edid);
     free(head->name);
     free(head);
-}
-
-static void handle_release(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_resource_destroy(struct wl_resource *resource)

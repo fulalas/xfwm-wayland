@@ -36,6 +36,8 @@ static void set_display_variables(const xfce_session_display *display)
     g_setenv("WAYLAND_DISPLAY", display->wayland_display, TRUE);
     if (display->x11_display) {
         g_setenv("DISPLAY", display->x11_display, TRUE);
+    } else {
+        g_unsetenv("DISPLAY");
     }
 }
 

@@ -83,6 +83,7 @@ compositor_x11_tests = {
   'ewmh_payload': ['../src/ewmh_payload.c'],
   'xsettings': ['../src/xsettings_table.c', '../src/xsettings_wire.c', '../src/xresources.c'],
   'restart_policy': ['../src/restart_policy.c'],
+  'utf8_copy': ['../src/utf8_copy.c'],
 }
 
 foreach name, sources : compositor_x11_tests

@@ -5,6 +5,7 @@
 #include "seat_resource.h"
 #include "workspace_protocol.h"
 #include "xfce_toplevel_private.h"
+#include "resource.h"
 
 static void handle_set_shaded(struct wl_client *client, struct wl_resource *resource);
 static void handle_unset_shaded(struct wl_client *client, struct wl_resource *resource);
@@ -24,7 +25,6 @@ static void handle_move_to_workspace(struct wl_client *client, struct wl_resourc
                                      struct wl_resource *workspace);
 static void handle_get_icon_pixels(struct wl_client *client, struct wl_resource *resource,
                                    uint32_t id, uint32_t size, uint32_t scale);
-static void handle_destroy(struct wl_client *client, struct wl_resource *resource);
 static void request_state(struct wl_resource *resource, wm_state_change change);
 static wm_window *window_of(struct wl_resource *resource);
 static compositor *server_of(struct wl_resource *resource);
@@ -46,7 +46,7 @@ static const struct xfce_foreign_toplevel_handle_v1_interface handle_impl = {
     .move_to_output = handle_move_to_output,
     .move_to_workspace = handle_move_to_workspace,
     .get_icon_pixels = handle_get_icon_pixels,
-    .destroy = handle_destroy,
+    .destroy = resource_handle_destroy,
 };
 
 const struct xfce_foreign_toplevel_handle_v1_interface *xfce_handle_requests(void)
@@ -162,12 +162,6 @@ static void handle_get_icon_pixels(struct wl_client *client, struct wl_resource 
     const view *v = handle->entry != NULL ? handle->entry->view : NULL;
     cairo_surface_t *pixels = v != NULL ? icon_slot_app_pixels(view_icon_slot(v)) : NULL;
     xfce_icon_pixels_answer(answer, pixels, (icon_size){size, scale});
-}
-
-static void handle_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void request_state(struct wl_resource *resource, wm_state_change change)

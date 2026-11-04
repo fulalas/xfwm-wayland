@@ -47,7 +47,7 @@ view *views_find_by_surface(compositor *server, struct wlr_surface *surface);
 void view_configure(view *view, const wm_rect *client);
 void view_close(view *view);
 void view_kill(view *view);
-void kill_client_pid(pid_t pid);
+
 void view_focus(view *view);
 void view_unfocus(view *view);
 void views_stack(void *const *windows, size_t count);

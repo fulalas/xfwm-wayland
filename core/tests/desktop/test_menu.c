@@ -87,6 +87,7 @@ static void test_monitor_submenu_moves_to_neighbour(void)
     menu_event(desktop, WM_TARGET_MENU, 15, false);
     CHECK_INT_EQ(1, world.menu.submenu.count);
     CHECK_INT_EQ(WM_MENU_MONITOR_RIGHT, world.menu.submenu.items[0].label);
+    menu_event(desktop, WM_TARGET_SUBMENU, 0, true);
     menu_event(desktop, WM_TARGET_SUBMENU, 0, false);
     CHECK_INT_EQ(2680, wm_window_current_view(window).client.x);
     wm_desktop_destroy(desktop);
@@ -127,8 +128,22 @@ static void test_menu_close_item(void)
     wm_desktop *desktop = fake_desktop_start(&world, &config);
     fake_map(desktop, 1, small);
     fake_key(desktop, FAKE_KEY_SPACE, WM_MOD_ALT);
+    menu_event(desktop, WM_TARGET_MENU, 16, true);
     menu_event(desktop, WM_TARGET_MENU, 16, false);
     CHECK(world.closed == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_release_without_press_does_not_activate(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    fake_key(desktop, FAKE_KEY_SPACE, WM_MOD_ALT);
+    menu_event(desktop, WM_TARGET_MENU, 16, false);
+    CHECK(world.closed == NULL);
+    CHECK(world.menu_visible);
     wm_desktop_destroy(desktop);
 }
 
@@ -159,6 +174,7 @@ int main(void)
         {"click_elsewhere_closes_menu", test_click_elsewhere_closes_menu},
         {"escape_closes_submenu_then_menu", test_escape_closes_submenu_then_menu},
         {"menu_close_item", test_menu_close_item},
+        {"release_without_press_does_not_activate", test_release_without_press_does_not_activate},
         {"transient_menu_disables_layers_and_stick",
          test_transient_menu_disables_layers_and_stick},
     };

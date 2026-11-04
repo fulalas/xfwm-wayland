@@ -61,6 +61,10 @@ wm_dispatch menu_button(wm_desktop *desktop, const wm_button_event *event)
         if (!on_menu) {
             menu_close(desktop);
         }
+        desktop->menu.pressed_on_menu = on_menu;
+        return WM_CONSUMED;
+    }
+    if (!desktop->menu.pressed_on_menu) {
         return WM_CONSUMED;
     }
     if (kind == WM_TARGET_MENU && item >= 0) {

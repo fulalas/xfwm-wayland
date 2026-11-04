@@ -1,13 +1,8 @@
-#include <time.h>
 
+#include "clock.h"
 #include "output.h"
 #include "seat.h"
 #include "server.h"
-
-enum {
-    MS_PER_SECOND = 1000,
-    NS_PER_MS = 1000000,
-};
 
 static size_t environment_output_count(void *self);
 static wm_output_info environment_output_at_index(void *self, size_t index);
@@ -53,9 +48,7 @@ static wm_point environment_pointer_position(void *self)
 static uint32_t environment_now_ms(void *self)
 {
     (void) self;
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (uint32_t) ((uint64_t) now.tv_sec * MS_PER_SECOND + (uint64_t) now.tv_nsec / NS_PER_MS);
+    return (uint32_t) clock_now_ms();
 }
 
 static wm_size environment_measure_title(void *self, const char *text)

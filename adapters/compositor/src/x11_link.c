@@ -50,7 +50,6 @@ void x11_link_set_bytes(const x11_link *link, const x11_property *property, x11_
     xcb_change_property(connection, XCB_PROP_MODE_REPLACE, property->window,
                         property->atom, property->type, BYTE_FORMAT,
                         bytes.length, bytes.data);
-    xcb_flush(connection);
 }
 
 void x11_link_delete(const x11_link *link, const x11_property *property)
@@ -58,6 +57,13 @@ void x11_link_delete(const x11_link *link, const x11_property *property)
     xcb_connection_t *connection = x11_link_connection(link);
     if (connection != NULL) {
         xcb_delete_property(connection, property->window, property->atom);
+    }
+}
+
+void x11_link_flush(const x11_link *link)
+{
+    xcb_connection_t *connection = x11_link_connection(link);
+    if (connection != NULL) {
         xcb_flush(connection);
     }
 }
@@ -102,5 +108,4 @@ static void change_property(const x11_link *link, const property_change *change)
     xcb_change_property(connection, change->mode, property->window,
                         property->atom, property->type, CARDINAL_FORMAT,
                         change->values.count, change->values.data);
-    xcb_flush(connection);
 }

@@ -47,18 +47,6 @@ static void test_right_and_bottom_are_exclusive_ends(void)
     CHECK_INT_EQ(26, wm_rect_bottom(&rect));
 }
 
-static void test_area_of_empty_rect_is_zero(void)
-{
-    CHECK_INT_EQ(0, wm_rect_area(&(wm_rect) {0, 0, -5, 10}));
-    CHECK_INT_EQ(200, wm_rect_area(&(wm_rect) {0, 0, 10, 20}));
-}
-
-static void test_area_does_not_overflow_int(void)
-{
-    wm_rect huge = {0, 0, 100000, 100000};
-    CHECK(wm_rect_area(&huge) == 10000000000L);
-}
-
 static void test_overlap_area_is_intersection_size(void)
 {
     wm_rect a = {0, 0, 10, 10};
@@ -155,8 +143,6 @@ int main(void)
         {"touching_rects_do_not_intersect", test_touching_rects_do_not_intersect},
         {"equals_compares_all_fields", test_equals_compares_all_fields},
         {"right_and_bottom_are_exclusive_ends", test_right_and_bottom_are_exclusive_ends},
-        {"area_of_empty_rect_is_zero", test_area_of_empty_rect_is_zero},
-        {"area_does_not_overflow_int", test_area_does_not_overflow_int},
         {"overlap_area_is_intersection_size", test_overlap_area_is_intersection_size},
         {"center_rounds_down", test_center_rounds_down},
         {"shrink_and_grow_are_inverse", test_shrink_and_grow_are_inverse},

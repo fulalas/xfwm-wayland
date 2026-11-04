@@ -42,4 +42,9 @@ osd_find_cursor *osd_find_cursor_create(compositor *server, struct wlr_scene_tre
 void osd_find_cursor_destroy(osd_find_cursor *find);
 void osd_find_cursor_start(osd_find_cursor *find);
 
+static inline const compositor_osd_painter *osd_painter_of(const compositor *server)
+{
+    return &server->painter->osd;
+}
+
 #endif

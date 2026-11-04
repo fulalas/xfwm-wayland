@@ -5,6 +5,7 @@
 #include "frame.h"
 #include "keybindings.h"
 #include "maximize.h"
+#include "monitors.h"
 #include "present.h"
 
 enum {
@@ -146,19 +147,18 @@ void moveresize_set_handle(wm_desktop *desktop, wm_part handle)
     move_session *session = &desktop->session;
     wm_window *window = session->window;
     wm_point point = handle_point(desktop, window, handle);
-    desktop->pointer = point;
     desktop->ports.commands.warp_pointer(desktop->ports.commands.self, point);
     session->handle = handle;
     window->moving_edges = resize_moving_edges(handle);
-    track_origin(desktop, point, session->button);
+    track_origin(desktop, monitors_pointer(desktop), session->button);
     cursor_show_session(desktop);
 }
 
 void moveresize_move_pointer(wm_desktop *desktop, int dx, int dy)
 {
-    desktop->pointer.x += dx;
-    desktop->pointer.y += dy;
-    desktop->ports.commands.warp_pointer(desktop->ports.commands.self, desktop->pointer);
+    wm_point point = {desktop->pointer.x + dx, desktop->pointer.y + dy};
+    desktop->ports.commands.warp_pointer(desktop->ports.commands.self, point);
+    desktop->pointer = monitors_pointer(desktop);
     run_motion(desktop, timers_now(desktop));
 }
 
@@ -217,6 +217,7 @@ static void finish(wm_desktop *desktop)
         finish_resize(desktop, window);
     }
     window->frozen = false;
+    window->moving_edges = 0;
     window_mark_dirty(window);
     if (session->box) {
         present_hide_outline(desktop);

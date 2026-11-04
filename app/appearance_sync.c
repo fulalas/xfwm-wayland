@@ -2,7 +2,7 @@
 
 #include "app.h"
 
-static bool appearance_is_current(app *app);
+static bool theme_is_current(app *app);
 static ui_style current_style(app *app);
 static theme_request request_for(app *app, const ui_style *style);
 static wm_config current_config(app *app);
@@ -10,6 +10,7 @@ static void push_config(app *app);
 static const char *lookup_theme_option(void *self, const char *key);
 static ui_style style_from_xfce(const xfce_style *source);
 static void copy_symbols(const xfce_style *source, ui_style *target);
+static const char *symbol_value(const xfce_style *source, const char *name);
 static ui_color color_from_xfce(xfce_color color);
 
 void app_load_appearance(app *app)
@@ -31,7 +32,7 @@ void app_push_appearance(app *app)
 
 void app_reload_appearance(app *app)
 {
-    if (appearance_is_current(app)) {
+    if (theme_is_current(app)) {
         return;
     }
     app_load_appearance(app);
@@ -40,7 +41,7 @@ void app_reload_appearance(app *app)
 
 void app_reload_theme(app *app)
 {
-    if (appearance_is_current(app)) {
+    if (theme_is_current(app)) {
         app_reload_config(app);
         return;
     }
@@ -49,7 +50,12 @@ void app_reload_theme(app *app)
 
 void app_reload_config(app *app)
 {
-    app->config = current_config(app);
+    wm_config config = current_config(app);
+
+    if (memcmp(&config, &app->config, sizeof(config)) == 0) {
+        return;
+    }
+    app->config = config;
     push_config(app);
 }
 
@@ -60,7 +66,7 @@ void app_reload_keymap(app *app)
     wm_desktop_set_keymap(app->desktop, &keymap);
 }
 
-static bool appearance_is_current(app *app)
+static bool theme_is_current(app *app)
 {
     ui_style style = current_style(app);
     theme_request request = request_for(app, &style);
@@ -71,8 +77,10 @@ static bool appearance_is_current(app *app)
 static ui_style current_style(app *app)
 {
     xfce_style xfce = xfce_environment_style(app->xfce);
+    ui_style style = style_from_xfce(&xfce);
 
-    return style_from_xfce(&xfce);
+    style.font_dpi = xfce_environment_font_dpi(app->xfce);
+    return style;
 }
 
 static theme_request request_for(app *app, const ui_style *style)
@@ -126,14 +134,22 @@ static ui_style style_from_xfce(const xfce_style *source)
 static void copy_symbols(const xfce_style *source, ui_style *target)
 {
     for (int i = 0; i < APPEARANCE_COLOR_SYMBOL_COUNT; i++) {
-        const char *name = appearance_color_symbol_name(i);
-        for (size_t j = 0; j < source->symbol_count; j++) {
-            if (strcmp(source->symbols[j].name, name) == 0) {
-                g_strlcpy(target->color_symbols[i], source->symbols[j].value,
-                          sizeof(target->color_symbols[i]));
-            }
+        const char *value = symbol_value(source, appearance_color_symbol_name(i));
+        if (value != NULL) {
+            g_strlcpy(target->color_symbols[i], value, sizeof(target->color_symbols[i]));
         }
     }
+}
+
+static const char *symbol_value(const xfce_style *source, const char *name)
+{
+    const char *value = NULL;
+    for (size_t j = 0; j < source->symbol_count; j++) {
+        if (strcmp(source->symbols[j].name, name) == 0) {
+            value = source->symbols[j].value;
+        }
+    }
+    return value;
 }
 
 static ui_color color_from_xfce(xfce_color color)

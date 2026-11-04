@@ -20,6 +20,7 @@ static struct wlr_output_mode *find_mode(struct wlr_output *wlr_output,
                                          const display_mode *wanted);
 static int pick_mode(struct wlr_output *wlr_output, const display_mode *wanted);
 static struct wlr_output_mode *mode_at(struct wlr_output *wlr_output, int index);
+static display_setting output_current_setting(const output *output);
 
 output_display *output_display_of(output *o)
 {
@@ -40,7 +41,7 @@ display_identity output_display_identity(const output *o)
     };
 }
 
-display_setting output_current_setting(const output *o)
+static display_setting output_current_setting(const output *o)
 {
     struct wlr_output *w = o->wlr_output;
     wm_rect full = output_full(o);

@@ -4,6 +4,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "listener.h"
+#include "resource.h"
 #include "session_apply.h"
 #include "view.h"
 #include "xdg-session-management-v1-protocol.h"
@@ -17,17 +18,18 @@ static bool toplevel_is_added(const session_data *session,
 static session_toplevel *toplevel_create(const toplevel_request *request);
 static void toplevel_attach(session_toplevel *tracked, session_data *session,
                             struct wlr_xdg_toplevel *toplevel);
+static session_toplevel *session_toplevel_in(session_data *session,
+                                             const struct wlr_xdg_toplevel *toplevel);
 static void store_current_state(session_toplevel *tracked);
 static void begin_restore(session_toplevel *tracked, const session_record *saved);
 static void handle_toplevel_destroy(struct wl_listener *listener, void *data);
 static void handle_surface_commit(struct wl_listener *listener, void *data);
-static void resource_handle_destroy(struct wl_resource *resource);
-static void handle_destroy(struct wl_client *client, struct wl_resource *resource);
+static void handle_resource_gone(struct wl_resource *resource);
 static void handle_rename(struct wl_client *client, struct wl_resource *resource,
                           const char *name);
 
 static const struct xdg_toplevel_session_v1_interface toplevel_session_impl = {
-    .destroy = handle_destroy,
+    .destroy = resource_handle_destroy,
     .rename = handle_rename,
 };
 
@@ -102,12 +104,22 @@ session_toplevel *session_toplevel_of(const xdg_sessions *sessions,
                                       const struct wlr_xdg_toplevel *toplevel)
 {
     session_data *session;
-    session_toplevel *tracked;
     wl_list_for_each(session, &sessions->sessions, link) {
-        wl_list_for_each(tracked, &session->toplevels, link) {
-            if (tracked->toplevel == toplevel) {
-                return tracked;
-            }
+        session_toplevel *tracked = session_toplevel_in(session, toplevel);
+        if (tracked != NULL) {
+            return tracked;
+        }
+    }
+    return NULL;
+}
+
+static session_toplevel *session_toplevel_in(session_data *session,
+                                             const struct wlr_xdg_toplevel *toplevel)
+{
+    session_toplevel *tracked;
+    wl_list_for_each(tracked, &session->toplevels, link) {
+        if (tracked->toplevel == toplevel) {
+            return tracked;
         }
     }
     return NULL;
@@ -185,7 +197,7 @@ static session_toplevel *toplevel_create(const toplevel_request *request)
     wl_list_init(&tracked->toplevel_destroy.link);
     wl_list_init(&tracked->surface_commit.link);
     wl_resource_set_implementation(resource, &toplevel_session_impl, tracked,
-                                   resource_handle_destroy);
+                                   handle_resource_gone);
     return tracked;
 }
 
@@ -237,7 +249,7 @@ static void handle_surface_commit(struct wl_listener *listener, void *data)
     }
 }
 
-static void resource_handle_destroy(struct wl_resource *resource)
+static void handle_resource_gone(struct wl_resource *resource)
 {
     session_toplevel *tracked = wl_resource_get_user_data(resource);
     if (tracked == NULL) {
@@ -247,12 +259,6 @@ static void resource_handle_destroy(struct wl_resource *resource)
     if (tracked->session == NULL) {
         session_toplevel_make_inert(tracked);
     }
-}
-
-static void handle_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_rename(struct wl_client *client, struct wl_resource *resource,

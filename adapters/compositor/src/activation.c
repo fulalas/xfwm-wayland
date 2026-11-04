@@ -116,8 +116,11 @@ static void handle_surface_destroy(struct wl_listener *listener, void *data)
 
 static bool token_trusted(const struct wlr_xdg_activation_token_v1 *token)
 {
-    if (token->seat == NULL || token->surface == NULL || token->surface->resource == NULL) {
+    if (token->seat == NULL) {
         return false;
+    }
+    if (token->surface == NULL || token->surface->resource == NULL) {
+        return true;
     }
     struct wl_client *client = wl_resource_get_client(token->surface->resource);
     struct wlr_seat_client *seat_client = wlr_seat_client_for_wl_client(token->seat, client);

@@ -121,9 +121,13 @@ static void handle_layout_change(struct wl_listener *listener, void *data)
     if (w->group == NULL || outs == NULL) {
         return;
     }
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        wlr_ext_workspace_group_handle_v1_output_enter(w->group,
-                                                       output_wlr(outputs_at_index(outs, i)));
+    for (size_t i = 0; i < outputs_known_count(outs); i++) {
+        output *o = outputs_known_at(outs, i);
+        if (output_is_active(o)) {
+            wlr_ext_workspace_group_handle_v1_output_enter(w->group, output_wlr(o));
+        } else {
+            wlr_ext_workspace_group_handle_v1_output_leave(w->group, output_wlr(o));
+        }
     }
 }
 

@@ -37,8 +37,9 @@ xfce_logic = static_library(
     'src/shortcut_defaults.c',
     'src/shortcut_property.c',
     'src/style_state.c',
+    '../../helper/protocol_text.c',
   ),
-  include_directories: xfce_inc,
+  include_directories: [xfce_inc, include_directories('../../helper')],
   dependencies: [xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep],
 )
 
@@ -118,7 +119,6 @@ test(
   executable(
     'test_xfce_wire',
     'tests/test_wire.c',
-    '../../helper/protocol_text.c',
     include_directories: [xfce_inc, include_directories('src', '../../helper')],
     link_with: xfce_logic,
     dependencies: [check_dep, xfce_glib_dep, xfce_cairo_dep],

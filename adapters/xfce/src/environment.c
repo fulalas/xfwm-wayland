@@ -58,6 +58,7 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
     environment->channels = channels_create(&watch);
     environment->dispatcher = dispatcher_create(&target);
     environment->bridge = gtk_bridge_create(&bridge_listener);
+    settings_store_missing_defaults(channels_get(environment->channels, CHANNEL_XFWM4));
     refresh_settings(environment);
     reload_keymap(environment);
     return environment;
@@ -104,6 +105,14 @@ wm_keymap xfce_environment_keymap(xfce_environment *environment)
 xfce_style xfce_environment_style(xfce_environment *environment)
 {
     return gtk_bridge_style(environment->bridge);
+}
+
+int xfce_environment_font_dpi(xfce_environment *environment)
+{
+    XfconfChannel *xsettings = channels_get(environment->channels, CHANNEL_XSETTINGS);
+    int dpi = xfconf_channel_get_int(xsettings, "/Xft/DPI", 0);
+
+    return dpi > 0 ? dpi : 0;
 }
 
 compositor_services xfce_environment_services(xfce_environment *environment)
@@ -161,7 +170,6 @@ static void refresh_settings(xfce_environment *environment)
 {
     XfconfChannel *xfwm4 = channels_get(environment->channels, CHANNEL_XFWM4);
 
-    settings_store_missing_defaults(xfwm4);
     g_free(environment->theme_name);
     g_free(environment->title_font);
     environment->theme_name = settings_read_text(xfwm4, "theme");

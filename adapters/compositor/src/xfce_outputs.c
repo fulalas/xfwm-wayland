@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_seat.h>
 
 #include "listener.h"
+#include "resource.h"
 #include "output.h"
 #include "output_record.h"
 #include "seat_private.h"
@@ -26,7 +27,6 @@ struct xfce_outputs {
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
 static void handle_get_output(struct wl_client *client, struct wl_resource *manager,
                               uint32_t id, struct wl_resource *wl_output);
-static void handle_destroy_request(struct wl_client *client, struct wl_resource *resource);
 static void handle_cursor_frame(struct wl_listener *listener, void *data);
 static void handle_focus_change(struct wl_listener *listener, void *data);
 static output *output_of_resource(struct wl_resource *wl_output);
@@ -34,11 +34,11 @@ static void update_pointer(xfce_outputs *outputs);
 
 static const struct xfce_output_manager_private_v1_interface manager_implementation = {
     .get_xfce_output = handle_get_output,
-    .release = handle_destroy_request,
+    .release = resource_handle_destroy,
 };
 
 static const struct xfce_output_v1_interface output_implementation = {
-    .destroy = handle_destroy_request,
+    .destroy = resource_handle_destroy,
 };
 
 xfce_outputs *xfce_outputs_create(compositor *server)
@@ -116,12 +116,6 @@ static void handle_get_output(struct wl_client *client, struct wl_resource *mana
     }
     output_record_attach(record, output_of_resource(wl_output));
     update_pointer(xo);
-}
-
-static void handle_destroy_request(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_cursor_frame(struct wl_listener *listener, void *data)

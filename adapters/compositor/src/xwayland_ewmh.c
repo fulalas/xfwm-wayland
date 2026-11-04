@@ -83,6 +83,7 @@ void xwayland_ewmh_link_ready(xwayland_ewmh *ewmh)
     x11_link_append_atoms(ewmh->link, &property, (x11_atom_list){supported, count});
     publish_desktops(ewmh);
     xwayland_ewmh_publish_outputs(ewmh);
+    x11_link_flush(ewmh->link);
 }
 
 void xwayland_ewmh_publish_workspaces(xwayland_ewmh *ewmh, const wm_workspaces_view *view)
@@ -97,6 +98,7 @@ void xwayland_ewmh_publish_workspaces(xwayland_ewmh *ewmh, const wm_workspaces_v
         ewmh->outputs_published = false;
         xwayland_ewmh_publish_outputs(ewmh);
     }
+    x11_link_flush(ewmh->link);
 }
 
 void xwayland_ewmh_publish_outputs(xwayland_ewmh *ewmh)
@@ -111,6 +113,7 @@ void xwayland_ewmh_publish_outputs(xwayland_ewmh *ewmh)
     }
     publish_workareas(ewmh, &state);
     publish_monitor_workareas(ewmh, &state);
+    x11_link_flush(ewmh->link);
     ewmh->published = state;
     ewmh->outputs_published = true;
 }

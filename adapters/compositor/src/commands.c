@@ -1,14 +1,17 @@
 #include <stdlib.h>
 
+#include "listener.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
 
 typedef struct terminate_ticket {
-    pid_t pid;
+    view *view;
+    struct wl_listener unmapped;
 } terminate_ticket;
 
 static void handle_terminate_answer(void *context, bool terminate);
+static void handle_ticket_unmapped(struct wl_listener *listener, void *data);
 
 void compositor_configure_window(compositor *c, void *window, const wm_rect *client)
 {
@@ -35,7 +38,8 @@ void compositor_ask_terminate(compositor *c, void *window)
     if (ticket == NULL) {
         return;
     }
-    ticket->pid = view_pid(window);
+    ticket->view = window;
+    listener_connect(&ticket->unmapped, &c->view_events.unmapped, handle_ticket_unmapped);
     terminate_request request = {
         .title = view_title(window),
         .done = handle_terminate_answer,
@@ -59,8 +63,18 @@ void compositor_schedule_timer(compositor *c, uint32_t delay_ms)
 static void handle_terminate_answer(void *context, bool terminate)
 {
     terminate_ticket *ticket = context;
-    if (terminate) {
-        kill_client_pid(ticket->pid);
+    if (terminate && ticket->view != NULL) {
+        view_kill(ticket->view);
     }
+    listener_disconnect(&ticket->unmapped);
     free(ticket);
+}
+
+static void handle_ticket_unmapped(struct wl_listener *listener, void *data)
+{
+    terminate_ticket *ticket = wl_container_of(listener, ticket, unmapped);
+    if (ticket->view == data) {
+        ticket->view = NULL;
+        listener_disconnect(&ticket->unmapped);
+    }
 }

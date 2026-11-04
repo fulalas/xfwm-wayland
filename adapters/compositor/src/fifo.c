@@ -1,29 +1,28 @@
 #include "fifo-v1-protocol.h"
 #include "fifo_surface.h"
+#include "resource.h"
 
 enum {
     FIFO_VERSION = 1,
 };
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void handle_manager_destroy(struct wl_client *client, struct wl_resource *resource);
 static void handle_get_fifo(struct wl_client *client, struct wl_resource *resource, uint32_t id,
                             struct wl_resource *surface_resource);
 static void handle_set_barrier(struct wl_client *client, struct wl_resource *resource);
 static void handle_wait_barrier(struct wl_client *client, struct wl_resource *resource);
-static void handle_fifo_destroy(struct wl_client *client, struct wl_resource *resource);
 static void handle_resource_destroy(struct wl_resource *resource);
 static fifo_surface *fifo_from_resource(struct wl_resource *resource);
 
 static const struct wp_fifo_manager_v1_interface manager_impl = {
-    .destroy = handle_manager_destroy,
+    .destroy = resource_handle_destroy,
     .get_fifo = handle_get_fifo,
 };
 
 static const struct wp_fifo_v1_interface fifo_impl = {
     .set_barrier = handle_set_barrier,
     .wait_barrier = handle_wait_barrier,
-    .destroy = handle_fifo_destroy,
+    .destroy = resource_handle_destroy,
 };
 
 bool fifo_global_create(present_sync *sync)
@@ -43,12 +42,6 @@ static void bind_manager(struct wl_client *client, void *data, uint32_t version,
         return;
     }
     wl_resource_set_implementation(resource, &manager_impl, data, NULL);
-}
-
-static void handle_manager_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_get_fifo(struct wl_client *client, struct wl_resource *resource, uint32_t id,
@@ -92,12 +85,6 @@ static void handle_wait_barrier(struct wl_client *client, struct wl_resource *re
     if (fs != NULL) {
         fs->wait_barrier = true;
     }
-}
-
-static void handle_fifo_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_resource_destroy(struct wl_resource *resource)

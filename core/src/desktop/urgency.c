@@ -83,9 +83,11 @@ static void toggle_look(wm_desktop *desktop, wm_window *window)
 
 static void keep_inactive_look(wm_desktop *desktop, wm_window *window)
 {
-    window->seen_active = false;
+    if (window->seen_active) {
+        window->seen_active = false;
+        window_mark_dirty(window);
+    }
     window->blink_iterations = 0;
-    window_mark_dirty(window);
     restart(desktop, window);
 }
 

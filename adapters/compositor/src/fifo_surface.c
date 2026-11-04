@@ -27,6 +27,7 @@ static void handle_release_idle(void *data);
 static void synced_move_state(void *dst, void *src);
 static void synced_commit(struct wlr_surface_synced *synced);
 static void addon_destroy(struct wlr_addon *addon);
+static void fifo_schedule_release(present_sync *sync);
 
 static const struct wlr_surface_synced_impl synced_impl = {
     .state_size = sizeof(fifo_state),
@@ -80,7 +81,7 @@ void fifo_output_latched(present_sync *sync, struct wlr_output *output)
     }
 }
 
-void fifo_schedule_release(present_sync *sync)
+static void fifo_schedule_release(present_sync *sync)
 {
     if (sync->fifo_idle == NULL) {
         sync->fifo_idle = wl_event_loop_add_idle(sync->loop, handle_release_idle, sync);
@@ -125,7 +126,9 @@ static void handle_client_commit(struct wl_listener *listener, void *data)
     fifo_surface *fs = wl_container_of(listener, fs, client_commit);
     bool wait = fs->wait_barrier;
     fs->wait_barrier = false;
-    if (wait && !is_synchronized(fs->surface) && fifo_must_wait(&fs->counters)) {
+    if (wl_list_empty(&fs->surface->current_outputs)) {
+        fs->counters.barrier = false;
+    } else if (wait && !is_synchronized(fs->surface) && fifo_must_wait(&fs->counters)) {
         queue_waiter(fs);
     }
     if (fs->pending.set_barrier) {

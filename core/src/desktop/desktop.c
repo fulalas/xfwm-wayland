@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "desktop_state.h"
 #include "maximize.h"
@@ -93,12 +94,6 @@ void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace)
     present_flush(desktop);
 }
 
-void wm_desktop_toggle_show_desktop(wm_desktop *desktop)
-{
-    visibility_toggle_show_desktop(desktop);
-    present_flush(desktop);
-}
-
 static void apply_config(wm_desktop *desktop, const wm_config *previous)
 {
     workspaces_set_count(desktop, desktop->config.workspaces.count);
@@ -115,13 +110,8 @@ static void apply_config(wm_desktop *desktop, const wm_config *previous)
 static bool names_changed(const wm_config *a, const wm_config *b)
 {
     for (int i = 0; i < WM_WORKSPACE_MAX; i++) {
-        for (int j = 0; j < WM_WORKSPACE_NAME_MAX; j++) {
-            if (a->workspaces.names[i][j] != b->workspaces.names[i][j]) {
-                return true;
-            }
-            if (a->workspaces.names[i][j] == '\0') {
-                break;
-            }
+        if (strncmp(a->workspaces.names[i], b->workspaces.names[i], WM_WORKSPACE_NAME_MAX) != 0) {
+            return true;
         }
     }
     return false;

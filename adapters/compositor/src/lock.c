@@ -231,5 +231,6 @@ static void place_surface(lock_surface *surface)
 static void lock_changed(session_lock *lock)
 {
     wlr_scene_node_set_enabled(&lock->tree->node, lock->locked);
+    seat_release_pointer_grab(lock->server->seat);
     seat_focus_refresh(lock->server->seat);
 }

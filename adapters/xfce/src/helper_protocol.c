@@ -1,4 +1,5 @@
 #include "helper_protocol.h"
+#include "protocol_text.h"
 
 #include <glib.h>
 #include <stdlib.h>
@@ -34,7 +35,6 @@ static const message_shape message_shapes[] = {
 static bool fill_message(char **fields, helper_message *message);
 static bool fill_fields(const message_shape *shape, char **fields, helper_message *message);
 static bool parse_id(const char *text, unsigned *id);
-static char *unescape(const char *text);
 static void append_escaped(GString *line, const char *text);
 static bool is_hex_color(const char *digits);
 static double color_channel(guint32 rgba, unsigned shift);
@@ -97,7 +97,7 @@ static bool fill_message(char **fields, helper_message *message)
 
 static bool fill_fields(const message_shape *shape, char **fields, helper_message *message)
 {
-    char *last = shape->field_count > 1 ? unescape(fields[shape->field_count - 1]) : NULL;
+    char *last = shape->field_count > 1 ? protocol_unescape(fields[shape->field_count - 1]) : NULL;
     bool valid = true;
 
     *message = (helper_message) { .kind = shape->kind };
@@ -125,29 +125,11 @@ static bool parse_id(const char *text, unsigned *id)
     return true;
 }
 
-static char *unescape(const char *text)
-{
-    GString *result = g_string_new(NULL);
-
-    for (const char *c = text; *c; c++) {
-        if (*c != '\\' || c[1] == '\0') {
-            g_string_append_c(result, *c);
-            continue;
-        }
-        c++;
-        g_string_append_c(result, *c == 't' ? '\t' : *c == 'n' ? '\n' : *c);
-    }
-    return g_string_free(result, FALSE);
-}
-
 static void append_escaped(GString *line, const char *text)
 {
-    for (const char *c = text; *c; c++) {
-        if (*c == '\\' || *c == '\t' || *c == '\n') {
-            g_string_append_c(line, '\\');
-        }
-        g_string_append_c(line, *c == '\t' ? 't' : *c == '\n' ? 'n' : *c);
-    }
+    char *escaped = protocol_escape(text);
+    g_string_append(line, escaped);
+    g_free(escaped);
 }
 
 static bool is_hex_color(const char *digits)

@@ -8,7 +8,6 @@
 struct wlr_drm_syncobj_timeline;
 struct wlr_output_state;
 
-bool render_sync_supported(const compositor *server);
 void render_sync_create_global(compositor *server);
 struct wlr_drm_syncobj_timeline *render_sync_timeline_create(const compositor *server);
 void render_sync_drop_wait(struct wlr_output_state *state);

@@ -10,7 +10,7 @@ static const char terminate_flag[] = "--terminate";
 
 int main(int argc, char **argv)
 {
-    if (!gtk_init_check(&argc, &argv)) {
+    if (!gtk_init_check(NULL, NULL)) {
         fprintf(stderr, "xfwm-wayland-helper: cannot open the display\n");
         return EXIT_FAILURE;
     }

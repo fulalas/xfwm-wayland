@@ -1,10 +1,10 @@
-#include <stdio.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "output.h"
 #include "scene_buffers.h"
 #include "scene_layers.h"
 #include "shadow_cache.h"
+#include "utf8_copy.h"
 #include "view_private.h"
 
 static const double SHADOW_TEMPLATE_OPACITY = 1.0;
@@ -53,13 +53,14 @@ void view_apply_content_opacity(view *v)
 static void store_target(view *v, const wm_window_view *state)
 {
     view_target *target = &v->target;
+    if (!v->presented || target->state.decor_serial != state->decor_serial) {
+        target->decor = *state->decor;
+    }
     target->state = *state;
-    target->decor = *state->decor;
     target->state.decor = &target->decor;
-    snprintf(target->title, sizeof(target->title), "%s", state->title != NULL ? state->title : "");
+    utf8_copy(target->title, sizeof(target->title), state->title);
     target->state.title = target->title;
-    snprintf(target->app_id, sizeof(target->app_id), "%s",
-             state->app_id != NULL ? state->app_id : "");
+    utf8_copy(target->app_id, sizeof(target->app_id), state->app_id);
     target->state.app_id = target->app_id;
 }
 

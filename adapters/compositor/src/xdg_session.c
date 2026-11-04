@@ -4,6 +4,7 @@
 #include <wlr/util/log.h>
 
 #include "listener.h"
+#include "resource.h"
 #include "session_file.h"
 #include "view.h"
 #include "xdg-session-management-v1-protocol.h"
@@ -15,7 +16,6 @@ enum {
 };
 
 static void manager_bind(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void manager_handle_destroy(struct wl_client *client, struct wl_resource *resource);
 static void manager_get_session(struct wl_client *client, struct wl_resource *resource,
                                 uint32_t id, uint32_t reason, const char *session_id);
 static bool session_request_valid(struct wl_resource *manager, uint32_t reason,
@@ -29,7 +29,6 @@ static void session_close(session_data *session);
 static int handle_save_timer(void *data);
 static void handle_view_changed(struct wl_listener *listener, void *data);
 static void session_handle_resource_destroy(struct wl_resource *resource);
-static void session_handle_destroy(struct wl_client *client, struct wl_resource *resource);
 static void session_handle_remove(struct wl_client *client, struct wl_resource *resource);
 static void session_handle_add_toplevel(struct wl_client *client, struct wl_resource *resource,
                                         uint32_t id, struct wl_resource *toplevel,
@@ -41,12 +40,12 @@ static void session_handle_remove_toplevel(struct wl_client *client,
                                            struct wl_resource *resource, const char *name);
 
 static const struct xdg_session_manager_v1_interface manager_impl = {
-    .destroy = manager_handle_destroy,
+    .destroy = resource_handle_destroy,
     .get_session = manager_get_session,
 };
 
 static const struct xdg_session_v1_interface session_impl = {
-    .destroy = session_handle_destroy,
+    .destroy = resource_handle_destroy,
     .remove = session_handle_remove,
     .add_toplevel = session_handle_add_toplevel,
     .restore_toplevel = session_handle_restore_toplevel,
@@ -107,12 +106,6 @@ static void manager_bind(struct wl_client *client, void *data, uint32_t version,
         return;
     }
     wl_resource_set_implementation(resource, &manager_impl, data, NULL);
-}
-
-static void manager_handle_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void manager_get_session(struct wl_client *client, struct wl_resource *resource,
@@ -257,12 +250,6 @@ static void session_handle_resource_destroy(struct wl_resource *resource)
     if (session != NULL) {
         session_close(session);
     }
-}
-
-static void session_handle_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void session_handle_remove(struct wl_client *client, struct wl_resource *resource)

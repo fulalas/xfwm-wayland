@@ -69,9 +69,7 @@ static void write_display(GPtrArray *writes, const display_set *current, size_t 
     if (display->setting.enabled) {
         write_setting(&writer, &display->setting);
     }
-    if (display->is_primary) {
-        add(&writer, "Primary", bool_value(true));
-    }
+    add(&writer, "Primary", bool_value(display->is_primary));
     g_free(hash);
 }
 

@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_compositor.h>
@@ -9,6 +8,7 @@
 #include "osd_parts.h"
 #include "osd_preview.h"
 #include "output.h"
+#include "utf8_copy.h"
 
 enum {
     CYCLE_TITLE_MAX = 128,
@@ -29,7 +29,6 @@ struct osd_cycle {
 
 static void store_view(osd_cycle *cycle, const wm_cycle_view *view);
 static void measure(osd_cycle *cycle);
-static const compositor_osd_painter *osd_painter(const osd_cycle *cycle);
 static void paint_panel(osd_cycle *cycle);
 static void collect_icons(const osd_cycle *cycle, cairo_surface_t **icons);
 static void update_previews(osd_cycle *cycle);
@@ -140,27 +139,21 @@ static void store_view(osd_cycle *cycle, const wm_cycle_view *view)
     size_t count = view->count < WM_CYCLE_ITEM_MAX ? view->count : WM_CYCLE_ITEM_MAX;
     cycle->view.count = count;
     for (size_t i = 0; i < count; i++) {
-        const char *title = view->items[i].title;
-        snprintf(cycle->titles[i], CYCLE_TITLE_MAX, "%s", title != NULL ? title : "");
+        utf8_copy(cycle->titles[i], CYCLE_TITLE_MAX, view->items[i].title);
         cycle->view.items[i].title = cycle->titles[i];
     }
 }
 
 static void measure(osd_cycle *cycle)
 {
-    const compositor_osd_painter *painter = osd_painter(cycle);
+    const compositor_osd_painter *painter = osd_painter_of(cycle->server);
     cycle->layout = painter->layout_cycle(painter->self, &cycle->view);
     cycle->origin = osd_center_origin(cycle->layout.size, &cycle->view.monitor);
 }
 
-static const compositor_osd_painter *osd_painter(const osd_cycle *cycle)
-{
-    return &cycle->server->painter->osd;
-}
-
 static void paint_panel(osd_cycle *cycle)
 {
-    const compositor_osd_painter *painter = osd_painter(cycle);
+    const compositor_osd_painter *painter = osd_painter_of(cycle->server);
     cairo_surface_t *icons[WM_CYCLE_ITEM_MAX] = {0};
     collect_icons(cycle, icons);
     cycle_paint_request request = {

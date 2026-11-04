@@ -3,6 +3,7 @@
 #include "input_mapping.h"
 #include "listener.h"
 #include "xwayland_view_private.h"
+#include "seat.h"
 
 typedef struct flag_request {
     uint32_t state;
@@ -95,6 +96,7 @@ static void handle_move(struct wl_listener *listener, void *data)
     xwayland_view *xv = wl_container_of(listener, xv, requests.move);
     wm_window *window = xwayland_view_window(xv);
     if (window != NULL) {
+        seat_release_pointer_grab(xv->server->seat);
         wm_request_move(xv->server->desktop, window);
     }
 }
@@ -106,6 +108,7 @@ static void handle_resize(struct wl_listener *listener, void *data)
     wm_window *window = xwayland_view_window(xv);
     if (window != NULL) {
         uint32_t edges = input_mapping_edges_from_wlr(event->edges);
+        seat_release_pointer_grab(xv->server->seat);
         wm_request_resize(xv->server->desktop, window, edges);
     }
 }

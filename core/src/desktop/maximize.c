@@ -76,7 +76,6 @@ static bool toggle(wm_desktop *desktop, wm_window *window, const maximize_reques
     if (!window_can_maximize(window)) {
         return false;
     }
-    window->tile = TILE_NONE;
     wm_rect rect = window->client;
     if (request->restore_position && (request->mode & WM_STATE_MAXIMIZED)) {
         maximize_save_geometry(window);
@@ -89,6 +88,7 @@ static bool toggle(wm_desktop *desktop, wm_window *window, const maximize_reques
         window->restore_size_pos = old_restore;
         return false;
     }
+    window->tile = TILE_NONE;
     window->client = rect;
     window_mark_dirty(window);
     if (request->restore_position && window_is_shaded(window)) {

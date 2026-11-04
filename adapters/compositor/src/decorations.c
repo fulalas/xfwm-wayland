@@ -18,6 +18,7 @@ struct decorations {
     struct wlr_scene_buffer *bands[FRAME_BAND_COUNT];
     band_mark marks[FRAME_BAND_COUNT];
     wm_decor_layout painted_layout;
+    char *painted_title;
 };
 
 typedef struct band_job {
@@ -27,7 +28,10 @@ typedef struct band_job {
 
 static bool band_needs_paint(const decorations *decorations, const decor_paint *paint,
                              const band_job *job);
-static bool shows_title_or_icon(const wm_decor_layout *layout, const wm_rect *band);
+static bool shows_icon(const wm_decor_layout *layout, const wm_rect *band);
+static bool shows_title(const wm_decor_layout *layout, const wm_rect *band);
+static bool title_changed(const decorations *decorations, const decor_paint *paint);
+static void remember_title(decorations *decorations, const char *title);
 static bool same_ops_in_band(const wm_decor_layout *a, const wm_decor_layout *b,
                              const wm_rect *band);
 static size_t next_op_in_band(const wm_decor_layout *layout, const wm_rect *band, size_t start);
@@ -59,6 +63,7 @@ decorations *decorations_create(struct wlr_scene_tree *parent, const compositor_
 void decorations_destroy(decorations *d)
 {
     wlr_scene_node_destroy(&d->tree->node);
+    free(d->painted_title);
     free(d);
 }
 
@@ -76,6 +81,7 @@ void decorations_paint(decorations *d, const decor_paint *paint)
         }
     }
     d->painted_layout = *paint->layout;
+    remember_title(d, paint->title);
     wlr_scene_node_set_enabled(&d->tree->node, true);
 }
 
@@ -111,19 +117,18 @@ static bool band_needs_paint(const decorations *d, const decor_paint *paint, con
     if (!mark->painted || mark->scale != paint->scale || !wm_rect_equals(&mark->rect, &job->rect)) {
         return true;
     }
-    if (shows_title_or_icon(paint->layout, &job->rect) ||
-        shows_title_or_icon(&d->painted_layout, &job->rect)) {
+    if (shows_icon(paint->layout, &job->rect) || shows_icon(&d->painted_layout, &job->rect)) {
+        return true;
+    }
+    if ((shows_title(paint->layout, &job->rect) || shows_title(&d->painted_layout, &job->rect))
+        && title_changed(d, paint)) {
         return true;
     }
     return !same_ops_in_band(&d->painted_layout, paint->layout, &job->rect);
 }
 
-static bool shows_title_or_icon(const wm_decor_layout *layout, const wm_rect *band)
+static bool shows_icon(const wm_decor_layout *layout, const wm_rect *band)
 {
-    const wm_text_op *title = &layout->title_text;
-    if (title->visible && wm_rect_intersects(&title->clip, band)) {
-        return true;
-    }
     for (size_t i = 0; i < op_limit(layout); i++) {
         const wm_paint_op *op = &layout->ops[i];
         if (op->pixmap.kind == WM_PIXMAP_APP_ICON && op_touches(op, band)) {
@@ -131,6 +136,28 @@ static bool shows_title_or_icon(const wm_decor_layout *layout, const wm_rect *ba
         }
     }
     return false;
+}
+
+static bool shows_title(const wm_decor_layout *layout, const wm_rect *band)
+{
+    const wm_text_op *title = &layout->title_text;
+    return title->visible && wm_rect_intersects(&title->clip, band);
+}
+
+static bool title_changed(const decorations *d, const decor_paint *paint)
+{
+    const char *title = paint->title != NULL ? paint->title : "";
+    if (d->painted_title == NULL || strcmp(d->painted_title, title) != 0) {
+        return true;
+    }
+    return memcmp(&d->painted_layout.title_text, &paint->layout->title_text,
+                  sizeof(paint->layout->title_text)) != 0;
+}
+
+static void remember_title(decorations *d, const char *title)
+{
+    free(d->painted_title);
+    d->painted_title = strdup(title != NULL ? title : "");
 }
 
 static bool same_ops_in_band(const wm_decor_layout *a, const wm_decor_layout *b,

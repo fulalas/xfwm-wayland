@@ -54,14 +54,6 @@ int wm_rect_bottom(const wm_rect *rect)
     return rect->y + rect->height;
 }
 
-long wm_rect_area(const wm_rect *rect)
-{
-    if (wm_rect_is_empty(rect)) {
-        return 0;
-    }
-    return (long) rect->width * (long) rect->height;
-}
-
 long wm_rect_overlap_area(const wm_rect *a, const wm_rect *b)
 {
     if (wm_rect_is_empty(a) || wm_rect_is_empty(b)) {

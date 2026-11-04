@@ -5,6 +5,7 @@
 #include "device_list_private.h"
 #include "device_list_send.h"
 #include "listener.h"
+#include "resource.h"
 #include "xfce-input-device-list-private-v1-protocol.h"
 
 typedef struct device_user {
@@ -15,12 +16,11 @@ typedef struct device_user {
 
 static void handle_user_destroy(struct wl_listener *listener, void *data);
 static void free_user(device_user *user);
-static void handle_release(struct wl_client *client, struct wl_resource *resource);
 static void handle_device_gone(struct wl_resource *resource);
 static void detach_resource(struct wl_resource *resource);
 
 static const struct xfce_input_device_v1_interface device_implementation = {
-    .release = handle_release,
+    .release = resource_handle_destroy,
 };
 
 listed_device *listed_device_create(device_list *list, struct libinput_device *handle)
@@ -108,12 +108,6 @@ static void free_user(device_user *user)
     listener_disconnect(&user->destroy);
     wl_list_remove(&user->link);
     free(user);
-}
-
-static void handle_release(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_device_gone(struct wl_resource *resource)

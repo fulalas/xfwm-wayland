@@ -1,22 +1,20 @@
 #include "edid.h"
 
-#include <fcntl.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <unistd.h>
 #include <wlr/backend.h>
 #include <wlr/backend/drm.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/util/log.h>
 #include <xf86drmMode.h>
 
+#include "sealed_memfd.h"
+
 static const char edid_property[] = "EDID";
 
 static edid_blob read_if_edid(int fd, uint32_t property_id, uint64_t value);
 static edid_blob read_blob(int fd, uint32_t blob_id);
-static bool write_all(int fd, const edid_blob *blob);
 
 edid_blob edid_read(struct wlr_output *output)
 {
@@ -46,18 +44,7 @@ void edid_release(edid_blob *blob)
 
 int edid_create_fd(const edid_blob *blob)
 {
-    int fd = memfd_create("edid", MFD_CLOEXEC | MFD_ALLOW_SEALING);
-    if (fd < 0) {
-        wlr_log_errno(WLR_ERROR, "cannot create a file for the EDID");
-        return -1;
-    }
-    if (!write_all(fd, blob)) {
-        wlr_log_errno(WLR_ERROR, "cannot write the EDID");
-        close(fd);
-        return -1;
-    }
-    fcntl(fd, F_ADD_SEALS, F_SEAL_SHRINK | F_SEAL_GROW | F_SEAL_WRITE | F_SEAL_SEAL);
-    return fd;
+    return sealed_memfd_create("edid", blob->data, blob->size);
 }
 
 static edid_blob read_if_edid(int fd, uint32_t property_id, uint64_t value)
@@ -83,15 +70,3 @@ static edid_blob read_blob(int fd, uint32_t blob_id)
     return blob;
 }
 
-static bool write_all(int fd, const edid_blob *blob)
-{
-    size_t written = 0;
-    while (written < blob->size) {
-        ssize_t count = write(fd, blob->data + written, blob->size - written);
-        if (count <= 0) {
-            return false;
-        }
-        written += (size_t) count;
-    }
-    return true;
-}

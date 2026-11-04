@@ -6,6 +6,7 @@
 
 #include "device_list_private.h"
 #include "listener.h"
+#include "resource.h"
 #include "xfce-input-device-list-private-v1-protocol.h"
 
 enum {
@@ -22,7 +23,6 @@ struct device_list {
 };
 
 static void bind_list(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void handle_list_destroy_request(struct wl_client *client, struct wl_resource *resource);
 static void handle_manager_gone(struct wl_resource *resource);
 static void handle_new_input(struct wl_listener *listener, void *data);
 static listed_device *find_entry(device_list *list, struct libinput_device *handle);
@@ -32,7 +32,7 @@ static void announce_new_devices(void *data);
 static bool announce_pending(device_list *list, struct wl_resource *manager);
 
 static const struct xfce_input_device_list_private_v1_interface list_implementation = {
-    .destroy = handle_list_destroy_request,
+    .destroy = resource_handle_destroy,
 };
 
 device_list *device_list_create(compositor *server)
@@ -105,12 +105,6 @@ static void bind_list(struct wl_client *client, void *data, uint32_t version, ui
         }
     }
     xfce_input_device_list_private_v1_send_done(manager);
-}
-
-static void handle_list_destroy_request(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void handle_manager_gone(struct wl_resource *resource)

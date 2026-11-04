@@ -154,7 +154,6 @@ void wm_desktop_handle_timer(wm_desktop *desktop);
 void wm_desktop_switch_workspace(wm_desktop *desktop, int workspace);
 void wm_desktop_add_workspace(wm_desktop *desktop);
 void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace);
-void wm_desktop_toggle_show_desktop(wm_desktop *desktop);
 wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabilities);
 
 wm_window *wm_window_map(wm_desktop *desktop, const wm_window_desc *desc);

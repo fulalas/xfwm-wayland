@@ -154,6 +154,7 @@ static void publish(xwayland_xsettings *xsettings)
                        (x11_bytes){(const char *) bytes.data, (uint32_t) bytes.length});
     xsettings_bytes_free(&bytes);
     update_resources(xsettings, connection);
+    x11_link_flush(xsettings->link);
 }
 
 static void update_resources(const xwayland_xsettings *xsettings, xcb_connection_t *connection)
@@ -167,7 +168,6 @@ static void update_resources(const xwayland_xsettings *xsettings, xcb_connection
     }
     xcb_change_property(connection, XCB_PROP_MODE_REPLACE, root, XCB_ATOM_RESOURCE_MANAGER,
                         XCB_ATOM_STRING, BYTE_FORMAT, (uint32_t) strlen(merged), merged);
-    xcb_flush(connection);
     free(merged);
 }
 

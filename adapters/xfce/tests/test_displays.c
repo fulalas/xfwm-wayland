@@ -264,7 +264,7 @@ static void test_writes_follow_settings_dialog_layout(void)
     CHECK(strcmp(written(writes, "/Default/eDP-1"), "eDP-1") == 0);
     CHECK(strcmp(written(writes, "/Default/eDP-1/Active"), "false") == 0);
     CHECK(written(writes, "/Default/eDP-1/Resolution") == NULL);
-    CHECK(written(writes, "/Default/eDP-1/Primary") == NULL);
+    CHECK(strcmp(written(writes, "/Default/eDP-1/Primary"), "false") == 0);
     g_ptr_array_unref(writes);
 }
 

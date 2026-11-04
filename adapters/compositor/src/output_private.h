@@ -21,6 +21,7 @@ typedef struct zoom_target {
     uint64_t point;
     bool cursor_locked;
     bool view_changed;
+    int failures;
 } zoom_target;
 
 struct output {

@@ -34,12 +34,10 @@ struct present_sync {
 
 bool fifo_global_create(present_sync *sync);
 void fifo_output_latched(present_sync *sync, struct wlr_output *output);
-void fifo_schedule_release(present_sync *sync);
 
 bool commit_timing_global_create(present_sync *sync);
 void commit_timing_output_frame(present_sync *sync, struct wlr_output *output);
 
-int64_t present_sync_now_ns(void);
 const vblank_clock *present_sync_clock(const present_sync *sync, const struct wlr_output *output);
 bool present_surface_on_output(struct wlr_surface *surface, const struct wlr_output *output);
 void present_surface_schedule_frames(struct wlr_surface *surface);

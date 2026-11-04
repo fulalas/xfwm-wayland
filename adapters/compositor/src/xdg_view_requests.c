@@ -3,6 +3,7 @@
 #include "input_mapping.h"
 #include "listener.h"
 #include "xdg_view_private.h"
+#include "seat.h"
 
 static void handle_maximize(struct wl_listener *listener, void *data);
 static void handle_fullscreen(struct wl_listener *listener, void *data);
@@ -80,6 +81,7 @@ static void handle_move(struct wl_listener *listener, void *data)
     xdg_view *xv = wl_container_of(listener, xv, requests.move);
     wm_window *window = mapped_window(xv);
     if (window != NULL) {
+        seat_release_pointer_grab(xv->server->seat);
         wm_request_move(xv->server->desktop, window);
     }
 }
@@ -91,6 +93,7 @@ static void handle_resize(struct wl_listener *listener, void *data)
     wm_window *window = mapped_window(xv);
     if (window != NULL) {
         uint32_t edges = input_mapping_edges_from_wlr(event->edges);
+        seat_release_pointer_grab(xv->server->seat);
         wm_request_resize(xv->server->desktop, window, edges);
     }
 }

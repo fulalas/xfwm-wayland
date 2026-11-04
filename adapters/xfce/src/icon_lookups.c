@@ -74,17 +74,6 @@ void icon_lookups_finish(icon_lookups *lookups, unsigned id, const char *path)
     }
 }
 
-void icon_lookups_fail_all(icon_lookups *lookups)
-{
-    GQueue failed = lookups->pending;
-    icon_pending *pending;
-
-    g_queue_init(&lookups->pending);
-    while ((pending = g_queue_pop_head(&failed))) {
-        complete(lookups, pending, NULL);
-    }
-}
-
 static icon_pending *take_pending(icon_lookups *lookups, unsigned id)
 {
     for (GList *link = lookups->pending.head; link; link = link->next) {

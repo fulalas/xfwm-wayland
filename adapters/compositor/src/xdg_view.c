@@ -244,7 +244,9 @@ static wm_rect popup_constraint(void *root)
     }
     wm_rect client = view_client_rect(xv->view);
     wm_rect area = view_output_area(xv->view);
-    return (wm_rect){area.x - client.x, area.y - client.y, area.width, area.height};
+    const struct wlr_box *geometry = &xv->toplevel->base->geometry;
+    return (wm_rect){area.x - client.x + geometry->x, area.y - client.y + geometry->y,
+                     area.width, area.height};
 }
 
 static struct wlr_surface *impl_surface(void *self)

@@ -8,13 +8,19 @@
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/util/box.h>
 #include <wlr/util/log.h>
+#include <wlr/util/transform.h>
 
 #include "output_private.h"
 #include "render_sync.h"
 #include "zoom.h"
 #include "zoom_math.h"
 #include "zoom_private.h"
+
+enum {
+    RENDER_RETRY_MAX = 3,
+};
 
 typedef struct zoom_pass {
     struct wlr_buffer *target;
@@ -34,6 +40,7 @@ static struct wlr_render_texture_options texture_options(const zoom *zoom, const
 static struct wlr_buffer_pass_options signal_options(const output *output);
 static void hand_fence_to_output(const output *output, struct wlr_output_state *state);
 static zoom_box source_box(const zoom *zoom, const output *output);
+static wm_point buffer_center(const zoom *z, const output *o);
 static void set_full_damage(struct wlr_output_state *state, const struct wlr_buffer *target);
 
 void zoom_render(zoom *z, output *o)
@@ -44,7 +51,8 @@ void zoom_render(zoom *z, output *o)
     }
     if (render_frame(z, o)) {
         o->zoom.view_changed = false;
-    } else {
+        o->zoom.failures = 0;
+    } else if (++o->zoom.failures < RENDER_RETRY_MAX) {
         wlr_output_schedule_frame(o->wlr_output);
     }
 }
@@ -203,15 +211,27 @@ static void hand_fence_to_output(const output *o, struct wlr_output_state *state
 
 static zoom_box source_box(const zoom *z, const output *o)
 {
-    wm_rect full = output_full(o);
-    double scale = o->wlr_output->scale;
     zoom_request request = {
         .size = {o->wlr_output->width, o->wlr_output->height},
-        .center = {(int) ((z->view.center.x - full.x) * scale),
-                   (int) ((z->view.center.y - full.y) * scale)},
+        .center = buffer_center(z, o),
         .level = z->view.level,
     };
     return zoom_source_box(&request);
+}
+
+static wm_point buffer_center(const zoom *z, const output *o)
+{
+    struct wlr_output *wlr_output = o->wlr_output;
+    wm_rect full = output_full(o);
+    double scale = wlr_output->scale;
+    int width = 0;
+    int height = 0;
+    wlr_output_transformed_resolution(wlr_output, &width, &height);
+    struct wlr_box center = {(int) ((z->view.center.x - full.x) * scale),
+                             (int) ((z->view.center.y - full.y) * scale), 1, 1};
+    wlr_box_transform(&center, &center, wlr_output_transform_invert(wlr_output->transform),
+                      width, height);
+    return (wm_point){center.x, center.y};
 }
 
 static void set_full_damage(struct wlr_output_state *state, const struct wlr_buffer *target)

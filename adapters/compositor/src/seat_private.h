@@ -62,6 +62,7 @@ struct seat {
     seat_focus focus;
     struct wl_list devices;
     struct wl_listener new_input;
+    struct wl_event_source *warp_motion;
 };
 
 void seat_track_device(seat *seat, struct wlr_input_device *device);
@@ -82,6 +83,7 @@ void pointer_input_destroy(pointer_input *pointer);
 void pointer_input_motion(pointer_input *pointer, uint32_t time_ms);
 void pointer_input_button(pointer_input *pointer, const button_input *input);
 void pointer_input_surface_gone(pointer_input *pointer, struct wlr_surface *surface);
+void pointer_input_release_grab(pointer_input *pointer);
 
 cursor_image *cursor_image_create(seat *seat);
 void cursor_image_destroy(cursor_image *image);

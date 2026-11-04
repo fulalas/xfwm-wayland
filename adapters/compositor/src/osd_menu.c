@@ -41,7 +41,6 @@ static int panel_item_at(const menu_panel *panel, wm_point point);
 static wm_point main_origin(const osd_menu *menu, wm_size size);
 static wm_point submenu_origin(const osd_menu *menu, wm_size size);
 static wm_rect selected_item(const menu_panel *panel);
-static const compositor_osd_painter *osd_painter(const osd_menu *menu);
 static wm_rect area_for(const osd_menu *menu, wm_point anchor);
 static void panel_hide(menu_panel *panel);
 
@@ -176,14 +175,14 @@ static void panel_store(menu_panel *panel, const wm_menu_level *level)
 
 static void panel_refresh(const osd_menu *menu, menu_panel *panel)
 {
-    const compositor_osd_painter *painter = osd_painter(menu);
+    const compositor_osd_painter *painter = osd_painter_of(menu->server);
     panel->layout = painter->layout_menu(painter->self, &panel->level);
     panel_paint(menu, panel);
 }
 
 static void panel_paint(const osd_menu *menu, menu_panel *panel)
 {
-    const compositor_osd_painter *painter = osd_painter(menu);
+    const compositor_osd_painter *painter = osd_painter_of(menu->server);
     wm_size size = panel->layout.size;
     menu_paint_request request = {
         .level = &panel->level,
@@ -233,11 +232,6 @@ static wm_rect selected_item(const menu_panel *panel)
         return (wm_rect){0, 0, 0, 0};
     }
     return panel->layout.items[index];
-}
-
-static const compositor_osd_painter *osd_painter(const osd_menu *menu)
-{
-    return &menu->server->painter->osd;
 }
 
 static wm_rect area_for(const osd_menu *menu, wm_point anchor)

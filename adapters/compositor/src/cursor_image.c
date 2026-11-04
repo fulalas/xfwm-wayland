@@ -23,6 +23,7 @@ struct cursor_image {
     cursor_prefs prefs;
     struct wlr_xcursor_manager *xcursors;
     wm_cursor_shape core_shape;
+    const char *client_shape;
     bool client_mode;
     struct wl_listener request_set_cursor;
     struct wl_listener request_set_shape;
@@ -32,6 +33,7 @@ static cursor_prefs current_prefs(const seat *seat);
 static bool same_prefs(const cursor_prefs *a, const cursor_prefs *b);
 static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs);
 static void apply_core_shape(cursor_image *image);
+static void apply_client_shape(cursor_image *image);
 static void handle_request_set_cursor(struct wl_listener *listener, void *data);
 static void handle_request_set_shape(struct wl_listener *listener, void *data);
 static bool accepts_request(const cursor_image *image, struct wlr_seat_client *client);
@@ -79,8 +81,11 @@ void cursor_image_reload(cursor_image *image)
         wlr_xcursor_manager_destroy(image->xcursors);
     }
     image->xcursors = load_theme(&image->prefs);
-    image->client_mode = false;
-    apply_core_shape(image);
+    if (!image->client_mode) {
+        apply_core_shape(image);
+    } else if (image->client_shape != NULL) {
+        apply_client_shape(image);
+    }
 }
 
 void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape)
@@ -129,6 +134,8 @@ static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs)
     setenv("XCURSOR_SIZE", size_text, 1);
     if (theme != NULL) {
         setenv("XCURSOR_THEME", theme, 1);
+    } else {
+        unsetenv("XCURSOR_THEME");
     }
     struct wlr_xcursor_manager *manager = wlr_xcursor_manager_create(theme, (uint32_t) size);
     if (manager == NULL || !wlr_xcursor_manager_load(manager, 1.0f)) {
@@ -158,6 +165,7 @@ static void handle_request_set_cursor(struct wl_listener *listener, void *data)
     const struct wlr_seat_pointer_request_set_cursor_event *event = data;
     if (accepts_request(image, event->seat_client)) {
         image->client_mode = true;
+        image->client_shape = NULL;
         wlr_cursor_set_surface(image->seat->cursor, event->surface, event->hotspot_x,
                                event->hotspot_y);
     }
@@ -167,10 +175,17 @@ static void handle_request_set_shape(struct wl_listener *listener, void *data)
 {
     cursor_image *image = wl_container_of(listener, image, request_set_shape);
     const struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
-    if (accepts_request(image, event->seat_client) && image->xcursors != NULL) {
+    if (accepts_request(image, event->seat_client)) {
         image->client_mode = true;
-        wlr_cursor_set_xcursor(image->seat->cursor, image->xcursors,
-                               wlr_cursor_shape_v1_name(event->shape));
+        image->client_shape = wlr_cursor_shape_v1_name(event->shape);
+        apply_client_shape(image);
+    }
+}
+
+static void apply_client_shape(cursor_image *image)
+{
+    if (image->xcursors != NULL) {
+        wlr_cursor_set_xcursor(image->seat->cursor, image->xcursors, image->client_shape);
     }
 }
 

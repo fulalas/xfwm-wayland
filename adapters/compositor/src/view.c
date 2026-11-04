@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/util/log.h>
 
 #include "osd.h"
 #include "scene_layers.h"
@@ -70,6 +71,10 @@ void view_map(view *v, const wm_window_desc *desc)
     v->handshake.committed = rect_size(&desc->geometry);
     v->handshake.requested = v->handshake.committed;
     v->window = wm_window_map(server->desktop, &copy);
+    if (v->window == NULL) {
+        wlr_log(WLR_ERROR, "cannot manage a new window");
+        return;
+    }
     wl_signal_emit(&server->view_events.mapped, v);
 }
 

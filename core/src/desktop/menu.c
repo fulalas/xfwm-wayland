@@ -19,6 +19,7 @@ void menu_show(wm_desktop *desktop, wm_window *window, wm_point point)
     }
     menu->active = true;
     menu->dirty = true;
+    menu->pressed_on_menu = false;
     menu->window = window;
     menu->view = (wm_menu_view) {0};
     menu_build(desktop, window, &menu->view.main);

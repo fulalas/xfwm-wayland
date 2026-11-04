@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <time.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_output.h>
@@ -58,13 +57,6 @@ void present_sync_destroy(present_sync *sync)
         wl_global_destroy(sync->timing_global);
     }
     free(sync);
-}
-
-int64_t present_sync_now_ns(void)
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (int64_t) now.tv_sec * NSEC_PER_SEC + now.tv_nsec;
 }
 
 const vblank_clock *present_sync_clock(const present_sync *sync, const struct wlr_output *output)

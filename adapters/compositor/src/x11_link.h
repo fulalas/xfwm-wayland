@@ -42,6 +42,7 @@ typedef struct x11_bytes {
 
 void x11_link_set_bytes(const x11_link *link, const x11_property *property, x11_bytes bytes);
 void x11_link_delete(const x11_link *link, const x11_property *property);
+void x11_link_flush(const x11_link *link);
 void x11_link_set_cardinals(const x11_link *link, const x11_property *property,
                             x11_values values);
 void x11_link_set_atoms(const x11_link *link, const x11_property *property, x11_atom_list list);

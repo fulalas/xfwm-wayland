@@ -1,5 +1,5 @@
+#include <math.h>
 #include <stdlib.h>
-#include <time.h>
 #include <wlr/backend.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
@@ -9,16 +9,12 @@
 #include <wlr/util/log.h>
 
 #include "absolute_input.h"
+#include "clock.h"
 #include "input_mapping.h"
 #include "listener.h"
 #include "lock.h"
 #include "pointer_prefs_compare.h"
 #include "seat_private.h"
-
-enum {
-    MS_PER_SECOND = 1000,
-    NS_PER_MS = 1000000,
-};
 
 typedef struct input_device {
     seat *seat;
@@ -40,7 +36,7 @@ static void free_device(input_device *device);
 static void configure_pointer(input_device *device);
 static bool takes_pointer_prefs(const struct wlr_input_device *device);
 static void update_capabilities(seat *seat);
-static uint32_t monotonic_ms(void);
+static void handle_warp_motion(void *data);
 
 seat *seat_create(compositor *server)
 {
@@ -73,6 +69,9 @@ void seat_destroy(seat *s)
         free_device(device);
     }
     seat_destroy_modules(s);
+    if (s->warp_motion != NULL) {
+        wl_event_source_remove(s->warp_motion);
+    }
     if (s->cursor != NULL) {
         wlr_cursor_destroy(s->cursor);
     }
@@ -117,13 +116,20 @@ void seat_set_core_cursor(seat *s, wm_cursor_shape shape)
 
 void seat_warp(seat *s, wm_point point)
 {
-    wlr_cursor_warp(s->cursor, NULL, point.x, point.y);
-    pointer_input_motion(s->pointer, monotonic_ms());
+    wlr_cursor_warp_closest(s->cursor, NULL, point.x, point.y);
+    if (s->warp_motion == NULL) {
+        s->warp_motion = wl_event_loop_add_idle(s->server->loop, handle_warp_motion, s);
+    }
+}
+
+void seat_release_pointer_grab(seat *s)
+{
+    pointer_input_release_grab(s->pointer);
 }
 
 wm_point seat_pointer_position(const seat *s)
 {
-    return (wm_point){(int) s->cursor->x, (int) s->cursor->y};
+    return (wm_point){(int) floor(s->cursor->x), (int) floor(s->cursor->y)};
 }
 
 uint32_t seat_modifiers(const seat *s)
@@ -297,9 +303,9 @@ static void update_capabilities(seat *s)
     wlr_seat_set_capabilities(s->wlr_seat, caps);
 }
 
-static uint32_t monotonic_ms(void)
+static void handle_warp_motion(void *data)
 {
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (uint32_t) (now.tv_sec * MS_PER_SECOND + now.tv_nsec / NS_PER_MS);
+    seat *s = data;
+    s->warp_motion = NULL;
+    pointer_input_motion(s->pointer, (uint32_t) clock_now_ms());
 }

@@ -3,6 +3,7 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/util/log.h>
 
+#include "clock.h"
 #include "listener.h"
 #include "timing_surface.h"
 
@@ -137,7 +138,7 @@ static void release_due(timing_surface *ts)
 
 static bool target_due(const timing_surface *ts, int64_t target_ns)
 {
-    int64_t now = present_sync_now_ns();
+    int64_t now = clock_now_ns();
     if (wl_list_empty(&ts->surface->current_outputs)) {
         return target_ns <= now;
     }
@@ -159,7 +160,7 @@ static int64_t earliest_on(const present_sync *sync, struct wlr_output *output, 
 
 static void rearm_timer(timing_surface *ts)
 {
-    int64_t now = present_sync_now_ns();
+    int64_t now = clock_now_ns();
     int64_t soonest = INT64_MAX;
     timing_waiter *waiter;
     wl_list_for_each(waiter, &ts->waiters, link) {
@@ -180,7 +181,8 @@ static int64_t next_check(const timing_surface *ts, int64_t target_ns, int64_t n
     struct wlr_surface_output *entry;
     wl_list_for_each(entry, &ts->surface->current_outputs, link) {
         const vblank_clock *clock = present_sync_clock(ts->sync, entry->output);
-        int64_t check = timing_next_check(clock != NULL ? clock : &unknown_clock, target_ns, now_ns);
+        const vblank_clock *known = clock != NULL ? clock : &unknown_clock;
+        int64_t check = timing_next_check(known, target_ns, now_ns);
         soonest = check < soonest ? check : soonest;
     }
     return soonest;

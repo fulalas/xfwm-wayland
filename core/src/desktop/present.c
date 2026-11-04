@@ -105,12 +105,12 @@ static void flush_stacking(wm_desktop *desktop)
     if (!desktop->present.stacking_dirty) {
         return;
     }
-    desktop->present.stacking_dirty = false;
     size_t count = desktop->stack.count;
     void **handles = malloc((count ? count : 1) * sizeof(handles[0]));
     if (handles == NULL) {
         return;
     }
+    desktop->present.stacking_dirty = false;
     for (size_t i = 0; i < count; i++) {
         handles[i] = desktop->stack.items[i]->handle;
     }

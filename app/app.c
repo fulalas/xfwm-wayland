@@ -19,7 +19,6 @@ static void on_displays_changed(void *self);
 static void on_x11_settings_changed(void *self);
 static void on_x11_display_changed(void *self);
 static void on_style_changed(void *self);
-static void on_session_ended(void *self);
 static gboolean on_terminate_signal(gpointer data);
 
 app *app_create(const app_options *options)
@@ -81,7 +80,7 @@ static bool create_adapters(app *app)
         .displays_changed = on_displays_changed,
         .x11_settings_changed = on_x11_settings_changed,
         .style_changed = on_style_changed,
-        .session_ended = on_session_ended,
+        .session_ended = on_quit_requested,
     };
 
     app->xfce = xfce_environment_create(&listener);
@@ -197,6 +196,7 @@ static void on_x11_settings_changed(void *self)
     app *app = self;
 
     compositor_x11_settings_changed(app->compositor);
+    app_reload_appearance(app);
 }
 
 static void on_x11_display_changed(void *self)
@@ -207,13 +207,6 @@ static void on_x11_display_changed(void *self)
 static void on_style_changed(void *self)
 {
     app_reload_appearance(self);
-}
-
-static void on_session_ended(void *self)
-{
-    app *app = self;
-
-    g_main_loop_quit(app->loop);
 }
 
 static gboolean on_terminate_signal(gpointer data)

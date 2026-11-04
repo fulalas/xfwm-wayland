@@ -32,6 +32,7 @@ void seat_focus_unmanaged(seat *seat, struct wlr_surface *surface);
 void seat_surface_gone(seat *seat, struct wlr_surface *surface);
 void seat_view_destroyed(seat *seat, view *view);
 void seat_focus_refresh(seat *seat);
+void seat_release_pointer_grab(seat *seat);
 
 void seat_set_core_cursor(seat *seat, wm_cursor_shape shape);
 void seat_warp(seat *seat, wm_point point);

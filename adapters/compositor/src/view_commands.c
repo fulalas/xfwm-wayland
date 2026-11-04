@@ -5,6 +5,7 @@
 #include "view_private.h"
 
 static void place_below_lowest(view *view, struct wlr_scene_node **lowest);
+static void kill_client_pid(pid_t pid);
 
 void view_close(view *v)
 {
@@ -14,13 +15,6 @@ void view_close(view *v)
 void view_kill(view *v)
 {
     kill_client_pid(view_pid(v));
-}
-
-void kill_client_pid(pid_t pid)
-{
-    if (pid > 0 && pid != getpid()) {
-        kill(pid, SIGKILL);
-    }
 }
 
 void view_focus(view *v)
@@ -60,4 +54,11 @@ static void place_below_lowest(view *v, struct wlr_scene_node **lowest)
         wlr_scene_node_place_below(node, above);
     }
     lowest[v->layer] = node;
+}
+
+static void kill_client_pid(pid_t pid)
+{
+    if (pid > 0 && pid != getpid()) {
+        kill(pid, SIGKILL);
+    }
 }

@@ -9,6 +9,7 @@ typedef struct menu_session {
     bool active;
     bool shown;
     bool dirty;
+    bool pressed_on_menu;
     wm_window *window;
     wm_menu_view view;
 } menu_session;

@@ -6,12 +6,13 @@
 #include <wlr/util/log.h>
 
 #include "render_sync.h"
+static bool render_sync_supported(const compositor *server);
 
 enum {
     SYNCOBJ_VERSION = 1,
 };
 
-bool render_sync_supported(const compositor *server)
+static bool render_sync_supported(const compositor *server)
 {
     return server->renderer->features.timeline && server->backend->features.timeline &&
            wlr_renderer_get_drm_fd(server->renderer) >= 0;

@@ -128,7 +128,7 @@ static void reset_vertical(wm_desktop *desktop)
 
 static void warp(wm_desktop *desktop, int dx, int dy)
 {
-    desktop->pointer.x += dx;
-    desktop->pointer.y += dy;
-    desktop->ports.commands.warp_pointer(desktop->ports.commands.self, desktop->pointer);
+    wm_point point = {desktop->pointer.x + dx, desktop->pointer.y + dy};
+    desktop->ports.commands.warp_pointer(desktop->ports.commands.self, point);
+    desktop->pointer = monitors_pointer(desktop);
 }

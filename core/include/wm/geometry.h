@@ -43,7 +43,6 @@ wm_rect wm_rect_intersection(const wm_rect *a, const wm_rect *b);
 wm_rect wm_rect_union(const wm_rect *a, const wm_rect *b);
 int wm_rect_right(const wm_rect *rect);
 int wm_rect_bottom(const wm_rect *rect);
-long wm_rect_area(const wm_rect *rect);
 long wm_rect_overlap_area(const wm_rect *a, const wm_rect *b);
 wm_point wm_rect_center(const wm_rect *rect);
 wm_rect wm_rect_shrink(const wm_rect *rect, const wm_extents *extents);

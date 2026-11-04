@@ -22,6 +22,7 @@ void x11_window_props_publish(x11_window_props *last, const x11_window_target *t
     if (!last->published || last->actions != next.actions) {
         publish_actions(target, next.actions);
     }
+    x11_link_flush(target->link);
     *last = next;
 }
 
@@ -32,6 +33,7 @@ void x11_window_props_publish_extents(const x11_window_target *target,
     x11_property property = {target->window, atom, XCB_ATOM_CARDINAL};
     x11_values values = {extents->values, EWMH_EXTENT_COUNT};
     x11_link_set_cardinals(target->link, &property, values);
+    x11_link_flush(target->link);
 }
 
 static x11_window_props props_of(const wm_window_view *state)

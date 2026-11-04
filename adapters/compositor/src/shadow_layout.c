@@ -1,4 +1,5 @@
 #include "shadow_layout.h"
+#include "wm/geometry.h"
 
 typedef struct axis_split {
     int start[3];
@@ -6,12 +7,11 @@ typedef struct axis_split {
 } axis_split;
 
 static axis_split split_axis(int origin, int length, int corner);
-static int min_int(int a, int b);
 
 shadow_pieces shadow_layout_compute(const wm_rect *rect, const shadow_geometry *image)
 {
     int corner = image->corner;
-    int dest_corner = min_int(corner, min_int(rect->width / 2, rect->height / 2));
+    int dest_corner = wm_min(corner, wm_min(rect->width / 2, rect->height / 2));
     axis_split src_x = split_axis(0, image->size.width, corner);
     axis_split src_y = split_axis(0, image->size.height, corner);
     axis_split dst_x = split_axis(rect->x, rect->width, dest_corner);
@@ -40,9 +40,4 @@ static axis_split split_axis(int origin, int length, int corner)
         .length = {corner, middle, corner},
     };
     return split;
-}
-
-static int min_int(int a, int b)
-{
-    return a < b ? a : b;
 }

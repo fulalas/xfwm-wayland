@@ -70,8 +70,8 @@ static bool create_desktop_modules(compositor *c)
     c->accessibility = accessibility_create(c);
     return c->foreign_toplevels != NULL && c->toplevel_capture != NULL && c->workspaces != NULL &&
            c->activation != NULL && c->output_config != NULL && c->output_power != NULL &&
-           displays_created &&
-           c->drm_lease != NULL && c->xdg_sessions != NULL && c->present_sync != NULL && c->accessibility != NULL;
+           displays_created && c->drm_lease != NULL && c->xdg_sessions != NULL &&
+           c->present_sync != NULL && c->accessibility != NULL;
 }
 
 void server_modules_destroy(compositor *c)

@@ -52,8 +52,12 @@ void selection_destroy(selection *sel)
 
 void selection_move_icons(selection *sel)
 {
+    struct wlr_scene_tree *tree = drag_tree(sel);
+    if (wl_list_empty(&tree->children)) {
+        return;
+    }
     struct wlr_cursor *cursor = sel->seat->cursor;
-    wlr_scene_node_set_position(&drag_tree(sel)->node, (int) cursor->x, (int) cursor->y);
+    wlr_scene_node_set_position(&tree->node, (int) cursor->x, (int) cursor->y);
 }
 
 static void handle_request_set_selection(struct wl_listener *listener, void *data)
@@ -77,6 +81,11 @@ static void handle_request_start_drag(struct wl_listener *listener, void *data)
     struct wlr_seat *wlr_seat = sel->seat->wlr_seat;
     if (wlr_seat_validate_pointer_grab_serial(wlr_seat, event->origin, event->serial)) {
         wlr_seat_start_pointer_drag(wlr_seat, event->drag, event->serial);
+        return;
+    }
+    struct wlr_touch_point *point;
+    if (wlr_seat_validate_touch_grab_serial(wlr_seat, event->origin, event->serial, &point)) {
+        wlr_seat_start_touch_drag(wlr_seat, event->drag, event->serial, point);
         return;
     }
     if (event->drag->source != NULL) {

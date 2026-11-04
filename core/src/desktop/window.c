@@ -73,7 +73,7 @@ void window_update_flags(wm_window *window)
 
 uint32_t window_opacity_from_double(double opacity)
 {
-    if (!(opacity > 0.0) || opacity >= 1.0) {
+    if (!(opacity >= 0.0) || opacity >= 1.0) {
         return OPACITY_OPAQUE;
     }
     return (uint32_t) (opacity * (double) OPACITY_OPAQUE);

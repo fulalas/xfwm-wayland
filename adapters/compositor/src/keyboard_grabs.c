@@ -5,6 +5,7 @@
 #include <wlr/xwayland/xwayland.h>
 
 #include "listener.h"
+#include "resource.h"
 #include "xwayland-keyboard-grab-unstable-v1-protocol.h"
 #include "xwayland.h"
 
@@ -24,19 +25,18 @@ typedef struct keyboard_grab {
 } keyboard_grab;
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void destroy_resource(struct wl_client *client, struct wl_resource *resource);
 static void grab_keyboard(struct wl_client *client, struct wl_resource *manager, uint32_t id,
                           struct wl_resource *surface, struct wl_resource *seat);
 static keyboard_grab *create_grab(struct wl_client *client, int version, uint32_t id);
 static void handle_grab_destroyed(struct wl_resource *resource);
 
 static const struct zwp_xwayland_keyboard_grab_manager_v1_interface manager_impl = {
-    .destroy = destroy_resource,
+    .destroy = resource_handle_destroy,
     .grab_keyboard = grab_keyboard,
 };
 
 static const struct zwp_xwayland_keyboard_grab_v1_interface grab_impl = {
-    .destroy = destroy_resource,
+    .destroy = resource_handle_destroy,
 };
 
 keyboard_grabs *keyboard_grabs_create(struct wl_display *display, xwayland_shell *shell)
@@ -93,12 +93,6 @@ static void bind_manager(struct wl_client *client, void *data, uint32_t version,
         return;
     }
     wl_resource_set_implementation(resource, &manager_impl, grabs, NULL);
-}
-
-static void destroy_resource(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
 }
 
 static void grab_keyboard(struct wl_client *client, struct wl_resource *manager, uint32_t id,
