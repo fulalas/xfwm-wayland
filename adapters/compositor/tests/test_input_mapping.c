@@ -75,6 +75,17 @@ static void test_high_resolution_wheel_accumulates(void)
     CHECK_INT_EQ(0, steps.remainder);
 }
 
+static void test_finger_scroll_becomes_wheel_units(void)
+{
+    CHECK_INT_EQ(120, input_mapping_axis_value120(0, 15.0));
+    CHECK_INT_EQ(-60, input_mapping_axis_value120(0, -7.5));
+}
+
+static void test_wheel_value120_is_kept(void)
+{
+    CHECK_INT_EQ(240, input_mapping_axis_value120(240, 30.0));
+}
+
 static void test_edges_round_trip(void)
 {
     uint32_t wlr = WLR_EDGE_TOP | WLR_EDGE_LEFT;
@@ -87,6 +98,8 @@ int main(void)
 {
     const check_case cases[] = {
         {"modifiers_map_to_core_bits", test_modifiers_map_to_core_bits},
+        {"finger_scroll_becomes_wheel_units", test_finger_scroll_becomes_wheel_units},
+        {"wheel_value120_is_kept", test_wheel_value120_is_kept},
         {"lock_modifiers_are_ignored", test_lock_modifiers_are_ignored},
         {"keysyms_are_lowercased", test_keysyms_are_lowercased},
         {"vt_switch_from_translated_keysym", test_vt_switch_from_translated_keysym},

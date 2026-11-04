@@ -2,6 +2,7 @@
 #define WM_DESKTOP_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "wm/config.h"
@@ -78,6 +79,8 @@ typedef struct wm_window_desc {
     const char *app_id;
     double opacity;
     bool activation_allowed;
+    bool has_workspace;
+    int workspace;
 } wm_window_desc;
 
 typedef enum wm_activation_source {
@@ -152,6 +155,7 @@ void wm_desktop_switch_workspace(wm_desktop *desktop, int workspace);
 void wm_desktop_add_workspace(wm_desktop *desktop);
 void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace);
 void wm_desktop_toggle_show_desktop(wm_desktop *desktop);
+wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabilities);
 
 wm_window *wm_window_map(wm_desktop *desktop, const wm_window_desc *desc);
 void wm_window_unmap(wm_desktop *desktop, wm_window *window);
@@ -177,6 +181,12 @@ void wm_request_configure(wm_desktop *desktop, wm_window *window, const wm_rect 
 void wm_request_activate(wm_desktop *desktop, wm_window *window, wm_activation_source source);
 void wm_request_close(wm_desktop *desktop, wm_window *window);
 void wm_request_state(wm_desktop *desktop, wm_window *window, const wm_state_change *change);
+void wm_request_send_to_monitor(wm_desktop *desktop, wm_window *window, size_t monitor);
+void wm_request_keyboard_move(wm_desktop *desktop, wm_window *window);
+void wm_request_keyboard_resize(wm_desktop *desktop, wm_window *window);
+void wm_request_highlight(wm_desktop *desktop, wm_window *window);
+void wm_request_unhighlight(wm_desktop *desktop);
+void wm_request_workspace(wm_desktop *desktop, wm_window *window, int workspace);
 
 wm_dispatch wm_pointer_motion(wm_desktop *desktop, const wm_pointer_event *event);
 wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event);

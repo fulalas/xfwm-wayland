@@ -11,6 +11,8 @@ static const char *const channel_names[CHANNEL_COUNT] = {
     [CHANNEL_KEYBOARD_LAYOUT] = "keyboard-layout",
     [CHANNEL_KEYBOARDS] = "keyboards",
     [CHANNEL_POINTERS] = "pointers",
+    [CHANNEL_DISPLAYS] = "displays-wl",
+    [CHANNEL_ACCESSIBILITY] = "accessibility",
 };
 
 static const char *const theme_properties[] = { "/general/theme", "/general/title_font" };
@@ -38,6 +40,8 @@ unsigned change_flags_for(channel_id id, const char *property)
     case CHANNEL_KEYBOARDS:
     case CHANNEL_POINTERS:
         return CHANGE_INPUT;
+    case CHANNEL_DISPLAYS:
+        return CHANGE_DISPLAYS;
     default:
         return 0;
     }
@@ -63,13 +67,14 @@ static bool is_theme_property(const char *property)
 
 static unsigned xsettings_flags(const char *property)
 {
+    unsigned flags = CHANGE_X11_SETTINGS;
     if (g_str_has_prefix(property, "/Net/DoubleClick")) {
-        return CHANGE_SETTINGS;
+        flags |= CHANGE_SETTINGS;
     }
     if (g_str_has_prefix(property, "/Gtk/CursorTheme")) {
-        return CHANGE_INPUT;
+        flags |= CHANGE_INPUT;
     }
-    return 0;
+    return flags;
 }
 
 static unsigned shortcut_flags(const char *property)

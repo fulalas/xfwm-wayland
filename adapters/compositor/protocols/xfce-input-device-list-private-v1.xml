@@ -1,0 +1,559 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="xfce_input_device_list_private_v1">
+  <copyright>
+    Copyright © 2026 Brian Tarricone &lt;brian@tarricone.org&gt;
+
+    Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation files
+    (the "Software"), to deal in the Software without restriction,
+    including without limitation the rights to use, copy, modify, merge,
+    publish, distribute, sublicense, and/or sell copies of the Software,
+    and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+
+    The above copyright notice and this permission notice (including the
+    next paragraph) shall be included in all copies or substantial
+    portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+    BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+    ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+  </copyright>
+
+  <interface name="xfce_input_device_list_private_v1" version="1">
+    <description summary="Input device list">
+      This interface provides a global that will list input devices currently
+      attached to the system, along with their current and possible settings.
+
+      This interface is informational and read-only: it reports each device's
+      settings, their defaults, and the values the device supports, but provides
+      no means to change them. Settings are configured through other Xfce
+      mechanisms; this protocol reflects the resulting state back to clients.
+
+      It is intended to be private to the Xfce desktop implementation, and
+      should not be used by other applications. This protocol may introduce
+      incompatible changes at any time, without warning, and without following
+      normal, accepted guidelines about Wayland protocol versioning.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the binding to the global">
+        Destroys the client's binding to the global. Existing device objects
+        are unaffected and remain valid until released.
+      </description>
+    </request>
+
+    <event name="device">
+      <description summary="new input device">
+        Notifies the client of an input device currently attached to the
+        system. This event is sent for every device present when the global is
+        bound, and again whenever a device is later added.
+
+        The device's name and capabilities are immutable for the lifetime of
+        the device and are provided here. Following this event, the compositor
+        sends the device's applicable settings on the newly created object
+        before sending the next done event.
+
+        A single physical device may expose more than one capability; it is
+        always represented by exactly one xfce_input_device_v1 object regardless
+        of how many capabilities it has.
+      </description>
+      <arg name="id" type="new_id" interface="xfce_input_device_v1" summary="the new device object"/>
+      <arg name="name" type="string" summary="the (mostly) human-readable device name"/>
+      <arg name="capabilities" type="uint" enum="capabilities" summary="bitfield of the device's capabilities"/>
+    </event>
+
+    <event name="done">
+      <description summary="a batch of newly added devices has been fully sent">
+        Sent after the compositor has finished emitting a group of newly added
+        devices, including each new device's full set of settings. It is sent
+        once after the initial set of devices present when the global was bound,
+        and again after each later group of devices is added.
+
+        This event is not sent when the settings of an existing device change;
+        such updates are delivered as standalone setting events on the affected
+        device object.
+      </description>
+    </event>
+
+    <enum name="capabilities" bitfield="true">
+      <description summary="input device capabilities">
+        The kinds of input a device is able to produce. A device may have more
+        than one of these set. The values mirror libinput's device
+        capabilities.
+      </description>
+      <entry name="keyboard" value="1" summary="device produces key events"/>
+      <entry name="pointer" value="2" summary="device produces relative pointer events (mouse, touchpad, trackpoint)"/>
+      <entry name="touch" value="4" summary="device produces touch events (touchscreen)"/>
+      <entry name="tablet_tool" value="8" summary="device is a graphics tablet driven by a tool (pen)"/>
+      <entry name="tablet_pad" value="16" summary="device is the button pad of a graphics tablet"/>
+      <entry name="gesture" value="32" summary="device produces gesture events (pinch, swipe)"/>
+      <entry name="switch" value="64" summary="device produces switch events (lid, tablet-mode)"/>
+    </enum>
+  </interface>
+
+  <interface name="xfce_input_device_v1" version="1">
+    <description summary="A single input device">
+      Represents a single input device, and exposes the settings the compositor
+      is able to apply to it. The device's name and capabilities are immutable
+      for the device's lifetime and are provided as arguments of the
+      xfce_input_device_list_private_v1.device event that creates this object.
+
+      Immediately after this object is created, the compositor sends one event
+      for each setting that is applicable to the device. A setting event is only
+      sent when the setting is
+      available on the device; the absence of a setting event means the device
+      does not support that setting at all. Where a setting is a choice among
+      several values, the event also reports which of those values the device
+      supports.
+
+      Whenever a setting changes for any reason (for example, the compositor
+      applying a new configuration), the corresponding event is sent again with
+      an updated current value.
+    </description>
+
+    <request name="release" type="destructor">
+      <description summary="release the device object">
+        Tells the compositor the client will no longer use this object. The
+        client should send this after receiving the removed event, but may send
+        it at any time if it is no longer interested in the device.
+      </description>
+    </request>
+
+    <event name="removed">
+      <description summary="device has been removed from the system">
+        The device has been removed from the system. No further events will be
+        sent on this object; the client should release it.
+      </description>
+    </event>
+
+    <event name="send_events">
+      <description summary="how the device may be enabled or disabled">
+        Reports the device's send-events mode, which controls whether and when
+        the device generates input events. This setting is available on every
+        device.
+      </description>
+      <arg name="supported" type="uint" enum="send_events_modes" summary="bitfield of supported values"/>
+      <arg name="default_value" type="uint" enum="send_events_modes" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="send_events_modes" summary="current setting value"/>
+    </event>
+
+    <event name="accel_speed">
+      <description summary="pointer acceleration speed">
+        Reports the device's normalized pointer-acceleration speed, in the
+        range [-1, 1], where 0 is the device's default acceleration, -1 is the
+        slowest, and 1 is the fastest. Only sent for devices that use pointer
+        acceleration.
+      </description>
+      <arg name="default_value" type="fixed" summary="default speed, in the range [-1, 1]"/>
+      <arg name="current_value" type="fixed" summary="current speed, in the range [-1, 1]"/>
+    </event>
+
+    <event name="accel_profile">
+      <description summary="pointer acceleration profile">
+        Reports the device's pointer-acceleration profile, which selects the
+        algorithm used to map device movement to pointer movement. Only sent for
+        devices that support more than the "none" profile.
+      </description>
+      <arg name="supported" type="uint" enum="accel_profiles" summary="bitfield of supported values"/>
+      <arg name="default_value" type="uint" enum="accel_profiles" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="accel_profiles" summary="current setting value"/>
+    </event>
+
+    <event name="natural_scroll">
+      <description summary="natural (reverse) scrolling">
+        Reports whether natural scrolling is enabled, in which the content
+        follows the finger or wheel direction rather than the scroll bar. Only
+        sent for devices that support natural scrolling.
+      </description>
+      <arg name="default_value" type="uint" enum="natural_scroll_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="natural_scroll_state" summary="current setting value"/>
+    </event>
+
+    <event name="scroll_method">
+      <description summary="how scroll events are produced">
+        Reports the method used to turn device movement into scroll events. Only
+        sent for devices that support a configurable scroll method.
+      </description>
+      <arg name="supported" type="uint" enum="scroll_methods" summary="bitfield of supported values"/>
+      <arg name="default_value" type="uint" enum="scroll_methods" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="scroll_methods" summary="current setting value"/>
+    </event>
+
+    <event name="scroll_button">
+      <description summary="button used for on-button-down scrolling">
+        Reports the button that, while held, turns device movement into scroll
+        events when the on_button_down scroll method is in use. The value is an
+        evdev button code, or 0 if button scrolling is disabled. Only sent for
+        devices that support the on_button_down scroll method.
+      </description>
+      <arg name="default_value" type="uint" summary="default button code, or 0 if disabled"/>
+      <arg name="current_value" type="uint" summary="current button code, or 0 if disabled"/>
+    </event>
+
+    <event name="scroll_button_lock">
+      <description summary="whether the scroll button latches">
+        Reports whether the scroll button latches: when enabled, the button is
+        pressed and released once to start and stop scrolling rather than being
+        held down. Only sent for devices that support the on_button_down scroll
+        method.
+      </description>
+      <arg name="default_value" type="uint" enum="scroll_button_lock_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="scroll_button_lock_state" summary="current setting value"/>
+    </event>
+
+    <event name="click_method">
+      <description summary="how button clicks are produced">
+        Reports the method used to determine which button a click maps to on a
+        clickpad, either by the area of the pad pressed or by the number of
+        fingers down. Only sent for devices that support a configurable click
+        method.
+      </description>
+      <arg name="supported" type="uint" enum="click_methods" summary="bitfield of supported values"/>
+      <arg name="default_value" type="uint" enum="click_methods" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="click_methods" summary="current setting value"/>
+    </event>
+
+    <event name="clickfinger_button_map">
+      <description summary="finger-count to button mapping for clickfinger">
+        Reports how a one-, two-, or three-finger click maps to a logical
+        button when the clickfinger click method is in use. Only sent for
+        devices that support the clickfinger click method.
+      </description>
+      <arg name="default_value" type="uint" enum="button_map" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="button_map" summary="current setting value"/>
+    </event>
+
+    <event name="left_handed">
+      <description summary="left-handed button layout">
+        Reports whether the device's buttons are configured for left-handed use,
+        which typically swaps the left and right buttons. Only sent for devices
+        that support a left-handed layout.
+      </description>
+      <arg name="default_value" type="uint" enum="left_handed_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="left_handed_state" summary="current setting value"/>
+    </event>
+
+    <event name="middle_emulation">
+      <description summary="middle-button emulation">
+        Reports whether middle-button emulation is enabled, in which a
+        simultaneous left and right button press is reported as a middle button
+        press. Only sent for devices that support middle-button emulation.
+      </description>
+      <arg name="default_value" type="uint" enum="middle_emulation_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="middle_emulation_state" summary="current setting value"/>
+    </event>
+
+    <event name="tap">
+      <description summary="tap-to-click">
+        Reports whether tap-to-click is enabled, in which a tap on the device is
+        reported as a button click. Only sent for devices that support
+        tap-to-click.
+      </description>
+      <arg name="default_value" type="uint" enum="tap_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="tap_state" summary="current setting value"/>
+    </event>
+
+    <event name="tap_finger_count">
+      <description summary="number of fingers usable for tapping">
+        Reports the number of fingers that can be detected for tap-to-click on
+        the device. This is a fixed property of the device and cannot be
+        changed; it is provided so the client knows which tap-related settings
+        are meaningful. Only sent for devices that support tap-to-click.
+      </description>
+      <arg name="count" type="uint" summary="number of tappable fingers"/>
+    </event>
+
+    <event name="tap_button_map">
+      <description summary="finger-count to button mapping for tapping">
+        Reports how a one-, two-, or three-finger tap maps to a logical button.
+        Only sent for devices that support tap-to-click.
+      </description>
+      <arg name="default_value" type="uint" enum="button_map" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="button_map" summary="current setting value"/>
+    </event>
+
+    <event name="tap_drag">
+      <description summary="tap-and-drag">
+        Reports whether tap-and-drag is enabled, in which a tap followed by a
+        finger movement drags with the left button held. Only sent for devices
+        that support tap-to-click.
+      </description>
+      <arg name="default_value" type="uint" enum="drag_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="drag_state" summary="current setting value"/>
+    </event>
+
+    <event name="tap_drag_lock">
+      <description summary="tap-and-drag lock">
+        Reports whether drag lock is enabled for tap-and-drag, in which lifting
+        the finger does not immediately end the drag. Only sent for devices that
+        support tap-to-click.
+      </description>
+      <arg name="default_value" type="uint" enum="drag_lock_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="drag_lock_state" summary="current setting value"/>
+    </event>
+
+    <event name="three_finger_drag">
+      <description summary="three-finger drag">
+        Reports whether dragging with three (or four) fingers is enabled, in
+        which placing the corresponding number of fingers down and moving drags
+        with the left button held. Only sent for devices that support
+        three-finger drag.
+
+        The max_fingers argument reports the largest number of fingers the
+        device supports for this gesture: if it is 3, only the enabled_3fg value
+        is usable; if it is 4, both enabled_3fg and enabled_4fg are usable.
+      </description>
+      <arg name="max_fingers" type="uint" summary="maximum supported finger count (3 or 4)"/>
+      <arg name="default_value" type="uint" enum="three_finger_drag_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="three_finger_drag_state" summary="current setting value"/>
+    </event>
+
+    <event name="dwt">
+      <description summary="disable-while-typing">
+        Reports whether disable-while-typing is enabled, in which the device is
+        temporarily disabled while a keyboard is being used to avoid spurious
+        input. Only sent for devices that support disable-while-typing.
+      </description>
+      <arg name="default_value" type="uint" enum="dwt_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="dwt_state" summary="current setting value"/>
+    </event>
+
+    <event name="dwt_timeout">
+      <description summary="disable-while-typing timeout">
+        Reports the time, in milliseconds, between the last key event and the
+        device being re-enabled when disable-while-typing is active. Only sent
+        for devices that support a configurable disable-while-typing timeout.
+      </description>
+      <arg name="default_value" type="uint" summary="default timeout in milliseconds"/>
+      <arg name="current_value" type="uint" summary="current timeout in milliseconds"/>
+    </event>
+
+    <event name="dwtp">
+      <description summary="disable-while-trackpointing">
+        Reports whether disable-while-trackpointing is enabled, in which the
+        device is temporarily disabled while a trackpoint is being used. Only
+        sent for devices that support disable-while-trackpointing.
+      </description>
+      <arg name="default_value" type="uint" enum="dwtp_state" summary="default setting value"/>
+      <arg name="current_value" type="uint" enum="dwtp_state" summary="current setting value"/>
+    </event>
+
+    <event name="dwtp_timeout">
+      <description summary="disable-while-trackpointing timeout">
+        Reports the time, in milliseconds, between the last trackpoint event and
+        the device being re-enabled when disable-while-trackpointing is active.
+        Only sent for devices that support a configurable
+        disable-while-trackpointing timeout.
+      </description>
+      <arg name="default_value" type="uint" summary="default timeout in milliseconds"/>
+      <arg name="current_value" type="uint" summary="current timeout in milliseconds"/>
+    </event>
+
+    <event name="rotation">
+      <description summary="rotation applied to device motion">
+        Reports the clockwise rotation, in whole degrees in the range [0, 360),
+        applied to all motion events from the device. Only sent for devices that
+        support rotation.
+      </description>
+      <arg name="default_value" type="uint" summary="default angle, in degrees clockwise"/>
+      <arg name="current_value" type="uint" summary="current angle, in degrees clockwise"/>
+    </event>
+
+    <event name="calibration">
+      <description summary="calibration matrix for absolute coordinates">
+        Reports the calibration matrix applied to the device's absolute
+        coordinates, as the six values [a, b, c, d, e, f] forming the first two
+        rows of the 3x3 transformation matrix
+
+            [ a  b  c ]
+            [ d  e  f ]
+            [ 0  0  1 ]
+
+        applied to normalized device coordinates. The identity matrix
+        (a=1, e=1, all others 0) represents no calibration. Only sent for
+        devices that can be calibrated.
+      </description>
+      <arg name="default_a" type="fixed" summary="default matrix element a (row 1, col 1)"/>
+      <arg name="default_b" type="fixed" summary="default matrix element b (row 1, col 2)"/>
+      <arg name="default_c" type="fixed" summary="default matrix element c (row 1, col 3)"/>
+      <arg name="default_d" type="fixed" summary="default matrix element d (row 2, col 1)"/>
+      <arg name="default_e" type="fixed" summary="default matrix element e (row 2, col 2)"/>
+      <arg name="default_f" type="fixed" summary="default matrix element f (row 2, col 3)"/>
+      <arg name="current_a" type="fixed" summary="current matrix element a (row 1, col 1)"/>
+      <arg name="current_b" type="fixed" summary="current matrix element b (row 1, col 2)"/>
+      <arg name="current_c" type="fixed" summary="current matrix element c (row 1, col 3)"/>
+      <arg name="current_d" type="fixed" summary="current matrix element d (row 2, col 1)"/>
+      <arg name="current_e" type="fixed" summary="current matrix element e (row 2, col 2)"/>
+      <arg name="current_f" type="fixed" summary="current matrix element f (row 2, col 3)"/>
+    </event>
+
+    <event name="area">
+      <description summary="active region of the tablet surface">
+        Reports the rectangular sub-region of a graphics tablet's surface that
+        is active; tablet-tool input is scaled to this region as if it were the
+        full surface. The region is given as the upper-left point (x1, y1) and
+        the lower-right point (x2, y2), each normalized to the range [0, 1] as a
+        proportion of the device's width and height, so the full surface is
+        (0, 0) to (1, 1). The conditions x1 is less than x2 and y1 is less than
+        y2 always hold. Only sent for devices that support configuring an active
+        area.
+      </description>
+      <arg name="default_x1" type="fixed" summary="default upper-left x, in the range [0, 1]"/>
+      <arg name="default_y1" type="fixed" summary="default upper-left y, in the range [0, 1]"/>
+      <arg name="default_x2" type="fixed" summary="default lower-right x, in the range [0, 1]"/>
+      <arg name="default_y2" type="fixed" summary="default lower-right y, in the range [0, 1]"/>
+      <arg name="current_x1" type="fixed" summary="current upper-left x, in the range [0, 1]"/>
+      <arg name="current_y1" type="fixed" summary="current upper-left y, in the range [0, 1]"/>
+      <arg name="current_x2" type="fixed" summary="current lower-right x, in the range [0, 1]"/>
+      <arg name="current_y2" type="fixed" summary="current lower-right y, in the range [0, 1]"/>
+    </event>
+
+    <enum name="natural_scroll_state">
+      <description summary="natural scrolling">
+        Whether the content follows the finger or wheel direction.
+      </description>
+      <entry name="disabled" value="0" summary="natural scrolling is disabled"/>
+      <entry name="enabled" value="1" summary="natural scrolling is enabled"/>
+    </enum>
+
+    <enum name="left_handed_state">
+      <description summary="left-handed button layout">
+        Whether the device's buttons are configured for left-handed use.
+      </description>
+      <entry name="disabled" value="0" summary="left-handed layout is disabled"/>
+      <entry name="enabled" value="1" summary="left-handed layout is enabled"/>
+    </enum>
+
+    <enum name="send_events_modes" bitfield="true">
+      <description summary="when a device generates events">
+        Controls whether a device generates input events. The supported argument
+        of the send_events event is a bitfield of these values; enabled is
+        implicit and always available. The default and current arguments hold a
+        single value.
+      </description>
+      <entry name="enabled" value="0" summary="the device is always enabled"/>
+      <entry name="disabled" value="1" summary="the device is disabled"/>
+      <entry name="disabled_on_external_mouse" value="2" summary="the device is disabled while an external mouse is attached"/>
+    </enum>
+
+    <enum name="accel_profiles" bitfield="true">
+      <description summary="pointer acceleration profiles">
+        The acceleration algorithms a device may use. The supported argument of
+        the accel_profile event is a bitfield of these values; the default and
+        current arguments hold a single value.
+      </description>
+      <entry name="none" value="0" summary="no acceleration profile is configurable"/>
+      <entry name="flat" value="1" summary="movement is scaled by a constant factor with no acceleration"/>
+      <entry name="adaptive" value="2" summary="movement is accelerated based on the device's speed"/>
+      <entry name="custom" value="4" summary="movement is mapped by a user-defined acceleration function"/>
+    </enum>
+
+    <enum name="scroll_methods" bitfield="true">
+      <description summary="ways scroll events are produced">
+        The methods by which device movement may be turned into scroll events.
+        The supported argument of the scroll_method event is a bitfield of these
+        values; the default and current arguments hold a single value.
+      </description>
+      <entry name="no_scroll" value="0" summary="movement never produces scroll events"/>
+      <entry name="two_finger" value="1" summary="scrolling occurs when two fingers are down"/>
+      <entry name="edge" value="2" summary="scrolling occurs along the bottom or right edge"/>
+      <entry name="on_button_down" value="4" summary="scrolling occurs while the scroll button is held"/>
+    </enum>
+
+    <enum name="scroll_button_lock_state">
+      <description summary="scroll button latching">
+        Whether the scroll button must be held or latches with a press and
+        release.
+      </description>
+      <entry name="disabled" value="0" summary="the scroll button must be held down to scroll"/>
+      <entry name="enabled" value="1" summary="the scroll button latches on and off"/>
+    </enum>
+
+    <enum name="click_methods" bitfield="true">
+      <description summary="ways button clicks are produced on a clickpad">
+        The methods by which a clickpad determines which button a click maps to.
+        The supported argument of the click_method event is a bitfield of these
+        values; the default and current arguments hold a single value.
+      </description>
+      <entry name="none" value="0" summary="no click method is configurable"/>
+      <entry name="button_areas" value="1" summary="the button is chosen by the region of the pad that is pressed"/>
+      <entry name="clickfinger" value="2" summary="the button is chosen by the number of fingers down"/>
+    </enum>
+
+    <enum name="button_map">
+      <description summary="finger-count to button mapping">
+        How a one-, two-, or three-finger tap or click maps to logical buttons.
+        Used by both the tap_button_map and clickfinger_button_map events.
+      </description>
+      <entry name="lrm" value="0" summary="1/2/3 fingers map to left/right/middle"/>
+      <entry name="lmr" value="1" summary="1/2/3 fingers map to left/middle/right"/>
+    </enum>
+
+    <enum name="middle_emulation_state">
+      <description summary="middle-button emulation">
+        Whether a simultaneous left and right button press is reported as a
+        middle button press.
+      </description>
+      <entry name="disabled" value="0" summary="middle-button emulation is disabled"/>
+      <entry name="enabled" value="1" summary="middle-button emulation is enabled"/>
+    </enum>
+
+    <enum name="tap_state">
+      <description summary="tap-to-click">
+        Whether a tap on the device is reported as a button click.
+      </description>
+      <entry name="disabled" value="0" summary="tap-to-click is disabled"/>
+      <entry name="enabled" value="1" summary="tap-to-click is enabled"/>
+    </enum>
+
+    <enum name="drag_state">
+      <description summary="tap-and-drag">
+        Whether a tap followed by finger movement drags with the button held.
+      </description>
+      <entry name="disabled" value="0" summary="tap-and-drag is disabled"/>
+      <entry name="enabled" value="1" summary="tap-and-drag is enabled"/>
+    </enum>
+
+    <enum name="drag_lock_state">
+      <description summary="tap-and-drag lock">
+        Whether lifting the finger immediately ends a tap-and-drag, and if not,
+        how the drag is eventually ended.
+      </description>
+      <entry name="disabled" value="0" summary="lifting the finger ends the drag immediately"/>
+      <entry name="enabled_timeout" value="1" summary="the drag continues until a timeout expires after the finger is lifted"/>
+      <entry name="enabled_sticky" value="2" summary="the drag continues until the finger is tapped again"/>
+    </enum>
+
+    <enum name="three_finger_drag_state">
+      <description summary="three-finger drag">
+        Whether placing three or four fingers down and moving drags with the
+        button held.
+      </description>
+      <entry name="disabled" value="0" summary="three-finger drag is disabled"/>
+      <entry name="enabled_3fg" value="1" summary="dragging is started with three fingers"/>
+      <entry name="enabled_4fg" value="2" summary="dragging is started with four fingers"/>
+    </enum>
+
+    <enum name="dwt_state">
+      <description summary="disable-while-typing">
+        Whether the device is temporarily disabled while a keyboard is in use.
+      </description>
+      <entry name="disabled" value="0" summary="disable-while-typing is disabled"/>
+      <entry name="enabled" value="1" summary="disable-while-typing is enabled"/>
+    </enum>
+
+    <enum name="dwtp_state">
+      <description summary="disable-while-trackpointing">
+        Whether the device is temporarily disabled while a trackpoint is in use.
+      </description>
+      <entry name="disabled" value="0" summary="disable-while-trackpointing is disabled"/>
+      <entry name="enabled" value="1" summary="disable-while-trackpointing is enabled"/>
+    </enum>
+  </interface>
+</protocol>

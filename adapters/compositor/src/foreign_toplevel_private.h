@@ -7,6 +7,8 @@
 
 struct wlr_foreign_toplevel_handle_v1;
 
+typedef struct xfce_toplevels xfce_toplevels;
+
 typedef struct toplevel_requests {
     struct wl_listener maximize;
     struct wl_listener minimize;
@@ -21,11 +23,13 @@ typedef struct toplevel_entry {
     struct wlr_foreign_toplevel_handle_v1 *wlr;
     struct wlr_ext_foreign_toplevel_handle_v1 *ext;
     toplevel_requests requests;
+    struct wl_list xfce_handles;
     struct wl_list link;
 } toplevel_entry;
 
 struct foreign_toplevels {
     compositor *server;
+    xfce_toplevels *xfce;
     struct wl_list entries;
     struct wl_listener mapped;
     struct wl_listener changed;

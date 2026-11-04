@@ -6,6 +6,7 @@ executable(
   'commands.c',
   'wayland_source.c',
   'session_environment.c',
+  'session_bus.c',
   c_args: [
     '-DAPP_VERSION="@0@"'.format(meson.project_version()),
     '-DAPP_LOCALE_DIR="@0@"'.format(get_option('prefix') / get_option('localedir')),

@@ -23,6 +23,11 @@ struct wlr_surface *view_surface(const view *v)
 
 cairo_surface_t *view_icon(const view *v)
 {
+    return icon_slot_surface(v->impl->icon(v->self));
+}
+
+const icon_slot *view_icon_slot(const view *v)
+{
     return v->impl->icon(v->self);
 }
 

@@ -7,6 +7,8 @@
 
 typedef struct workspace_state {
     int count;
+    unsigned ids[WM_WORKSPACE_MAX];
+    unsigned next_id;
     int current;
     int previous;
     bool show_desktop;

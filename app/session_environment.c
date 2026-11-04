@@ -1,6 +1,20 @@
 #include "app.h"
 
-void app_export_session_environment(app *app)
+void app_start_session(app *app)
+{
+    xfce_session_display display = {
+        .wayland_display = compositor_socket_name(app->compositor),
+        .x11_display = compositor_x11_display(app->compositor),
+    };
+
+    if (app->startup_command) {
+        xfce_environment_start_session(app->xfce, &display, app->startup_command);
+    } else {
+        xfce_environment_export_session(app->xfce, &display);
+    }
+}
+
+void app_export_x11_display(app *app)
 {
     xfce_session_display display = {
         .wayland_display = compositor_socket_name(app->compositor),
@@ -8,11 +22,4 @@ void app_export_session_environment(app *app)
     };
 
     xfce_environment_export_session(app->xfce, &display);
-}
-
-void app_run_startup_command(app *app)
-{
-    if (app->startup_command && *app->startup_command) {
-        xfce_environment_spawn(app->xfce, app->startup_command);
-    }
 }

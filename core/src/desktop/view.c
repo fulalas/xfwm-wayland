@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "allowed_actions.h"
 #include "desktop_state.h"
 #include "effects.h"
 #include "frame.h"
@@ -10,7 +11,9 @@ static void refresh_decor(wm_desktop *desktop, wm_window *window);
 static wm_decor_window decor_inputs(wm_desktop *desktop, wm_window *window);
 static void measure_title(wm_desktop *desktop, wm_window *window);
 static void fill_states(const wm_window *window, wm_window_view *view);
+static wm_rect restore_client_of(const wm_window *window);
 static void fill_identity(const wm_window *window, wm_window_view *view);
+static unsigned workspace_id_of(const wm_desktop *desktop, const wm_window *window);
 static uint32_t tile_edges(tile_mode tile);
 static uint32_t view_tiled_edges(const wm_window *window);
 
@@ -20,11 +23,13 @@ void view_refresh(wm_desktop *desktop, wm_window *window)
     wm_window_view *view = &window->view;
     view->client = window->frozen ? window->frozen_client : window->client;
     view->frame = frame_rect_for_client(desktop, window, &view->client);
+    view->restore_client = restore_client_of(window);
     view->visible = window->visible;
     view->activated = desktop->focus.focused == window;
     fill_states(window, view);
     view->tiled_edges = view_tiled_edges(window);
     view->workspace = window->workspace;
+    view->workspace_id = workspace_id_of(desktop, window);
     view->layer = window->layer;
     view->has_shadow = effects_has_shadow(desktop, window);
     view->shadow = effects_shadow_rect(desktop, window);
@@ -32,6 +37,7 @@ void view_refresh(wm_desktop *desktop, wm_window *window)
     view->decor = &window->layout;
     view->decor_serial = window->decor_serial;
     fill_identity(window, view);
+    view->allowed_actions = allowed_actions_of(window);
 }
 
 void view_invalidate_decor(wm_desktop *desktop)
@@ -91,11 +97,27 @@ static void fill_states(const wm_window *window, wm_window_view *view)
     view->resizing = window->resizing;
 }
 
+static wm_rect restore_client_of(const wm_window *window)
+{
+    bool maximized_saved = window_is_maximized(window) && window->restore_size_pos;
+    if (maximized_saved) {
+        return window->saved;
+    }
+    return window_is_fullscreen(window) ? window->pre_fullscreen : window->client;
+}
+
 static void fill_identity(const wm_window *window, wm_window_view *view)
 {
     view->title = window->title;
     view->app_id = window->app_id;
     view->parent = window->parent != NULL ? window->parent->handle : NULL;
+}
+
+static unsigned workspace_id_of(const wm_desktop *desktop, const wm_window *window)
+{
+    const workspace_state *workspaces = &desktop->workspaces;
+    bool known = window->workspace >= 0 && window->workspace < workspaces->count;
+    return known ? workspaces->ids[window->workspace] : 0;
 }
 
 static uint32_t tile_edges(tile_mode tile)

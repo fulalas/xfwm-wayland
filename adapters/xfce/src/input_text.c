@@ -8,8 +8,11 @@ char *input_device_property_prefix(const char *device_name)
     GString *prefix = g_string_new("/");
 
     for (const char *c = device_name; *c; c++) {
-        bool kept = g_ascii_isalnum(*c) || *c == '-' || *c == '_';
-        g_string_append_c(prefix, kept ? *c : '_');
+        if (g_ascii_isalnum(*c) || *c == '-' || *c == '_') {
+            g_string_append_c(prefix, *c);
+        } else if (*c == ' ') {
+            g_string_append_c(prefix, '_');
+        }
     }
     g_string_append_c(prefix, '/');
     return g_string_free(prefix, FALSE);

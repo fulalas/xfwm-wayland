@@ -3,6 +3,7 @@
 #include "desktop_state.h"
 #include "focus.h"
 #include "frame_buttons.h"
+#include "highlight.h"
 #include "initial_state.h"
 #include "menu.h"
 #include "moveresize.h"
@@ -12,7 +13,9 @@
 #include "transients.h"
 
 static wm_window *attach(wm_desktop *desktop, const wm_window_desc *desc);
-static int initial_workspace(const wm_desktop *desktop, wm_window *window);
+static int initial_workspace(const wm_desktop *desktop, wm_window *window,
+                             const wm_window_desc *desc);
+static int requested_workspace(const wm_desktop *desktop, const wm_window_desc *desc);
 static void forget(wm_desktop *desktop, wm_window *window);
 static bool is_managed(const wm_desktop *desktop, const wm_window *window);
 
@@ -66,13 +69,14 @@ static wm_window *attach(wm_desktop *desktop, const wm_window_desc *desc)
     }
     window_apply_type(window);
     window_update_flags(window);
-    window->workspace = initial_workspace(desktop, window);
+    window->workspace = initial_workspace(desktop, window, desc);
     stack_add(desktop, window);
     window_list_append(&desktop->mru, window);
     return window;
 }
 
-static int initial_workspace(const wm_desktop *desktop, wm_window *window)
+static int initial_workspace(const wm_desktop *desktop, wm_window *window,
+                             const wm_window_desc *desc)
 {
     const wm_window *parent = window->parent;
     if (window_is_sticky(window) && !window_has_flag(window, WINDOW_HAS_STICK)
@@ -85,7 +89,13 @@ static int initial_workspace(const wm_desktop *desktop, wm_window *window)
     if (parent != NULL && !window_is_sticky(window)) {
         return parent->workspace;
     }
-    return desktop->workspaces.current;
+    return requested_workspace(desktop, desc);
+}
+
+static int requested_workspace(const wm_desktop *desktop, const wm_window_desc *desc)
+{
+    bool known = desc->workspace >= 0 && desc->workspace < desktop->workspaces.count;
+    return desc->has_workspace && known ? desc->workspace : desktop->workspaces.current;
 }
 
 static void forget(wm_desktop *desktop, wm_window *window)
@@ -96,6 +106,7 @@ static void forget(wm_desktop *desktop, wm_window *window)
     frame_buttons_window_gone(desktop, window);
     cycle_window_gone(desktop, window);
     menu_window_gone(desktop, window);
+    highlight_end(desktop, window);
     focus_forget(desktop, window);
 }
 

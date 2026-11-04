@@ -1,6 +1,7 @@
 compositor_test_inc = [
   include_directories('.'),
   include_directories('../src'),
+  compositor_api_inc,
   core_inc,
 ]
 
@@ -10,8 +11,17 @@ compositor_pure_tests = {
   'zoom_math': ['../src/zoom_math.c'],
   'usable_area': ['../src/usable_area.c'],
   'cursor_names': ['../src/cursor_names.c'],
+  'cursor_owner': ['../src/cursor_owner.c'],
+  'display_policy': ['../src/display_policy.c'],
+  'mode_choice': ['../src/mode_choice.c'],
+  'device_setting': ['../src/device_setting.c'],
   'icon_pixels': ['../src/icon_pixels.c'],
+  'find_cursor_rings': ['../src/find_cursor_rings.c'],
   'osd_geometry': ['../src/osd_geometry.c'],
+  'session_record': ['../src/session_record.c'],
+  'session_book': ['../src/session_book.c', '../src/session_record.c'],
+  'session_apply': ['../src/session_apply.c'],
+  'present_rules': ['../src/present_rules.c'],
 }
 
 foreach name, sources : compositor_pure_tests
@@ -44,5 +54,55 @@ test(
     ['test_layer_mapping.c', '../src/layer_mapping.c', layer_shell_header],
     include_directories: compositor_test_inc,
     dependencies: [check_dep, wayland_server_dep],
+  ),
+)
+
+test(
+  'compositor_input_transform',
+  executable(
+    'test_compositor_input_transform',
+    ['test_input_transform.c', '../src/input_transform.c'],
+    include_directories: compositor_test_inc + [compositor_api_inc],
+    c_args: compositor_c_args,
+    dependencies: [check_dep, wlroots_dep, cairo_dep, compositor_m_dep],
+  ),
+)
+
+test(
+  'compositor_pointer_prefs_compare',
+  executable(
+    'test_compositor_pointer_prefs_compare',
+    ['test_pointer_prefs_compare.c', '../src/pointer_prefs_compare.c'],
+    include_directories: compositor_test_inc + [compositor_api_inc],
+    dependencies: [check_dep, cairo_dep],
+  ),
+)
+
+compositor_x11_tests = {
+  'x11_gravity': ['../src/x11_gravity.c'],
+  'ewmh_payload': ['../src/ewmh_payload.c'],
+  'xsettings': ['../src/xsettings_table.c', '../src/xsettings_wire.c', '../src/xresources.c'],
+  'restart_policy': ['../src/restart_policy.c'],
+}
+
+foreach name, sources : compositor_x11_tests
+  test(
+    'compositor_' + name,
+    executable(
+      'test_compositor_' + name,
+      ['test_' + name + '.c'] + sources,
+      include_directories: compositor_test_inc + [compositor_api_inc],
+      dependencies: [check_dep, wm_core_dep, xcb_dep],
+    ),
+  )
+endforeach
+
+test(
+  'compositor_output_identity',
+  executable(
+    'test_compositor_output_identity',
+    ['test_output_identity.c', '../src/output_identity.c'],
+    include_directories: compositor_test_inc + [compositor_api_inc],
+    dependencies: [check_dep, glib_dep],
   ),
 )

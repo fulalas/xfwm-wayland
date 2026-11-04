@@ -3,11 +3,13 @@
 #include <string.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
+#include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 
 #include "cursor_names.h"
+#include "cursor_owner.h"
 #include "listener.h"
 #include "seat_private.h"
 
@@ -32,7 +34,8 @@ static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs);
 static void apply_core_shape(cursor_image *image);
 static void handle_request_set_cursor(struct wl_listener *listener, void *data);
 static void handle_request_set_shape(struct wl_listener *listener, void *data);
-static bool client_is_focused(const cursor_image *image, struct wlr_seat_client *client);
+static bool accepts_request(const cursor_image *image, struct wlr_seat_client *client);
+static bool drag_active(const cursor_image *image);
 
 cursor_image *cursor_image_create(seat *s)
 {
@@ -83,14 +86,14 @@ void cursor_image_reload(cursor_image *image)
 void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape)
 {
     image->core_shape = shape;
-    if (!image->client_mode) {
+    if (!image->client_mode && !drag_active(image)) {
         apply_core_shape(image);
     }
 }
 
 void cursor_image_use_core(cursor_image *image)
 {
-    if (image->client_mode) {
+    if (image->client_mode && !drag_active(image)) {
         image->client_mode = false;
         apply_core_shape(image);
     }
@@ -153,7 +156,8 @@ static void handle_request_set_cursor(struct wl_listener *listener, void *data)
 {
     cursor_image *image = wl_container_of(listener, image, request_set_cursor);
     const struct wlr_seat_pointer_request_set_cursor_event *event = data;
-    if (client_is_focused(image, event->seat_client)) {
+    if (accepts_request(image, event->seat_client)) {
+        image->client_mode = true;
         wlr_cursor_set_surface(image->seat->cursor, event->surface, event->hotspot_x,
                                event->hotspot_y);
     }
@@ -163,14 +167,28 @@ static void handle_request_set_shape(struct wl_listener *listener, void *data)
 {
     cursor_image *image = wl_container_of(listener, image, request_set_shape);
     const struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
-    if (client_is_focused(image, event->seat_client) && image->xcursors != NULL) {
+    if (accepts_request(image, event->seat_client) && image->xcursors != NULL) {
+        image->client_mode = true;
         wlr_cursor_set_xcursor(image->seat->cursor, image->xcursors,
                                wlr_cursor_shape_v1_name(event->shape));
     }
 }
 
-static bool client_is_focused(const cursor_image *image, struct wlr_seat_client *client)
+static bool accepts_request(const cursor_image *image, struct wlr_seat_client *client)
 {
-    return image->client_mode &&
-           image->seat->wlr_seat->pointer_state.focused_client == client;
+    const struct wlr_seat *wlr_seat = image->seat->wlr_seat;
+    const struct wlr_drag *drag = wlr_seat->drag;
+    cursor_request request = {
+        .requester = client,
+        .pointer_focus = wlr_seat->pointer_state.focused_client,
+        .drag_source = drag != NULL ? drag->seat_client : NULL,
+        .drag_active = drag_active(image),
+        .client_mode = image->client_mode,
+    };
+    return cursor_owner_accepts(&request);
+}
+
+static bool drag_active(const cursor_image *image)
+{
+    return image->seat->wlr_seat->drag != NULL;
 }

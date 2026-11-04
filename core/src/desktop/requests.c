@@ -5,6 +5,7 @@
 #include "placement.h"
 #include "present.h"
 #include "size_hints.h"
+#include "states.h"
 #include "window_ops.h"
 
 static wm_part part_for_edges(uint32_t edges);
@@ -49,6 +50,18 @@ void wm_request_configure(wm_desktop *desktop, wm_window *window, const wm_rect 
 void wm_request_close(wm_desktop *desktop, wm_window *window)
 {
     window_ops_close(desktop, window);
+    present_flush(desktop);
+}
+
+void wm_request_workspace(wm_desktop *desktop, wm_window *window, int workspace)
+{
+    if (workspace < 0 || workspace >= desktop->workspaces.count) {
+        return;
+    }
+    if (window_is_sticky(window)) {
+        states_unstick(desktop, window);
+    }
+    window_ops_send_to_workspace(desktop, window, workspace);
     present_flush(desktop);
 }
 

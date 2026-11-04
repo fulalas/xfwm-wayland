@@ -1,9 +1,11 @@
+#include "foreign_toplevel.h"
 #include "idle.h"
 #include "osd.h"
 #include "seat.h"
 #include "server.h"
 #include "view.h"
 #include "workspace_protocol.h"
+#include "xwayland.h"
 #include "zoom.h"
 
 static void present_window(void *self, void *window, const wm_window_view *state);
@@ -63,6 +65,12 @@ static void present_workspaces(void *self, const wm_workspaces_view *view)
 {
     compositor *c = self;
     workspace_protocol_publish(c->workspaces, view);
+    if (c->xwayland != NULL) {
+        xwayland_shell_publish_workspaces(c->xwayland, view);
+    }
+    if (c->foreign_toplevels != NULL) {
+        foreign_toplevels_sync_all(c->foreign_toplevels);
+    }
 }
 
 static void present_cycle(void *self, const wm_cycle_view *view)

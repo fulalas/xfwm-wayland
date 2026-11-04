@@ -24,7 +24,7 @@ static void impl_close(void *self);
 static pid_t impl_pid(void *self);
 static void impl_focus(void *self);
 static void impl_unfocus(void *self);
-static cairo_surface_t *impl_icon(void *self);
+static icon_slot *impl_icon(void *self);
 
 static const view_impl xwayland_view_impl = {
     .surface = impl_surface,
@@ -243,8 +243,8 @@ static void impl_unfocus(void *self)
     wlr_xwayland_surface_activate(xv->xsurface, false);
 }
 
-static cairo_surface_t *impl_icon(void *self)
+static icon_slot *impl_icon(void *self)
 {
     xwayland_view *xv = self;
-    return icon_slot_surface(xv->icon);
+    return xv->icon;
 }

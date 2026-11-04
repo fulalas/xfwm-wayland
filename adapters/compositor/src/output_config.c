@@ -4,9 +4,11 @@
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/util/log.h>
 
+#include "displays.h"
 #include "listener.h"
 #include "output.h"
 #include "output_config.h"
+#include "xfce_output_heads.h"
 
 struct output_config {
     compositor *server;
@@ -64,7 +66,13 @@ static void handle_apply(struct wl_listener *listener, void *data)
 {
     output_config *c = wl_container_of(listener, c, apply);
     struct wlr_output_configuration_v1 *config = data;
-    answer(config, output_config_commit(c->server, config));
+    struct wl_client *client = config->resource != NULL ? wl_resource_get_client(config->resource)
+                                                        : NULL;
+    bool committed = output_config_commit(c->server, config);
+    answer(config, committed);
+    if (committed) {
+        displays_configured(c->server->displays, client);
+    }
     outputs_mark_changed(c->server->outputs);
     outputs_schedule_frames(c->server->outputs);
     output_config_schedule_publish(c);
@@ -116,6 +124,7 @@ static void publish(output_config *c)
         describe_output(config, outputs_known_at(server->outputs, i));
     }
     wlr_output_manager_v1_set_configuration(server->globals.output_manager, config);
+    xfce_output_heads_sync(server->xfce_output_heads);
 }
 
 static void describe_output(struct wlr_output_configuration_v1 *config, output *o)

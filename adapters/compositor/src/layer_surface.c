@@ -107,6 +107,7 @@ static void handle_unmap(struct wl_listener *listener, void *data)
     (void) data;
     layer_surface *ls = wl_container_of(listener, ls, unmap);
     compositor *server = ls->shell->server;
+    shadow_hide(ls->shadow);
     seat_surface_gone(server->seat, ls->wlr->surface);
     outputs_schedule_arrange(server->outputs);
 }

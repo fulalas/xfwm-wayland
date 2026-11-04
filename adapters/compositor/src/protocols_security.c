@@ -24,6 +24,11 @@ static const char *const privileged_interfaces[] = {
     "ext_output_image_capture_source_manager_v1",
     "ext_foreign_toplevel_image_capture_source_manager_v1",
     "ext_image_copy_capture_manager_v1",
+    "xfce_foreign_toplevel_manager_private_v1",
+    "xfce_accessibility_manager_private_v1",
+    "xfce_input_device_list_private_v1",
+    "xfce_output_manager_private_v1",
+    "xfce_output_management_manager_private_v1",
 };
 
 static bool filter_global(const struct wl_client *client, const struct wl_global *global,

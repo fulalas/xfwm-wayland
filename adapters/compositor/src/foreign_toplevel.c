@@ -4,6 +4,7 @@
 
 #include "foreign_toplevel_private.h"
 #include "listener.h"
+#include "xfce_toplevel.h"
 
 static void handle_mapped(struct wl_listener *listener, void *data);
 static void handle_changed(struct wl_listener *listener, void *data);
@@ -19,6 +20,7 @@ foreign_toplevels *foreign_toplevels_create(compositor *server)
         return NULL;
     }
     t->server = server;
+    t->xfce = xfce_toplevels_create(server);
     wl_list_init(&t->entries);
     view_signals *events = &server->view_events;
     listener_connect(&t->mapped, &events->mapped, handle_mapped);
@@ -39,7 +41,18 @@ void foreign_toplevels_destroy(foreign_toplevels *t)
     listener_disconnect(&t->changed);
     listener_disconnect(&t->unmapped);
     listener_disconnect(&t->layout_change);
+    if (t->xfce != NULL) {
+        xfce_toplevels_destroy(t->xfce);
+    }
     free(t);
+}
+
+void foreign_toplevels_sync_all(foreign_toplevels *t)
+{
+    toplevel_entry *entry;
+    wl_list_for_each(entry, &t->entries, link) {
+        toplevel_entry_sync(entry);
+    }
 }
 
 view *foreign_toplevel_ext_view(const struct wlr_ext_foreign_toplevel_handle_v1 *handle)
@@ -68,6 +81,7 @@ static void handle_mapped(struct wl_listener *listener, void *data)
     }
     entry->owner = t;
     entry->view = data;
+    wl_list_init(&entry->xfce_handles);
     wl_list_insert(t->entries.prev, &entry->link);
     toplevel_entry_sync(entry);
     sync_children(t, entry->view);
@@ -95,10 +109,7 @@ static void handle_layout_change(struct wl_listener *listener, void *data)
 {
     (void) data;
     foreign_toplevels *t = wl_container_of(listener, t, layout_change);
-    toplevel_entry *entry;
-    wl_list_for_each(entry, &t->entries, link) {
-        toplevel_entry_sync(entry);
-    }
+    foreign_toplevels_sync_all(t);
 }
 
 static void sync_children(foreign_toplevels *t, const view *parent)

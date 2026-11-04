@@ -8,6 +8,8 @@ typedef enum channel_id {
     CHANNEL_KEYBOARD_LAYOUT,
     CHANNEL_KEYBOARDS,
     CHANNEL_POINTERS,
+    CHANNEL_DISPLAYS,
+    CHANNEL_ACCESSIBILITY,
     CHANNEL_COUNT,
 } channel_id;
 
@@ -16,6 +18,8 @@ enum change_flag {
     CHANGE_SHORTCUTS = 1 << 1,
     CHANGE_INPUT = 1 << 2,
     CHANGE_THEME = 1 << 3,
+    CHANGE_DISPLAYS = 1 << 4,
+    CHANGE_X11_SETTINGS = 1 << 5,
 };
 
 const char *channel_name(channel_id id);

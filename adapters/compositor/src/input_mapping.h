@@ -19,6 +19,7 @@ uint32_t input_mapping_keysym(uint32_t level0_keysym);
 unsigned input_mapping_vt(const key_chord *chord);
 uint32_t input_mapping_button(uint32_t linux_button);
 axis_steps input_mapping_axis(int32_t remainder, int32_t value120);
+int32_t input_mapping_axis_value120(int32_t value120, double delta);
 uint32_t input_mapping_edges_from_wlr(uint32_t wlr_edges);
 uint32_t input_mapping_edges_to_wlr(uint32_t wm_edges);
 

@@ -4,6 +4,7 @@
 
 #include "foreign_toplevel_private.h"
 #include "output.h"
+#include "xfce_toplevel.h"
 
 typedef struct state_flag {
     uint32_t bit;
@@ -44,10 +45,12 @@ void toplevel_entry_sync(toplevel_entry *entry)
     leave_outputs(entry);
     enter_outputs(entry);
     sync_parent(entry);
+    xfce_toplevels_publish(entry);
 }
 
 void toplevel_entry_hide(toplevel_entry *entry)
 {
+    xfce_toplevels_detach(entry);
     toplevel_requests_disconnect(entry);
     if (entry->wlr != NULL) {
         wlr_foreign_toplevel_handle_v1_destroy(entry->wlr);

@@ -65,6 +65,40 @@ static void test_appearance_presents_each_window_once(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_workspace_request_moves_window(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    wm_window *window = fake_map(desktop, 1, small);
+    wm_request_workspace(desktop, window, 2);
+    CHECK_INT_EQ(2, wm_window_current_view(window).workspace);
+    CHECK(!wm_window_current_view(window).visible);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_workspace_request_unsticks_window(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    wm_window *window = fake_map(desktop, 1, small);
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_STICKY, 0});
+    wm_request_workspace(desktop, window, 1);
+    CHECK(!wm_window_current_view(window).sticky);
+    CHECK_INT_EQ(1, wm_window_current_view(window).workspace);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_workspace_request_out_of_range_is_ignored(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    wm_window *window = fake_map(desktop, 1, small);
+    wm_request_workspace(desktop, window, 99);
+    CHECK_INT_EQ(0, wm_window_current_view(window).workspace);
+    CHECK(wm_window_current_view(window).visible);
+    wm_desktop_destroy(desktop);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -72,6 +106,10 @@ int main(void)
         {"refused_maximize_still_answers", test_refused_maximize_still_answers},
         {"maximize_directions_are_absolute", test_maximize_directions_are_absolute},
         {"appearance_presents_each_window_once", test_appearance_presents_each_window_once},
+        {"workspace_request_moves_window", test_workspace_request_moves_window},
+        {"workspace_request_unsticks_window", test_workspace_request_unsticks_window},
+        {"workspace_request_out_of_range_is_ignored",
+         test_workspace_request_out_of_range_is_ignored},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

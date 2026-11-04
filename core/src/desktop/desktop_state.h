@@ -35,6 +35,7 @@ struct wm_desktop {
     cycle_session cycle;
     menu_session menu;
     zoom_state zoom;
+    wm_window *highlighted;
     wm_point pointer;
     uint32_t modifiers;
     bool has_scrolled;

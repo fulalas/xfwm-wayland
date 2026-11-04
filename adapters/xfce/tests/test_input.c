@@ -12,10 +12,10 @@ static void test_device_prefix_mangling(void)
 {
     char *prefix = input_device_property_prefix("SynPS/2 Synaptics TouchPad");
 
-    CHECK(strcmp(prefix, "/SynPS_2_Synaptics_TouchPad/") == 0);
+    CHECK(strcmp(prefix, "/SynPS2_Synaptics_TouchPad/") == 0);
     g_free(prefix);
     prefix = input_device_property_prefix("Logitech-USB_Mouse (2.4G)");
-    CHECK(strcmp(prefix, "/Logitech-USB_Mouse__2_4G_/") == 0);
+    CHECK(strcmp(prefix, "/Logitech-USB_Mouse_24G/") == 0);
     g_free(prefix);
 }
 

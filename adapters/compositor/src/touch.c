@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_touch.h>
 
+#include "absolute_input.h"
 #include "listener.h"
 #include "pointer_target.h"
 #include "seat_private.h"
@@ -160,7 +161,9 @@ static layout_point to_layout(const touch_input *touch, struct wlr_touch *device
                               layout_point_fraction where)
 {
     layout_point point = {0};
-    wlr_cursor_absolute_to_layout_coords(touch->seat->cursor, &device->base, where.x, where.y,
+    input_point mapped = absolute_input_position(touch->seat->absolute, &device->base,
+                                                 (input_point){where.x, where.y});
+    wlr_cursor_absolute_to_layout_coords(touch->seat->cursor, &device->base, mapped.x, mapped.y,
                                          &point.x, &point.y);
     return point;
 }

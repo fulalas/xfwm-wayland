@@ -1,17 +1,21 @@
+#include <stdlib.h>
 #include "xfce/environment.h"
 
 #include <glib.h>
 
+#include "accessibility.h"
 #include "channels.h"
 #include "dispatcher.h"
+#include "display_store.h"
 #include "gtk_bridge.h"
 #include "input_prefs.h"
+#include "logout.h"
 #include "session_export.h"
+#include "session_launch.h"
 #include "settings.h"
 #include "shortcuts.h"
 #include "spawn.h"
-
-static const char logout_command[] = "xfce4-session-logout";
+#include "x11_settings.h"
 
 struct xfce_environment {
     xfce_listener listener;
@@ -19,6 +23,7 @@ struct xfce_environment {
     dispatcher *dispatcher;
     keymap_store *keymap;
     gtk_bridge *bridge;
+    session_launch *session;
     char *theme_name;
     char *title_font;
 };
@@ -29,13 +34,18 @@ static void on_channel_changed(void *self, channel_id id, const char *property);
 static void on_dispatch(void *self, unsigned flags);
 static void notify_settings(xfce_environment *environment, unsigned flags);
 static void on_style_changed(void *self);
+static void on_session_ended(void *self);
 static void notify(xfce_environment *environment, void (*callback)(void *self));
 static keyboard_prefs keyboard_prefs_of(void *self);
 static pointer_prefs pointer_prefs_of(void *self, const char *device_name);
 static cursor_prefs cursor_prefs_of(void *self);
+static accessibility_prefs accessibility_prefs_of(void *self);
 static void lookup_icon(void *self, const icon_request *request);
 static void cancel_icon_lookups(void *self, void *context);
 static void ask_terminate(void *self, const terminate_request *request);
+static void x11_settings_of(void *self, const x11_setting_sink *sink);
+static display_plan load_displays(void *self, const display_set *connected);
+static void save_displays(void *self, const display_set *current);
 
 xfce_environment *xfce_environment_create(const xfce_listener *listener)
 {
@@ -55,6 +65,7 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
 
 void xfce_environment_destroy(xfce_environment *environment)
 {
+    session_launch_destroy(environment->session);
     gtk_bridge_destroy(environment->bridge);
     dispatcher_destroy(environment->dispatcher);
     channels_destroy(environment->channels);
@@ -102,9 +113,13 @@ compositor_services xfce_environment_services(xfce_environment *environment)
         .keyboard_prefs = keyboard_prefs_of,
         .pointer_prefs = pointer_prefs_of,
         .cursor_prefs = cursor_prefs_of,
+        .accessibility_prefs = accessibility_prefs_of,
         .lookup_icon = lookup_icon,
         .cancel_icon_lookups = cancel_icon_lookups,
         .ask_terminate = ask_terminate,
+        .load_displays = load_displays,
+        .save_displays = save_displays,
+        .x11_settings = x11_settings_of,
     };
 }
 
@@ -121,7 +136,8 @@ void xfce_environment_spawn(xfce_environment *environment, const char *command)
 
 void xfce_environment_logout(xfce_environment *environment)
 {
-    xfce_environment_spawn(environment, logout_command);
+    (void) environment;
+    logout_request();
 }
 
 void xfce_environment_export_session(xfce_environment *environment,
@@ -129,6 +145,16 @@ void xfce_environment_export_session(xfce_environment *environment,
 {
     (void) environment;
     session_export(display);
+}
+
+void xfce_environment_start_session(xfce_environment *environment,
+                                    const xfce_session_display *display, const char *command)
+{
+    session_launch_listener listener = { .self = environment, .ended = on_session_ended };
+
+    session_export(display);
+    session_launch_destroy(environment->session);
+    environment->session = session_launch_start(command, &listener);
 }
 
 static void refresh_settings(xfce_environment *environment)
@@ -174,6 +200,12 @@ static void on_dispatch(void *self, unsigned flags)
     if (flags & CHANGE_INPUT) {
         notify(environment, environment->listener.input_changed);
     }
+    if (flags & CHANGE_X11_SETTINGS) {
+        notify(environment, environment->listener.x11_settings_changed);
+    }
+    if (flags & CHANGE_DISPLAYS) {
+        notify(environment, environment->listener.displays_changed);
+    }
 }
 
 static void notify_settings(xfce_environment *environment, unsigned flags)
@@ -190,6 +222,13 @@ static void on_style_changed(void *self)
     xfce_environment *environment = self;
 
     notify(environment, environment->listener.style_changed);
+}
+
+static void on_session_ended(void *self)
+{
+    xfce_environment *environment = self;
+
+    notify(environment, environment->listener.session_ended);
 }
 
 static void notify(xfce_environment *environment, void (*callback)(void *self))
@@ -220,6 +259,13 @@ static cursor_prefs cursor_prefs_of(void *self)
     return input_prefs_cursor(environment->channels);
 }
 
+static accessibility_prefs accessibility_prefs_of(void *self)
+{
+    xfce_environment *environment = self;
+
+    return accessibility_prefs_load(environment->channels);
+}
+
 static void lookup_icon(void *self, const icon_request *request)
 {
     xfce_environment *environment = self;
@@ -239,4 +285,30 @@ static void ask_terminate(void *self, const terminate_request *request)
     xfce_environment *environment = self;
 
     gtk_bridge_ask_terminate(environment->bridge, request);
+}
+
+static display_plan load_displays(void *self, const display_set *connected)
+{
+    xfce_environment *environment = self;
+
+    return display_store_load(channels_get(environment->channels, CHANNEL_DISPLAYS), connected);
+}
+
+static void save_displays(void *self, const display_set *current)
+{
+    xfce_environment *environment = self;
+
+    display_store_save(channels_get(environment->channels, CHANNEL_DISPLAYS), current);
+}
+
+static void x11_settings_of(void *self, const x11_setting_sink *sink)
+{
+    xfce_environment *environment = self;
+
+    x11_settings_collect(channels_get(environment->channels, CHANNEL_XSETTINGS), sink);
+}
+
+int xfce_environment_session_exit_code(const xfce_environment *environment)
+{
+    return environment->session ? session_launch_exit_code(environment->session) : EXIT_SUCCESS;
 }

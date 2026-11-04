@@ -8,9 +8,11 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/util/log.h>
 
+#include "absolute_input.h"
 #include "input_mapping.h"
 #include "listener.h"
 #include "lock.h"
+#include "pointer_prefs_compare.h"
 #include "seat_private.h"
 
 enum {
@@ -36,6 +38,7 @@ static void add_device(seat *seat, struct wlr_input_device *device);
 static input_device *track_device(seat *seat, struct wlr_input_device *device);
 static void free_device(input_device *device);
 static void configure_pointer(input_device *device);
+static bool takes_pointer_prefs(const struct wlr_input_device *device);
 static void update_capabilities(seat *seat);
 static uint32_t monotonic_ms(void);
 
@@ -91,7 +94,7 @@ void seat_reload_prefs(seat *s)
     keyboards_reload(s->keyboards);
     input_device *device;
     wl_list_for_each(device, &s->devices, link) {
-        if (device->device->type == WLR_INPUT_DEVICE_POINTER) {
+        if (takes_pointer_prefs(device->device)) {
             configure_pointer(device);
         }
     }
@@ -151,14 +154,16 @@ static bool seat_create_modules(seat *s)
     s->shortcuts = shortcuts_create(s);
     s->pointer = pointer_input_create(s);
     s->touch = touch_input_create(s);
+    s->absolute = absolute_input_create(&(absolute_places){s->cursor, s->server->layout});
     s->tablet = tablet_input_create(s);
     s->gestures = gestures_create(s);
     s->constraints = constraints_create(s);
     s->selection = selection_create(s);
     s->virtual_input = virtual_input_create(s);
     return s->image != NULL && s->keyboards != NULL && s->shortcuts != NULL &&
-           s->pointer != NULL && s->touch != NULL && s->tablet != NULL && s->gestures != NULL &&
-           s->constraints != NULL && s->selection != NULL && s->virtual_input != NULL;
+           s->pointer != NULL && s->touch != NULL && s->tablet != NULL && s->absolute != NULL &&
+           s->gestures != NULL && s->constraints != NULL && s->selection != NULL &&
+           s->virtual_input != NULL;
 }
 
 static void seat_destroy_modules(seat *s)
@@ -191,6 +196,9 @@ static void destroy_pointer_modules(seat *s)
     }
     if (s->tablet != NULL) {
         tablet_input_destroy(s->tablet);
+    }
+    if (s->absolute != NULL) {
+        absolute_input_destroy(s->absolute);
     }
     if (s->touch != NULL) {
         touch_input_destroy(s->touch);
@@ -230,7 +238,7 @@ static void add_device(seat *s, struct wlr_input_device *device)
         return;
     }
     input_device *tracked = track_device(s, device);
-    if (tracked != NULL && device->type == WLR_INPUT_DEVICE_POINTER) {
+    if (tracked != NULL && takes_pointer_prefs(device)) {
         configure_pointer(tracked);
     }
 }
@@ -266,6 +274,13 @@ static void configure_pointer(input_device *device)
     device->applied_prefs = prefs;
     device->configured = true;
     libinput_config_apply(device->device, &prefs);
+    absolute_input_configure(device->seat->absolute, device->device, &prefs.absolute);
+}
+
+static bool takes_pointer_prefs(const struct wlr_input_device *device)
+{
+    return device->type == WLR_INPUT_DEVICE_POINTER || device->type == WLR_INPUT_DEVICE_TOUCH ||
+           device->type == WLR_INPUT_DEVICE_TABLET;
 }
 
 static void update_capabilities(seat *s)

@@ -25,6 +25,7 @@ wm_desktop *wm_desktop_create(const wm_ports *ports, const wm_config *config)
     desktop->ports = *ports;
     desktop->config = *config;
     desktop->workspaces.count = 1;
+    desktop->workspaces.ids[0] = desktop->workspaces.next_id++;
     workspaces_set_count(desktop, config->workspaces.count);
     zoom_init(desktop);
     present_mark_workspaces(desktop);

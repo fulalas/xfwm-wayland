@@ -3,6 +3,7 @@
 #include "layer_shell.h"
 #include "lock.h"
 #include "output_private.h"
+#include "xfce_outputs.h"
 #include "xwayland.h"
 
 static bool output_update_usable(output *output);
@@ -23,6 +24,10 @@ void outputs_arrange(outputs *outs)
     update_max_scale(outs);
     if (changed) {
         wm_desktop_outputs_changed(server->desktop);
+    }
+    xfce_outputs_refresh(server->xfce_outputs);
+    if (server->xwayland != NULL) {
+        xwayland_shell_outputs_arranged(server->xwayland);
     }
 }
 

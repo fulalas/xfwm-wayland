@@ -155,9 +155,11 @@ static void test_change_flags(void)
     CHECK_INT_EQ(CHANGE_SETTINGS, change_flags_for(CHANNEL_XFWM4, "/general/theme_extra"));
     CHECK_INT_EQ(CHANGE_SETTINGS, change_flags_for(CHANNEL_XFWM4, "/general/button_layout"));
     CHECK_INT_EQ(0, change_flags_for(CHANNEL_XFWM4, "/other"));
-    CHECK_INT_EQ(CHANGE_SETTINGS, change_flags_for(CHANNEL_XSETTINGS, "/Net/DoubleClickTime"));
-    CHECK_INT_EQ(CHANGE_INPUT, change_flags_for(CHANNEL_XSETTINGS, "/Gtk/CursorThemeSize"));
-    CHECK_INT_EQ(0, change_flags_for(CHANNEL_XSETTINGS, "/Net/ThemeName"));
+    CHECK_INT_EQ(CHANGE_SETTINGS | CHANGE_X11_SETTINGS,
+                 change_flags_for(CHANNEL_XSETTINGS, "/Net/DoubleClickTime"));
+    CHECK_INT_EQ(CHANGE_INPUT | CHANGE_X11_SETTINGS,
+                 change_flags_for(CHANNEL_XSETTINGS, "/Gtk/CursorThemeSize"));
+    CHECK_INT_EQ(CHANGE_X11_SETTINGS, change_flags_for(CHANNEL_XSETTINGS, "/Net/ThemeName"));
     CHECK_INT_EQ(CHANGE_SHORTCUTS, change_flags_for(CHANNEL_SHORTCUTS, "/xfwm4/custom/<Alt>F4"));
     CHECK_INT_EQ(CHANGE_INPUT, change_flags_for(CHANNEL_POINTERS, "/Mouse/RightHanded"));
 }

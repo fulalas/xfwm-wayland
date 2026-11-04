@@ -11,6 +11,7 @@
 
 typedef struct app_options {
     bool show_version;
+    bool no_session;
     const char *startup_command;
 } app_options;
 
@@ -41,7 +42,9 @@ void app_reload_config(app *app);
 void app_reload_keymap(app *app);
 wm_commands app_commands(app *app);
 GSource *app_wayland_source_new(compositor *compositor);
-void app_export_session_environment(app *app);
-void app_run_startup_command(app *app);
+void app_start_session(app *app);
+void app_export_x11_display(app *app);
+GPid app_session_bus_start(void);
+void app_session_bus_stop(GPid bus);
 
 #endif

@@ -2,23 +2,33 @@
 
 #include <glib.h>
 
-#include "spawn.h"
+#include "session_vars.h"
 
-static const char *exported_variables[] = {
-    "WAYLAND_DISPLAY", "DISPLAY", "XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", NULL,
-};
+static const char activation_tool[] = "dbus-update-activation-environment";
 
 static void set_display_variables(const xfce_session_display *display);
-static void update_activation_environment(void);
+static void set_missing_defaults(void);
+static const char *lookup_variable(void *self, const char *name);
 
 void session_export(const xfce_session_display *display)
 {
     set_display_variables(display);
     g_setenv("XDG_SESSION_TYPE", "wayland", TRUE);
-    if (!g_getenv("XDG_CURRENT_DESKTOP")) {
-        g_setenv("XDG_CURRENT_DESKTOP", "XFCE", TRUE);
+    set_missing_defaults();
+}
+
+char **session_export_activation_argv(void)
+{
+    session_lookup lookup = { .self = NULL, .get = lookup_variable };
+    gchar *tool = g_find_program_in_path(activation_tool);
+    char **argv;
+
+    if (!tool) {
+        return NULL;
     }
-    update_activation_environment();
+    argv = session_vars_activation_argv(tool, &lookup);
+    g_free(tool);
+    return argv;
 }
 
 static void set_display_variables(const xfce_session_display *display)
@@ -29,19 +39,15 @@ static void set_display_variables(const xfce_session_display *display)
     }
 }
 
-static void update_activation_environment(void)
+static void set_missing_defaults(void)
 {
-    gchar *tool = g_find_program_in_path("dbus-update-activation-environment");
-    gchar *variables;
-    gchar *command;
-
-    if (!tool) {
-        return;
+    for (size_t i = 0; session_vars_defaults[i].name; i++) {
+        g_setenv(session_vars_defaults[i].name, session_vars_defaults[i].value, FALSE);
     }
-    variables = g_strjoinv(" ", (gchar **) exported_variables);
-    command = g_strdup_printf("%s --systemd %s", tool, variables);
-    spawn_command(command);
-    g_free(command);
-    g_free(variables);
-    g_free(tool);
+}
+
+static const char *lookup_variable(void *self, const char *name)
+{
+    (void) self;
+    return g_getenv(name);
 }

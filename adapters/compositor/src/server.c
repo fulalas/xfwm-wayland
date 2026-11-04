@@ -6,6 +6,8 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 
+#include "device_list.h"
+#include "displays.h"
 #include "listener.h"
 #include "osd.h"
 #include "output.h"
@@ -70,6 +72,7 @@ bool compositor_start(compositor *c, wm_desktop *desktop)
         wlr_log(WLR_ERROR, "cannot start the backend");
         return false;
     }
+    displays_start(c->displays);
     outputs_schedule_arrange(c->outputs);
     if (c->listener != NULL && c->listener->started != NULL) {
         c->listener->started(c->listener->self);
@@ -90,9 +93,17 @@ void compositor_appearance_changed(compositor *c)
     osd_repaint(c->osd);
 }
 
+void compositor_display_prefs_changed(compositor *c)
+{
+    displays_reload_primary(c->displays);
+}
+
 void compositor_input_prefs_changed(compositor *c)
 {
     seat_reload_prefs(c->seat);
+    if (c->device_list != NULL) {
+        device_list_refresh(c->device_list);
+    }
 }
 
 int compositor_event_fd(compositor *c)
@@ -144,7 +155,10 @@ static bool painter_is_complete(const compositor_painter *p)
 static bool services_are_complete(const compositor_services *s)
 {
     return s->keyboard_prefs != NULL && s->pointer_prefs != NULL && s->cursor_prefs != NULL &&
-           s->lookup_icon != NULL && s->cancel_icon_lookups != NULL && s->ask_terminate != NULL;
+           s->accessibility_prefs != NULL &&
+           s->lookup_icon != NULL && s->cancel_icon_lookups != NULL && s->ask_terminate != NULL &&
+           s->load_displays != NULL && s->save_displays != NULL &&
+           s->x11_settings != NULL;
 }
 
 static void init_lists(compositor *c)

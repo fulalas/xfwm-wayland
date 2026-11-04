@@ -4,6 +4,7 @@
 
 #include "cycle.h"
 #include "desktop_state.h"
+#include "highlight.h"
 #include "menu.h"
 #include "timers.h"
 #include "view.h"
@@ -27,6 +28,7 @@ void present_flush(wm_desktop *desktop)
     flush_workspaces(desktop);
     cycle_present(desktop);
     menu_present(desktop);
+    highlight_present(desktop);
     flush_outline(desktop);
     zoom_present(desktop);
     flush_cursor(desktop);

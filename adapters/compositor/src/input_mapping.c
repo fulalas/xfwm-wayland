@@ -1,3 +1,4 @@
+#include <math.h>
 #include <linux/input-event-codes.h>
 #include <stddef.h>
 #include <wlr/types/wlr_keyboard.h>
@@ -10,6 +11,7 @@
 
 enum {
     WHEEL_STEP_V120 = 120,
+    SCROLL_DISTANCE_PER_STEP = 15,
     VT_COUNT = 12,
 };
 
@@ -83,6 +85,14 @@ axis_steps input_mapping_axis(int32_t remainder, int32_t value120)
         .steps = total / WHEEL_STEP_V120,
     };
     return result;
+}
+
+int32_t input_mapping_axis_value120(int32_t value120, double delta)
+{
+    if (value120 != 0) {
+        return value120;
+    }
+    return (int32_t) lround(delta * WHEEL_STEP_V120 / SCROLL_DISTANCE_PER_STEP);
 }
 
 uint32_t input_mapping_edges_from_wlr(uint32_t wlr_edges)

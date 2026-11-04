@@ -14,6 +14,7 @@ typedef struct keyboards keyboards;
 typedef struct pointer_input pointer_input;
 typedef struct touch_input touch_input;
 typedef struct tablet_input tablet_input;
+typedef struct absolute_input absolute_input;
 typedef struct gestures gestures;
 typedef struct constraints constraints;
 typedef struct selection selection;
@@ -52,6 +53,7 @@ struct seat {
     pointer_input *pointer;
     touch_input *touch;
     tablet_input *tablet;
+    absolute_input *absolute;
     gestures *gestures;
     constraints *constraints;
     selection *selection;
@@ -74,7 +76,6 @@ void shortcuts_destroy(shortcuts *shortcuts);
 void shortcuts_focus_changed(shortcuts *shortcuts, struct wlr_surface *surface);
 bool shortcuts_inhibited(const shortcuts *shortcuts, const struct wlr_surface *surface);
 void libinput_config_apply(struct wlr_input_device *device, const pointer_prefs *prefs);
-bool pointer_prefs_equal(const pointer_prefs *a, const pointer_prefs *b);
 
 pointer_input *pointer_input_create(seat *seat);
 void pointer_input_destroy(pointer_input *pointer);

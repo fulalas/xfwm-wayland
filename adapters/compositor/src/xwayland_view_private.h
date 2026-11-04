@@ -6,6 +6,8 @@
 #include "icon_slot.h"
 #include "unmanaged.h"
 #include "view.h"
+#include "x11_gravity.h"
+#include "xwayland_window_props.h"
 #include "xwayland_view.h"
 
 typedef struct xwayland_requests {
@@ -55,6 +57,7 @@ struct xwayland_view {
     struct wl_listener map;
     struct wl_listener unmap;
     struct wl_listener commit;
+    x11_window_props published;
 };
 
 void xwayland_requests_connect(xwayland_view *view);
@@ -73,5 +76,8 @@ void xwayland_view_fetch_icon(xwayland_view *view);
 strut xwayland_view_strut(const xwayland_view *view);
 void xwayland_view_send_states(void *self, const wm_window_view *state);
 void xwayland_view_settle_if_current(xwayland_view *view);
+int xwayland_view_gravity(const xwayland_view *view);
+wm_rect xwayland_view_requested_rect(const xwayland_view *view, const x11_configure *request);
+wm_point xwayland_view_initial_position(const xwayland_view *view);
 
 #endif

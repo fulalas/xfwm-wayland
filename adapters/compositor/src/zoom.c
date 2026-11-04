@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <wlr/render/drm_syncobj.h>
 #include <wlr/render/swapchain.h>
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_damage_ring.h>
@@ -58,6 +59,9 @@ void zoom_release(output *o)
         wlr_swapchain_destroy(target->swapchain);
         target->swapchain = NULL;
     }
+    wlr_drm_syncobj_timeline_unref(target->timeline);
+    target->timeline = NULL;
+    target->point = 0;
     if (target->cursor_locked) {
         wlr_output_lock_software_cursors(o->wlr_output, false);
         target->cursor_locked = false;

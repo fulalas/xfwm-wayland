@@ -13,6 +13,9 @@ desktop_tests = [
   'misc',
   'window_info',
   'requests',
+  'window_actions',
+  'pager',
+  'restore',
 ]
 
 foreach name : desktop_tests

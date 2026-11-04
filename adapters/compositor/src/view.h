@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 
+#include "icon_slot.h"
 #include "server.h"
 #include "wm/desktop.h"
 
@@ -22,7 +23,7 @@ typedef struct view_impl {
     void (*send_states)(void *self, const wm_window_view *state);
     void (*focus)(void *self);
     void (*unfocus)(void *self);
-    cairo_surface_t *(*icon)(void *self);
+    icon_slot *(*icon)(void *self);
 } view_impl;
 
 view *view_create(compositor *server, const view_impl *impl, void *self);
@@ -34,6 +35,7 @@ struct wlr_scene_tree *view_popup_tree(const view *view);
 wm_window *view_window(const view *view);
 struct wlr_surface *view_surface(const view *view);
 cairo_surface_t *view_icon(const view *view);
+const icon_slot *view_icon_slot(const view *view);
 const char *view_title(const view *view);
 wm_rect view_client_rect(const view *view);
 wm_rect view_output_area(const view *view);

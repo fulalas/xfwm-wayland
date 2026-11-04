@@ -32,6 +32,10 @@ static void update_shadow(popup *popup);
 
 void popup_create(compositor *server, struct wlr_xdg_popup *xdg_popup, const popup_parent *parent)
 {
+    if (parent->tree == NULL) {
+        wlr_log(WLR_ERROR, "cannot show a popup whose parent is gone");
+        return;
+    }
     popup *p = calloc(1, sizeof(*p));
     if (p == NULL) {
         return;
@@ -108,6 +112,7 @@ static void handle_wrap_destroy(struct wl_listener *listener, void *data)
     listener_disconnect(&p->wrap_destroy);
     p->wrap = NULL;
     p->content = NULL;
+    p->as_parent.tree = NULL;
 }
 
 static void unconstrain(popup *p)

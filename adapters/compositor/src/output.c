@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 
+#include "displays.h"
 #include "layer_shell.h"
 #include "listener.h"
 #include "output_private.h"
@@ -16,8 +17,6 @@ static void handle_frame(struct wl_listener *listener, void *data);
 static void handle_request_state(struct wl_listener *listener, void *data);
 static void handle_destroy(struct wl_listener *listener, void *data);
 static void handle_arrange_idle(void *data);
-static bool output_enable(struct wlr_output *wlr_output, wm_vblank_mode vblank_mode);
-static bool commit_enable_state(struct wlr_output *wlr_output, bool adaptive);
 static output *output_create(outputs *outputs, struct wlr_output *wlr_output);
 static void output_destroy(output *output);
 
@@ -128,15 +127,12 @@ static void handle_new_output(struct wl_listener *listener, void *data)
         wlr_log(WLR_ERROR, "cannot init rendering on output %s", wlr_output->name);
         return;
     }
-    if (!output_enable(wlr_output, server->config.compositing.vblank_mode)) {
-        wlr_log(WLR_ERROR, "cannot enable output %s", wlr_output->name);
-    }
     output *o = output_create(outs, wlr_output);
-    if (o == NULL || !output_attach_auto(o)) {
-        wlr_log(WLR_ERROR, "cannot add output %s to the layout", wlr_output->name);
+    if (o == NULL) {
+        wlr_log(WLR_ERROR, "cannot create output %s", wlr_output->name);
         return;
     }
-    outputs_mark_changed(outs);
+    displays_output_added(server->displays, o);
 }
 
 static void handle_layout_change(struct wl_listener *listener, void *data)
@@ -167,9 +163,10 @@ static void handle_destroy(struct wl_listener *listener, void *data)
 {
     (void) data;
     output *o = wl_container_of(listener, o, destroy);
-    outputs *outs = o->server->outputs;
+    compositor *server = o->server;
     output_destroy(o);
-    outputs_mark_changed(outs);
+    outputs_mark_changed(server->outputs);
+    displays_output_removed(server->displays);
 }
 
 static void handle_arrange_idle(void *data)
@@ -177,32 +174,6 @@ static void handle_arrange_idle(void *data)
     outputs *outs = data;
     outs->arrange_idle = NULL;
     outputs_arrange(outs);
-}
-
-static bool output_enable(struct wlr_output *wlr_output, wm_vblank_mode vblank_mode)
-{
-    bool adaptive = vblank_mode == WM_VBLANK_ADAPTIVE && wlr_output->adaptive_sync_supported;
-    if (adaptive && commit_enable_state(wlr_output, true)) {
-        return true;
-    }
-    return commit_enable_state(wlr_output, false);
-}
-
-static bool commit_enable_state(struct wlr_output *wlr_output, bool adaptive)
-{
-    struct wlr_output_state state;
-    wlr_output_state_init(&state);
-    wlr_output_state_set_enabled(&state, true);
-    struct wlr_output_mode *mode = wlr_output_preferred_mode(wlr_output);
-    if (mode != NULL) {
-        wlr_output_state_set_mode(&state, mode);
-    }
-    if (adaptive) {
-        wlr_output_state_set_adaptive_sync_enabled(&state, true);
-    }
-    bool ok = wlr_output_commit_state(wlr_output, &state);
-    wlr_output_state_finish(&state);
-    return ok;
 }
 
 static output *output_create(outputs *outs, struct wlr_output *wlr_output)
@@ -234,6 +205,7 @@ static void output_destroy(output *o)
     listener_disconnect(&o->destroy);
     listener_disconnect(&o->scene_destroy);
     o->wlr_output->data = NULL;
+    edid_release(&o->display.edid);
     wl_list_remove(&o->link);
     free(o);
 }

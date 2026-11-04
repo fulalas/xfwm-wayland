@@ -16,6 +16,7 @@ typedef struct compositor_listener {
     void (*started)(void *self);
     void (*output_scale_changed)(void *self, double max_scale);
     void (*quit_requested)(void *self);
+    void (*x11_display_changed)(void *self);
 } compositor_listener;
 
 typedef struct compositor_options {
@@ -41,6 +42,8 @@ void compositor_schedule_timer(compositor *compositor, uint32_t delay_ms);
 void compositor_set_config(compositor *compositor, const wm_config *config);
 void compositor_appearance_changed(compositor *compositor);
 void compositor_input_prefs_changed(compositor *compositor);
+void compositor_display_prefs_changed(compositor *compositor);
+void compositor_x11_settings_changed(compositor *compositor);
 
 int compositor_event_fd(compositor *compositor);
 void compositor_dispatch(compositor *compositor);

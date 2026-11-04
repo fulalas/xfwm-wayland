@@ -4,5 +4,6 @@
 #include "xfce/environment.h"
 
 void session_export(const xfce_session_display *display);
+char **session_export_activation_argv(void);
 
 #endif

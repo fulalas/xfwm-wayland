@@ -23,8 +23,8 @@ struct workspace_protocol {
     compositor *server;
     struct wlr_ext_workspace_group_handle_v1 *group;
     struct wlr_ext_workspace_handle_v1 *handles[WM_WORKSPACE_MAX];
+    unsigned ids[WM_WORKSPACE_MAX];
     int count;
-    unsigned next_id;
     struct wl_listener commit;
     struct wl_listener layout_change;
 };
@@ -37,8 +37,12 @@ static void switch_to(workspace_protocol *workspaces, int index);
 static void remove_at(workspace_protocol *workspaces, int index);
 static int index_of(const workspace_protocol *workspaces,
                     const struct wlr_ext_workspace_handle_v1 *handle);
-static void resize(workspace_protocol *workspaces, int count);
-static bool add_handle(workspace_protocol *workspaces);
+static void destroy_all(workspace_protocol *workspaces);
+static void reconcile(workspace_protocol *workspaces, const wm_workspaces_view *view);
+static struct wlr_ext_workspace_handle_v1 *take_handle(workspace_protocol *workspaces, unsigned id);
+static struct wlr_ext_workspace_handle_v1 *create_handle(workspace_protocol *workspaces,
+                                                         unsigned id);
+static void set_position(struct wlr_ext_workspace_handle_v1 *handle, int index);
 static void update_handle(workspace_protocol *workspaces, int index,
                           const wm_workspaces_view *view);
 
@@ -62,7 +66,7 @@ workspace_protocol *workspace_protocol_create(compositor *server)
 
 void workspace_protocol_destroy(workspace_protocol *w)
 {
-    resize(w, 0);
+    destroy_all(w);
     if (w->group != NULL) {
         wlr_ext_workspace_group_handle_v1_destroy(w->group);
     }
@@ -76,11 +80,27 @@ void workspace_protocol_publish(workspace_protocol *w, const wm_workspaces_view 
     if (w == NULL || w->group == NULL) {
         return;
     }
-    int count = view->count < WM_WORKSPACE_MAX ? view->count : WM_WORKSPACE_MAX;
-    resize(w, count);
+    reconcile(w, view);
     for (int i = 0; i < w->count; i++) {
         update_handle(w, i, view);
     }
+}
+
+struct wlr_ext_workspace_handle_v1 *workspace_protocol_handle(const workspace_protocol *w,
+                                                              unsigned id)
+{
+    for (int i = 0; w != NULL && i < w->count; i++) {
+        if (w->ids[i] == id) {
+            return w->handles[i];
+        }
+    }
+    return NULL;
+}
+
+int workspace_protocol_index(const workspace_protocol *w,
+                             const struct wlr_ext_workspace_handle_v1 *handle)
+{
+    return w != NULL ? index_of(w, handle) : -1;
 }
 
 static void handle_commit(struct wl_listener *listener, void *data)
@@ -150,37 +170,77 @@ static int index_of(const workspace_protocol *w, const struct wlr_ext_workspace_
     return -1;
 }
 
-static void resize(workspace_protocol *w, int count)
+static void destroy_all(workspace_protocol *w)
 {
-    while (w->count > count) {
-        w->count--;
-        wlr_ext_workspace_handle_v1_destroy(w->handles[w->count]);
-        w->handles[w->count] = NULL;
+    for (int i = 0; i < w->count; i++) {
+        if (w->handles[i] != NULL) {
+            wlr_ext_workspace_handle_v1_destroy(w->handles[i]);
+        }
     }
-    while (w->count < count && w->group != NULL && add_handle(w)) {
-    }
+    w->count = 0;
 }
 
-static bool add_handle(workspace_protocol *w)
+static void reconcile(workspace_protocol *w, const wm_workspaces_view *view)
 {
-    char id[WORKSPACE_TEXT_MAX];
-    snprintf(id, sizeof(id), "xfwm-workspace-%u", w->next_id++);
+    struct wlr_ext_workspace_handle_v1 *handles[WM_WORKSPACE_MAX] = {0};
+    int count = view->count < WM_WORKSPACE_MAX ? view->count : WM_WORKSPACE_MAX;
+    for (int i = 0; i < count; i++) {
+        handles[i] = take_handle(w, view->ids[i]);
+        if (handles[i] == NULL) {
+            handles[i] = create_handle(w, view->ids[i]);
+        }
+        if (handles[i] != NULL) {
+            set_position(handles[i], i);
+        }
+    }
+    destroy_all(w);
+    memcpy(w->handles, handles, sizeof(handles));
+    memcpy(w->ids, view->ids, sizeof(w->ids));
+    w->count = count;
+}
+
+static struct wlr_ext_workspace_handle_v1 *take_handle(workspace_protocol *w, unsigned id)
+{
+    for (int i = 0; i < w->count; i++) {
+        struct wlr_ext_workspace_handle_v1 *handle = w->handles[i];
+        if (handle != NULL && w->ids[i] == id) {
+            w->handles[i] = NULL;
+            return handle;
+        }
+    }
+    return NULL;
+}
+
+static struct wlr_ext_workspace_handle_v1 *create_handle(workspace_protocol *w, unsigned id)
+{
+    char name[WORKSPACE_TEXT_MAX];
+    snprintf(name, sizeof(name), "xfwm-workspace-%u", id);
     struct wlr_ext_workspace_handle_v1 *handle =
-        wlr_ext_workspace_handle_v1_create(w->group->manager, id, WORKSPACE_CAPS);
+        wlr_ext_workspace_handle_v1_create(w->group->manager, name, WORKSPACE_CAPS);
     if (handle == NULL) {
         wlr_log(WLR_ERROR, "cannot create a workspace handle");
-        return false;
+        return NULL;
     }
-    uint32_t coordinates[COORDINATE_COUNT] = {(uint32_t) w->count, 0};
     wlr_ext_workspace_handle_v1_set_group(handle, w->group);
+    return handle;
+}
+
+static void set_position(struct wlr_ext_workspace_handle_v1 *handle, int index)
+{
+    uint32_t coordinates[COORDINATE_COUNT] = {(uint32_t) index, 0};
+    const uint32_t *current = handle->coordinates.data;
+    if (handle->coordinates.size == sizeof(coordinates) && current[0] == coordinates[0]) {
+        return;
+    }
     wlr_ext_workspace_handle_v1_set_coordinates(handle, coordinates, COORDINATE_COUNT);
-    w->handles[w->count++] = handle;
-    return true;
 }
 
 static void update_handle(workspace_protocol *w, int index, const wm_workspaces_view *view)
 {
     struct wlr_ext_workspace_handle_v1 *handle = w->handles[index];
+    if (handle == NULL) {
+        return;
+    }
     char number[WORKSPACE_TEXT_MAX];
     snprintf(number, sizeof(number), "%d", index + 1);
     const char *name = view->names[index] != NULL ? view->names[index] : number;

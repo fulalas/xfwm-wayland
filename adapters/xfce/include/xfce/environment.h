@@ -57,6 +57,9 @@ typedef struct xfce_listener {
     void (*shortcuts_changed)(void *self);
     void (*input_changed)(void *self);
     void (*style_changed)(void *self);
+    void (*session_ended)(void *self);
+    void (*displays_changed)(void *self);
+    void (*x11_settings_changed)(void *self);
 } xfce_listener;
 
 typedef struct xfce_environment xfce_environment;
@@ -76,7 +79,10 @@ compositor_services xfce_environment_services(xfce_environment *environment);
 void xfce_environment_store_workspace_count(xfce_environment *environment, int count);
 void xfce_environment_spawn(xfce_environment *environment, const char *command);
 void xfce_environment_logout(xfce_environment *environment);
+int xfce_environment_session_exit_code(const xfce_environment *environment);
 void xfce_environment_export_session(xfce_environment *environment,
                                      const xfce_session_display *display);
+void xfce_environment_start_session(xfce_environment *environment,
+                                    const xfce_session_display *display, const char *command);
 
 #endif

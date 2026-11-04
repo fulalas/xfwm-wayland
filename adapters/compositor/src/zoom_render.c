@@ -1,5 +1,6 @@
 #include <pixman.h>
 #include <wlr/render/allocator.h>
+#include <wlr/render/drm_syncobj.h>
 #include <wlr/render/pass.h>
 #include <wlr/render/swapchain.h>
 #include <wlr/render/wlr_renderer.h>
@@ -10,9 +11,16 @@
 #include <wlr/util/log.h>
 
 #include "output_private.h"
+#include "render_sync.h"
 #include "zoom.h"
 #include "zoom_math.h"
 #include "zoom_private.h"
+
+typedef struct zoom_pass {
+    struct wlr_buffer *target;
+    struct wlr_drm_syncobj_timeline *wait_timeline;
+    uint64_t wait_point;
+} zoom_pass;
 
 static void sync_cursor_lock(output *output, bool locked);
 static bool render_frame(const zoom *zoom, output *output);
@@ -20,7 +28,11 @@ static bool ensure_swapchain(output *output);
 static bool primary_format_ready(output *output);
 static void keep_source(output *output, const struct wlr_output_state *state);
 static bool compose(const zoom *zoom, output *output, struct wlr_output_state *state);
-static bool draw_zoomed(const zoom *zoom, output *output, struct wlr_buffer *target);
+static bool draw_zoomed(const zoom *zoom, output *output, const zoom_pass *pass);
+static struct wlr_render_texture_options texture_options(const zoom *zoom, const output *output,
+                                                         const zoom_pass *pass);
+static struct wlr_buffer_pass_options signal_options(const output *output);
+static void hand_fence_to_output(const output *output, struct wlr_output_state *state);
 static zoom_box source_box(const zoom *zoom, const output *output);
 static void set_full_damage(struct wlr_output_state *state, const struct wlr_buffer *target);
 
@@ -82,6 +94,8 @@ static bool ensure_swapchain(output *o)
                                              wlr_output->height, &wlr_output->swapchain->format);
     if (o->zoom.swapchain == NULL) {
         wlr_log(WLR_ERROR, "cannot create zoom swapchain for %s", wlr_output->name);
+    } else if (o->zoom.timeline == NULL) {
+        o->zoom.timeline = render_sync_timeline_create(o->server);
     }
     return o->zoom.swapchain != NULL;
 }
@@ -118,40 +132,73 @@ static bool compose(const zoom *z, output *o, struct wlr_output_state *state)
     if (target == NULL) {
         return false;
     }
-    bool ok = draw_zoomed(z, o, target);
+    zoom_pass pass = {target, state->wait_timeline, state->wait_point};
+    o->zoom.point++;
+    bool ok = draw_zoomed(z, o, &pass);
     if (ok) {
         wlr_output_state_set_buffer(state, target);
         state->buffer_src_box = (struct wlr_fbox){0};
         state->buffer_dst_box = (struct wlr_box){0};
         set_full_damage(state, target);
+        hand_fence_to_output(o, state);
     }
     wlr_buffer_unlock(target);
     return ok;
 }
 
-static bool draw_zoomed(const zoom *z, output *o, struct wlr_buffer *target)
+static bool draw_zoomed(const zoom *z, output *o, const zoom_pass *zp)
 {
     struct wlr_renderer *renderer = o->server->renderer;
     struct wlr_texture *texture = wlr_texture_from_buffer(renderer, o->zoom.source);
     if (texture == NULL) {
         return false;
     }
-    struct wlr_render_pass *pass = wlr_renderer_begin_buffer_pass(renderer, target, NULL);
+    struct wlr_buffer_pass_options options = signal_options(o);
+    struct wlr_render_pass *pass = wlr_renderer_begin_buffer_pass(renderer, zp->target, &options);
     if (pass == NULL) {
         wlr_texture_destroy(texture);
         return false;
     }
-    zoom_box box = source_box(z, o);
-    wlr_render_pass_add_texture(pass, &(struct wlr_render_texture_options){
-                                          .texture = texture,
-                                          .src_box = {box.x, box.y, box.width, box.height},
-                                          .dst_box = {0, 0, target->width, target->height},
-                                          .filter_mode = WLR_SCALE_FILTER_BILINEAR,
-                                          .blend_mode = WLR_RENDER_BLEND_MODE_NONE,
-                                      });
+    struct wlr_render_texture_options draw = texture_options(z, o, zp);
+    draw.texture = texture;
+    wlr_render_pass_add_texture(pass, &draw);
     bool ok = wlr_render_pass_submit(pass);
     wlr_texture_destroy(texture);
     return ok;
+}
+
+static struct wlr_render_texture_options texture_options(const zoom *z, const output *o,
+                                                         const zoom_pass *zp)
+{
+    zoom_box box = source_box(z, o);
+    return (struct wlr_render_texture_options){
+        .src_box = {box.x, box.y, box.width, box.height},
+        .dst_box = {0, 0, zp->target->width, zp->target->height},
+        .filter_mode = WLR_SCALE_FILTER_BILINEAR,
+        .blend_mode = WLR_RENDER_BLEND_MODE_NONE,
+        .wait_timeline = zp->wait_timeline,
+        .wait_point = zp->wait_point,
+    };
+}
+
+static struct wlr_buffer_pass_options signal_options(const output *o)
+{
+    if (o->zoom.timeline == NULL) {
+        return (struct wlr_buffer_pass_options){0};
+    }
+    return (struct wlr_buffer_pass_options){
+        .signal_timeline = o->zoom.timeline,
+        .signal_point = o->zoom.point,
+    };
+}
+
+static void hand_fence_to_output(const output *o, struct wlr_output_state *state)
+{
+    if (o->zoom.timeline != NULL) {
+        wlr_output_state_set_wait_timeline(state, o->zoom.timeline, o->zoom.point);
+    } else if (state->wait_timeline != NULL) {
+        render_sync_drop_wait(state);
+    }
 }
 
 static zoom_box source_box(const zoom *z, const output *o)

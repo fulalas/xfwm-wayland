@@ -21,6 +21,36 @@ static void test_switch_restores_workspace_focus(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_delete_keeps_ids_of_other_workspaces(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_workspaces_view before = world.workspaces;
+    wm_desktop_remove_workspace(desktop, 1);
+    CHECK_INT_EQ(before.count - 1, world.workspaces.count);
+    CHECK_INT_EQ(before.ids[0], world.workspaces.ids[0]);
+    CHECK_INT_EQ(before.ids[2], world.workspaces.ids[1]);
+    CHECK_INT_EQ(before.ids[3], world.workspaces.ids[2]);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_ids_are_unique(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_desktop_remove_workspace(desktop, 0);
+    wm_desktop_add_workspace(desktop);
+    const wm_workspaces_view *view = &world.workspaces;
+    for (int i = 0; i < view->count; i++) {
+        for (int j = i + 1; j < view->count; j++) {
+            CHECK(view->ids[i] != view->ids[j]);
+        }
+    }
+    wm_desktop_destroy(desktop);
+}
+
 static void test_move_window_to_workspace_key(void)
 {
     fake_world world;
@@ -163,6 +193,8 @@ int main(void)
 {
     static const check_case cases[] = {
         {"switch_restores_workspace_focus", test_switch_restores_workspace_focus},
+        {"delete_keeps_ids_of_other_workspaces", test_delete_keeps_ids_of_other_workspaces},
+        {"ids_are_unique", test_ids_are_unique},
         {"move_window_to_workspace_key", test_move_window_to_workspace_key},
         {"left_workspace_wraps_layout", test_left_workspace_wraps_layout},
         {"left_workspace_stops_without_wrap", test_left_workspace_stops_without_wrap},

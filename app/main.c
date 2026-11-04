@@ -7,9 +7,11 @@
 #include "app.h"
 
 static const char usage[] =
-    "Usage: xfwm-wayland [-s|--startup COMMAND] [--version]\n";
+    "Usage: xfwm-wayland [-s|--startup COMMAND | -n|--no-session] [--version]\n";
+static const char default_session_command[] = "xfce4-session";
 
 static bool parse_options(int argc, char **argv, app_options *options);
+static bool finish_options(app_options *options);
 
 int main(int argc, char **argv)
 {
@@ -28,12 +30,13 @@ int main(int argc, char **argv)
         printf("xfwm-wayland %s\n", APP_VERSION);
         return EXIT_SUCCESS;
     }
+    GPid bus = app_session_bus_start();
     app = app_create(&options);
-    if (!app) {
-        return EXIT_FAILURE;
+    status = app ? app_run(app) : EXIT_FAILURE;
+    if (app) {
+        app_destroy(app);
     }
-    status = app_run(app);
-    app_destroy(app);
+    app_session_bus_stop(bus);
     return status;
 }
 
@@ -53,7 +56,22 @@ static bool parse_options(int argc, char **argv, app_options *options)
             options->startup_command = argv[++i];
             continue;
         }
+        if (is_option(argv[i], "-n", "--no-session")) {
+            options->no_session = true;
+            continue;
+        }
         return false;
+    }
+    return finish_options(options);
+}
+
+static bool finish_options(app_options *options)
+{
+    if (options->no_session) {
+        return options->startup_command == NULL;
+    }
+    if (options->startup_command == NULL) {
+        options->startup_command = default_session_command;
     }
     return true;
 }

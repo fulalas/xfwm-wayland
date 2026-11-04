@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "icon_slot.h"
 
@@ -13,11 +14,16 @@ struct icon_slot {
     icon_listener listener;
     cairo_surface_t *surface;
     bool pinned;
+    bool app_pixels;
+    char *app_name;
+    unsigned serial;
 };
 
 static void request_icon(icon_slot *slot, const char *app_id, const char *icon_name);
 static void handle_icon_found(void *context, cairo_surface_t *icon);
-static void replace_surface(icon_slot *slot, cairo_surface_t *surface);
+static void store_surface(icon_slot *slot, cairo_surface_t *surface);
+static void store_name(icon_slot *slot, const char *name);
+static void notify(icon_slot *slot);
 static void cancel_lookups(icon_slot *slot);
 
 icon_slot *icon_slot_create(compositor *server, const icon_listener *listener)
@@ -37,20 +43,30 @@ void icon_slot_destroy(icon_slot *slot)
     if (slot->surface != NULL) {
         cairo_surface_destroy(slot->surface);
     }
+    free(slot->app_name);
     free(slot);
 }
 
 void icon_slot_set(icon_slot *slot, cairo_surface_t *surface)
 {
-    cancel_lookups(slot);
-    slot->pinned = surface != NULL;
-    replace_surface(slot, surface);
+    icon_slot_set_app(slot, &(app_icon){NULL, NULL, surface});
 }
 
-void icon_slot_lookup_name(icon_slot *slot, const char *app_id, const char *icon_name)
+void icon_slot_set_app(icon_slot *slot, const app_icon *icon)
 {
-    slot->pinned = true;
-    request_icon(slot, app_id, icon_name);
+    cancel_lookups(slot);
+    store_name(slot, icon->name);
+    slot->app_pixels = icon->pixels != NULL;
+    slot->pinned = icon->pixels != NULL || icon->name != NULL;
+    slot->serial++;
+    store_surface(slot, icon->pixels);
+    const char *app_id = icon->app_id != NULL ? icon->app_id : "";
+    if (icon->pixels == NULL && icon->name != NULL) {
+        request_icon(slot, app_id, icon->name);
+    } else if (icon->app_id != NULL) {
+        icon_slot_lookup_app(slot, app_id);
+    }
+    notify(slot);
 }
 
 void icon_slot_lookup_app(icon_slot *slot, const char *app_id)
@@ -63,6 +79,21 @@ void icon_slot_lookup_app(icon_slot *slot, const char *app_id)
 cairo_surface_t *icon_slot_surface(const icon_slot *slot)
 {
     return slot != NULL ? slot->surface : NULL;
+}
+
+const char *icon_slot_app_name(const icon_slot *slot)
+{
+    return slot != NULL ? slot->app_name : NULL;
+}
+
+cairo_surface_t *icon_slot_app_pixels(const icon_slot *slot)
+{
+    return slot != NULL && slot->app_pixels ? slot->surface : NULL;
+}
+
+unsigned icon_slot_serial(const icon_slot *slot)
+{
+    return slot != NULL ? slot->serial : 0;
 }
 
 static void request_icon(icon_slot *slot, const char *app_id, const char *icon_name)
@@ -82,12 +113,13 @@ static void request_icon(icon_slot *slot, const char *app_id, const char *icon_n
 static void handle_icon_found(void *context, cairo_surface_t *icon)
 {
     icon_slot *slot = context;
-    if (icon != NULL) {
-        replace_surface(slot, icon);
+    if (icon != NULL && icon != slot->surface) {
+        store_surface(slot, icon);
+        notify(slot);
     }
 }
 
-static void replace_surface(icon_slot *slot, cairo_surface_t *surface)
+static void store_surface(icon_slot *slot, cairo_surface_t *surface)
 {
     if (slot->surface == surface) {
         return;
@@ -96,6 +128,16 @@ static void replace_surface(icon_slot *slot, cairo_surface_t *surface)
         cairo_surface_destroy(slot->surface);
     }
     slot->surface = surface != NULL ? cairo_surface_reference(surface) : NULL;
+}
+
+static void store_name(icon_slot *slot, const char *name)
+{
+    free(slot->app_name);
+    slot->app_name = name != NULL ? strdup(name) : NULL;
+}
+
+static void notify(icon_slot *slot)
+{
     if (slot->listener.changed != NULL) {
         slot->listener.changed(slot->listener.self);
     }

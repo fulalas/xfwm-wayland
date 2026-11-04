@@ -24,6 +24,15 @@ typedef struct workspace_protocol workspace_protocol;
 typedef struct activation activation;
 typedef struct output_config output_config;
 typedef struct output_power output_power;
+typedef struct displays displays;
+typedef struct lid_switch lid_switch;
+typedef struct xfce_outputs xfce_outputs;
+typedef struct xfce_output_heads xfce_output_heads;
+typedef struct accessibility accessibility;
+typedef struct device_list device_list;
+typedef struct drm_lease drm_lease;
+typedef struct xdg_sessions xdg_sessions;
+typedef struct present_sync present_sync;
 
 typedef struct protocol_globals {
     struct wlr_compositor *compositor;
@@ -91,6 +100,15 @@ struct compositor {
     activation *activation;
     output_config *output_config;
     output_power *output_power;
+    displays *displays;
+    lid_switch *lid_switch;
+    xfce_outputs *xfce_outputs;
+    xfce_output_heads *xfce_output_heads;
+    accessibility *accessibility;
+    device_list *device_list;
+    drm_lease *drm_lease;
+    xdg_sessions *xdg_sessions;
+    present_sync *present_sync;
     struct wl_list views;
     view_signals view_events;
     struct wl_event_source *timer;

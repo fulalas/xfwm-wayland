@@ -22,6 +22,7 @@ static bool is_aligned(const wm_rect *current, const wm_rect *other, monitor_dir
 static int midpoint_offset(const wm_rect *current, const wm_rect *other,
                            monitor_direction direction);
 static wm_point transform(wm_point point, const wm_rect *from, const wm_rect *to);
+static void move_remembered_geometry(wm_window *window, const wm_rect *from, const wm_rect *to);
 static void refit(wm_desktop *desktop, wm_window *window);
 
 bool monitor_move_possible(const wm_desktop *desktop, const wm_window *window,
@@ -33,25 +34,23 @@ bool monitor_move_possible(const wm_desktop *desktop, const wm_window *window,
 void monitor_move(wm_desktop *desktop, wm_window *window, monitor_direction direction)
 {
     int target = find_target(desktop, window, direction);
-    if (target == NO_MONITOR) {
+    if (target != NO_MONITOR) {
+        monitor_move_to(desktop, window, (size_t) target);
+    }
+}
+
+void monitor_move_to(wm_desktop *desktop, wm_window *window, size_t target)
+{
+    size_t current = current_monitor(desktop, window);
+    if (target >= monitors_count(desktop) || target == current) {
         return;
     }
-    wm_rect from = monitors_work_area_of(desktop, current_monitor(desktop, window));
-    wm_rect to = monitors_work_area_of(desktop, (size_t) target);
+    wm_rect from = monitors_work_area_of(desktop, current);
+    wm_rect to = monitors_work_area_of(desktop, target);
     wm_point position = transform((wm_point) {window->client.x, window->client.y}, &from, &to);
     window->client.x = position.x;
     window->client.y = position.y;
-    if (window->restore_size_pos) {
-        wm_point saved = transform((wm_point) {window->saved.x, window->saved.y}, &from, &to);
-        window->saved.x = saved.x;
-        window->saved.y = saved.y;
-    }
-    if (window_is_fullscreen(window)) {
-        wm_point origin = {window->pre_fullscreen.x, window->pre_fullscreen.y};
-        wm_point moved = transform(origin, &from, &to);
-        window->pre_fullscreen.x = moved.x;
-        window->pre_fullscreen.y = moved.y;
-    }
+    move_remembered_geometry(window, &from, &to);
     refit(desktop, window);
     window_mark_dirty(window);
 }
@@ -125,6 +124,21 @@ static wm_point transform(wm_point point, const wm_rect *from, const wm_rect *to
     double ratio_y = from->height ? (point.y - from->y) / (double) from->height : 0.0;
     return (wm_point) {(int) (to->x + ratio_x * to->width + ROUNDING),
                        (int) (to->y + ratio_y * to->height + ROUNDING)};
+}
+
+static void move_remembered_geometry(wm_window *window, const wm_rect *from, const wm_rect *to)
+{
+    if (window->restore_size_pos) {
+        wm_point saved = transform((wm_point) {window->saved.x, window->saved.y}, from, to);
+        window->saved.x = saved.x;
+        window->saved.y = saved.y;
+    }
+    if (window_is_fullscreen(window)) {
+        wm_point origin = {window->pre_fullscreen.x, window->pre_fullscreen.y};
+        wm_point moved = transform(origin, from, to);
+        window->pre_fullscreen.x = moved.x;
+        window->pre_fullscreen.y = moved.y;
+    }
 }
 
 static void refit(wm_desktop *desktop, wm_window *window)

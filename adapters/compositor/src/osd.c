@@ -10,6 +10,7 @@ struct osd {
     osd_menu *menu;
     osd_cycle *cycle;
     osd_outline *outline;
+    osd_find_cursor *find_cursor;
 };
 
 osd *osd_create(compositor *server)
@@ -23,7 +24,8 @@ osd *osd_create(compositor *server)
     o->outline = osd_outline_create(parent);
     o->cycle = osd_cycle_create(server, parent);
     o->menu = osd_menu_create(server, parent);
-    if (o->outline == NULL || o->cycle == NULL || o->menu == NULL) {
+    o->find_cursor = osd_find_cursor_create(server, parent);
+    if (o->outline == NULL || o->cycle == NULL || o->menu == NULL || o->find_cursor == NULL) {
         osd_destroy(o);
         return NULL;
     }
@@ -40,6 +42,9 @@ void osd_destroy(osd *o)
     }
     if (o->outline != NULL) {
         osd_outline_destroy(o->outline);
+    }
+    if (o->find_cursor != NULL) {
+        osd_find_cursor_destroy(o->find_cursor);
     }
     free(o);
 }
@@ -72,6 +77,11 @@ void osd_show_outline(osd *o, const wm_rect *rect)
 void osd_hide_outline(osd *o)
 {
     osd_outline_hide(o->outline);
+}
+
+void osd_show_find_cursor(osd *o)
+{
+    osd_find_cursor_start(o->find_cursor);
 }
 
 bool osd_is_modal(const osd *o)

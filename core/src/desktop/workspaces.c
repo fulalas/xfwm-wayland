@@ -16,6 +16,9 @@ static void focus_after_switch(wm_desktop *desktop, wm_window *new_focus, wm_win
 static int target_column(const wm_desktop *desktop, int delta);
 static int wrapped(int value, int limit);
 static void store_count(wm_desktop *desktop, int count);
+static void assign_new_ids(workspace_state *state, int from, int to);
+static void remove_id(workspace_state *state, int position);
+static void insert_id(workspace_state *state, int position);
 
 void workspaces_switch(wm_desktop *desktop, int workspace, wm_window *carried)
 {
@@ -63,6 +66,7 @@ void workspaces_set_count(wm_desktop *desktop, int count)
     if (clamped == state->count) {
         return;
     }
+    assign_new_ids(state, state->count, clamped);
     state->count = clamped;
     for (size_t i = 0; i < desktop->stack.count; i++) {
         wm_window *window = desktop->stack.items[i];
@@ -92,6 +96,7 @@ void workspaces_insert(wm_desktop *desktop, int position)
     if (position > count || desktop->workspaces.count == count) {
         return;
     }
+    insert_id(&desktop->workspaces, position);
     for (size_t i = 0; i < desktop->stack.count; i++) {
         wm_window *window = desktop->stack.items[i];
         if (window->workspace >= position) {
@@ -112,6 +117,7 @@ void workspaces_delete(wm_desktop *desktop, int position)
             visibility_set_workspace(desktop, window, window->workspace - 1);
         }
     }
+    remove_id(&desktop->workspaces, position);
     workspaces_change_count(desktop, count - 1);
 }
 
@@ -123,6 +129,7 @@ wm_workspaces_view workspaces_view(const wm_desktop *desktop)
     for (int i = 0; i < view.count; i++) {
         const char *name = desktop->config.workspaces.names[i];
         view.names[i] = name[0] != '\0' ? name : NULL;
+        view.ids[i] = desktop->workspaces.ids[i];
     }
     return view;
 }
@@ -254,4 +261,27 @@ static int wrapped(int value, int limit)
 static void store_count(wm_desktop *desktop, int count)
 {
     desktop->ports.commands.store_workspace_count(desktop->ports.commands.self, count);
+}
+
+static void assign_new_ids(workspace_state *state, int from, int to)
+{
+    for (int i = from; i < to; i++) {
+        state->ids[i] = state->next_id++;
+    }
+}
+
+static void remove_id(workspace_state *state, int position)
+{
+    for (int i = position; i < state->count - 1; i++) {
+        state->ids[i] = state->ids[i + 1];
+    }
+}
+
+static void insert_id(workspace_state *state, int position)
+{
+    unsigned appended = state->ids[state->count - 1];
+    for (int i = state->count - 1; i > position; i--) {
+        state->ids[i] = state->ids[i - 1];
+    }
+    state->ids[position] = appended;
 }

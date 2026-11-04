@@ -14,13 +14,25 @@ xfce_logic = static_library(
   'xfce_logic',
   files(
     'src/accelerator.c',
+    'src/accessibility_resolve.c',
     'src/changes.c',
     'src/config_table.c',
     'src/config_values.c',
+    'src/display_choice.c',
+    'src/display_hash.c',
+    'src/display_plan.c',
+    'src/display_read.c',
+    'src/display_table.c',
+    'src/display_transform.c',
+    'src/display_write.c',
     'src/helper_protocol.c',
     'src/input_resolve.c',
     'src/input_text.c',
     'src/keymap_store.c',
+    'src/logout_policy.c',
+    'src/pointer_choices.c',
+    'src/pointer_resolve.c',
+    'src/session_vars.c',
     'src/setting_source.c',
     'src/shortcut_defaults.c',
     'src/shortcut_property.c',
@@ -33,8 +45,10 @@ xfce_logic = static_library(
 xfce_lib = static_library(
   'xfce',
   files(
+    'src/accessibility.c',
     'src/channels.c',
     'src/dispatcher.c',
+    'src/display_store.c',
     'src/environment.c',
     'src/gtk_bridge.c',
     'src/helper_client.c',
@@ -44,11 +58,15 @@ xfce_lib = static_library(
     'src/icon_lookups.c',
     'src/icon_surface.c',
     'src/input_prefs.c',
+    'src/logout.c',
     'src/session_export.c',
+    'src/session_launch.c',
     'src/settings.c',
     'src/shortcuts.c',
     'src/spawn.c',
     'src/terminate.c',
+    'src/x11_setting_values.c',
+    'src/x11_settings.c',
     'src/xfconf_source.c',
   ),
   include_directories: xfce_inc,
@@ -80,7 +98,7 @@ xfce_dep = declare_dependency(
   ],
 )
 
-xfce_tests = ['accelerator', 'config', 'input', 'protocol', 'shortcuts']
+xfce_tests = ['accelerator', 'accessibility', 'config', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts']
 
 foreach name : xfce_tests
   test(
@@ -104,5 +122,16 @@ test(
     include_directories: [xfce_inc, include_directories('src', '../../helper')],
     link_with: xfce_logic,
     dependencies: [check_dep, xfce_glib_dep, xfce_cairo_dep],
+  ),
+)
+
+test(
+  'xfce_x11_settings',
+  executable(
+    'test_xfce_x11_settings',
+    'tests/test_x11_settings.c',
+    'src/x11_setting_values.c',
+    include_directories: [xfce_inc, include_directories('src')],
+    dependencies: [check_dep, xfce_glib_dep, dependency('gobject-2.0')],
   ),
 )

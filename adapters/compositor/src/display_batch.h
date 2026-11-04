@@ -1,0 +1,20 @@
+#ifndef COMPOSITOR_DISPLAY_BATCH_H
+#define COMPOSITOR_DISPLAY_BATCH_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "compositor/displays.h"
+#include "output.h"
+
+typedef struct display_batch {
+    output *outputs[DISPLAY_MAX];
+    display_state states[DISPLAY_MAX];
+    size_t count;
+} display_batch;
+
+void display_batch_collect(const outputs *outputs, display_batch *batch);
+bool display_batch_has_pending(const display_batch *batch);
+void display_batch_decide(const display_batch *batch, bool lid_closed, bool *enabled);
+
+#endif

@@ -2,6 +2,7 @@
 #include <wlr/xwayland/xwayland.h>
 
 #include "icon_convert.h"
+#include "xwayland.h"
 #include "xwayland_view_private.h"
 
 enum {
@@ -33,16 +34,19 @@ static uint32_t current_states(const struct wlr_xwayland_surface *xsurface);
 static bool has_position(const struct wlr_xwayland_surface *xsurface);
 static strut_range strut_side(uint32_t size, uint32_t start, uint32_t end);
 static void set_maximized(struct wlr_xwayland_surface *xsurface, bool value);
+static void set_layer_states(struct wlr_xwayland_surface *xsurface, const wm_window_view *state);
 
 wm_window_desc xwayland_view_describe(const xwayland_view *xv)
 {
     const struct wlr_xwayland_surface *xs = xv->xsurface;
+    bool positioned = has_position(xs);
+    wm_point position = positioned ? xwayland_view_initial_position(xv) : (wm_point){xs->x, xs->y};
     wm_window_desc desc = {
         .type = xwayland_view_type(xv),
         .capabilities = xwayland_view_capabilities(xv),
         .states = current_states(xs),
-        .geometry = {xs->x, xs->y, xs->width, xs->height},
-        .has_position = has_position(xs),
+        .geometry = {position.x, position.y, xs->width, xs->height},
+        .has_position = positioned,
         .size_hints = xwayland_view_size_hints(xv),
         .parent = xwayland_view_parent_window(xv),
         .title = xs->title,
@@ -151,12 +155,9 @@ void xwayland_view_send_states(void *self, const wm_window_view *state)
     if (xs->shaded != state->shaded) {
         wlr_xwayland_surface_set_shaded(xs, state->shaded);
     }
-    if (xs->above != state->above) {
-        wlr_xwayland_surface_set_above(xs, state->above);
-    }
-    if (xs->below != state->below) {
-        wlr_xwayland_surface_set_below(xs, state->below);
-    }
+    set_layer_states(xs, state);
+    x11_window_target target = {xwayland_shell_link(xv->server->xwayland), xs->window_id};
+    x11_window_props_publish(&xv->published, &target, state);
 }
 
 static uint32_t current_states(const struct wlr_xwayland_surface *xs)
@@ -195,5 +196,15 @@ static void set_maximized(struct wlr_xwayland_surface *xs, bool value)
 {
     if (xs->maximized_horz != value || xs->maximized_vert != value) {
         wlr_xwayland_surface_set_maximized(xs, value, value);
+    }
+}
+
+static void set_layer_states(struct wlr_xwayland_surface *xs, const wm_window_view *state)
+{
+    if (xs->above != state->above) {
+        wlr_xwayland_surface_set_above(xs, state->above);
+    }
+    if (xs->below != state->below) {
+        wlr_xwayland_surface_set_below(xs, state->below);
     }
 }

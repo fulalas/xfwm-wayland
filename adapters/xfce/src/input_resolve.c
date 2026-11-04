@@ -8,7 +8,6 @@ enum {
     DEFAULT_REPEAT_DELAY_MS = 500,
     DEFAULT_REPEAT_RATE = 20,
     DEFAULT_CURSOR_SIZE = 24,
-    ACCELERATION_STEPS = 5,
 };
 
 static const char default_cursor_theme[] = "default";
@@ -17,11 +16,6 @@ static bool lookup_bool(const setting_source *source, const char *key, bool fall
 static int lookup_int(const setting_source *source, const char *key, int fallback);
 static void copy_text(const setting_source *source, const char *key, char *target);
 static void copy_options(const setting_source *layout, char *target);
-static optional_bool natural_scroll(const setting_source *device);
-static optional_bool left_handed(const setting_source *device);
-static optional_double accel_speed(const setting_source *device);
-static optional_double legacy_accel_speed(const setting_source *device);
-static optional_bool device_bool(const setting_source *device, const char *key);
 
 keyboard_prefs input_keyboard_prefs_from(const keyboard_sources *sources)
 {
@@ -41,18 +35,6 @@ keyboard_prefs input_keyboard_prefs_from(const keyboard_sources *sources)
     copy_text(&sources->layout, "XkbModel", prefs.model);
     copy_options(&sources->layout, prefs.options);
     return prefs;
-}
-
-pointer_prefs input_pointer_prefs_from(const setting_source *device)
-{
-    return (pointer_prefs) {
-        .tap = device_bool(device, "libinput_Tapping_Enabled"),
-        .natural_scroll = natural_scroll(device),
-        .left_handed = left_handed(device),
-        .accel_speed = accel_speed(device),
-        .disable_while_typing = device_bool(device, "libinput_Disable_While_Typing_Enabled"),
-        .middle_emulation = device_bool(device, "libinput_Middle_Emulation_Enabled"),
-    };
 }
 
 cursor_prefs input_cursor_prefs_from(const cursor_sources *sources)
@@ -102,57 +84,4 @@ static void copy_options(const setting_source *layout, char *target)
     const char *parts[] = { group ? group : "", compose ? compose : "", NULL };
 
     input_join_options(parts, target, PREFS_TEXT_MAX);
-}
-
-static optional_bool natural_scroll(const setting_source *device)
-{
-    optional_bool value = device_bool(device, "libinput_Natural_Scrolling_Enabled");
-
-    if (value.is_set) {
-        return value;
-    }
-    return input_bool_from_text(setting_source_lookup(device, "ReverseScrolling"));
-}
-
-static optional_bool left_handed(const setting_source *device)
-{
-    optional_bool value = device_bool(device, "libinput_Left_Handed_Enabled");
-
-    if (value.is_set) {
-        return value;
-    }
-    value = input_bool_from_text(setting_source_lookup(device, "RightHanded"));
-    value.value = !value.value;
-    return value;
-}
-
-static optional_double accel_speed(const setting_source *device)
-{
-    const char *speed = setting_source_lookup(device, "Properties/libinput_Accel_Speed");
-    optional_double value = input_double_from_text(speed);
-
-    if (!value.is_set) {
-        value = legacy_accel_speed(device);
-    }
-    value.value = CLAMP(value.value, -1.0, 1.0);
-    return value;
-}
-
-static optional_double legacy_accel_speed(const setting_source *device)
-{
-    optional_double value = input_double_from_text(setting_source_lookup(device, "Acceleration"));
-
-    if (value.is_set) {
-        value.value = value.value / ACCELERATION_STEPS - 1.0;
-    }
-    return value;
-}
-
-static optional_bool device_bool(const setting_source *device, const char *key)
-{
-    char *property = g_strconcat("Properties/", key, NULL);
-    optional_bool value = input_bool_from_text(setting_source_lookup(device, property));
-
-    g_free(property);
-    return value;
 }

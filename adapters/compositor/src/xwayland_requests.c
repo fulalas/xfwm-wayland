@@ -79,7 +79,9 @@ static void handle_configure(struct wl_listener *listener, void *data)
     const struct wlr_xwayland_surface_configure_event *event = data;
     wm_window *window = xwayland_view_window(xv);
     if (window != NULL) {
-        wm_rect client = {event->x, event->y, event->width, event->height};
+        x11_configure request = {{event->x, event->y, event->width, event->height}, event->mask,
+                                 xwayland_view_gravity(xv)};
+        wm_rect client = xwayland_view_requested_rect(xv, &request);
         wm_request_configure(xv->server->desktop, window, &client);
         return;
     }

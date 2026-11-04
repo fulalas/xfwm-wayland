@@ -6,8 +6,8 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 
+#include "click_focus.h"
 #include "input_mapping.h"
-#include "layer_shell.h"
 #include "listener.h"
 #include "pointer_target.h"
 #include "seat_private.h"
@@ -58,7 +58,6 @@ static void press(pointer_input *pointer, const button_input *input);
 static void release(pointer_input *pointer, const button_input *input);
 static wm_dispatch dispatch_button(pointer_input *pointer, const pointer_hit *hit,
                                    const button_input *input);
-static void focus_on_click(pointer_input *pointer, const pointer_hit *hit);
 static void start_grab(pointer_input *pointer, const pointer_hit *hit);
 static void end_grab(pointer_input *pointer);
 static bool take_forwarded(pointer_input *pointer, uint32_t button);
@@ -264,7 +263,7 @@ static void leave_surfaces(pointer_input *p)
 static void press(pointer_input *p, const button_input *input)
 {
     pointer_hit hit = hit_at_cursor(p);
-    focus_on_click(p, &hit);
+    click_focus(p->seat, &hit);
     if (dispatch_button(p, &hit, input) != WM_FORWARD || hit.surface == NULL) {
         return;
     }
@@ -310,23 +309,6 @@ static wm_dispatch dispatch_button(pointer_input *p, const pointer_hit *hit,
     return wm_pointer_button(p->seat->server->desktop, &event);
 }
 
-static void focus_on_click(pointer_input *p, const pointer_hit *hit)
-{
-    if (hit->owner == NULL) {
-        return;
-    }
-    node_role role = hit->owner->role;
-    if (role == NODE_LAYER_SURFACE || role == NODE_DESKTOP_SURFACE) {
-        if (layer_surface_accepts_click_focus(hit->owner->object)) {
-            seat_focus_layer(p->seat, layer_surface_wlr_surface(hit->owner->object));
-        }
-        return;
-    }
-    if ((role == NODE_VIEW_CLIENT || role == NODE_VIEW_FRAME) && p->seat->focus.layer != NULL) {
-        seat_focus_layer(p->seat, NULL);
-    }
-}
-
 static void start_grab(pointer_input *p, const pointer_hit *hit)
 {
     if (p->grab_surface != NULL || hit->node == NULL) {
@@ -362,7 +344,8 @@ static wm_dispatch dispatch_axis(pointer_input *p, const struct wlr_pointer_axis
         return WM_FORWARD;
     }
     int index = event->orientation == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : 1;
-    axis_steps steps = input_mapping_axis(p->axis_remainder[index], event->delta_discrete);
+    int32_t value120 = input_mapping_axis_value120(event->delta_discrete, event->delta);
+    axis_steps steps = input_mapping_axis(p->axis_remainder[index], value120);
     p->axis_remainder[index] = steps.remainder;
     if (steps.steps == 0) {
         return WM_FORWARD;

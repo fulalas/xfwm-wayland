@@ -15,7 +15,11 @@ static void on_theme_changed(void *self);
 static void on_settings_changed(void *self);
 static void on_shortcuts_changed(void *self);
 static void on_input_changed(void *self);
+static void on_displays_changed(void *self);
+static void on_x11_settings_changed(void *self);
+static void on_x11_display_changed(void *self);
 static void on_style_changed(void *self);
+static void on_session_ended(void *self);
 static gboolean on_terminate_signal(gpointer data);
 
 app *app_create(const app_options *options)
@@ -63,7 +67,7 @@ int app_run(app *app)
     app->wayland_source = app_wayland_source_new(app->compositor);
     g_source_attach(app->wayland_source, NULL);
     g_main_loop_run(app->loop);
-    return EXIT_SUCCESS;
+    return xfce_environment_session_exit_code(app->xfce);
 }
 
 static bool create_adapters(app *app)
@@ -74,7 +78,10 @@ static bool create_adapters(app *app)
         .settings_changed = on_settings_changed,
         .shortcuts_changed = on_shortcuts_changed,
         .input_changed = on_input_changed,
+        .displays_changed = on_displays_changed,
+        .x11_settings_changed = on_x11_settings_changed,
         .style_changed = on_style_changed,
+        .session_ended = on_session_ended,
     };
 
     app->xfce = xfce_environment_create(&listener);
@@ -97,6 +104,7 @@ static bool create_compositor(app *app)
         .started = on_compositor_started,
         .output_scale_changed = on_output_scale_changed,
         .quit_requested = on_quit_requested,
+        .x11_display_changed = on_x11_display_changed,
     };
     options = (compositor_options) {
         .painter = &app->painter,
@@ -136,9 +144,8 @@ static void on_compositor_started(void *self)
 {
     app *app = self;
 
-    app_export_session_environment(app);
+    app_start_session(app);
     xfce_environment_start_helper(app->xfce);
-    app_run_startup_command(app);
 }
 
 static void on_output_scale_changed(void *self, double max_scale)
@@ -178,9 +185,35 @@ static void on_input_changed(void *self)
     compositor_input_prefs_changed(app->compositor);
 }
 
+static void on_displays_changed(void *self)
+{
+    app *app = self;
+
+    compositor_display_prefs_changed(app->compositor);
+}
+
+static void on_x11_settings_changed(void *self)
+{
+    app *app = self;
+
+    compositor_x11_settings_changed(app->compositor);
+}
+
+static void on_x11_display_changed(void *self)
+{
+    app_export_x11_display(self);
+}
+
 static void on_style_changed(void *self)
 {
     app_reload_appearance(self);
+}
+
+static void on_session_ended(void *self)
+{
+    app *app = self;
+
+    g_main_loop_quit(app->loop);
 }
 
 static gboolean on_terminate_signal(gpointer data)

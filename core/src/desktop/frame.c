@@ -30,6 +30,15 @@ wm_extents frame_extents(const wm_desktop *desktop, const wm_window *window)
     return wm_decor_extents(&input);
 }
 
+wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabilities)
+{
+    wm_decor_window decor;
+    memset(&decor, 0, sizeof(decor));
+    decor.has_border = (capabilities & WM_CAP_DECORATED) != 0;
+    wm_decor_input input = {&desktop->theme, &desktop->config.frame, &decor};
+    return wm_decor_extents(&input);
+}
+
 wm_rect frame_rect(const wm_desktop *desktop, const wm_window *window)
 {
     return frame_rect_for_client(desktop, window, &window->client);

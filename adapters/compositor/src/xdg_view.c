@@ -4,6 +4,7 @@
 #include <wlr/util/log.h>
 
 #include "listener.h"
+#include "xdg_session.h"
 #include "xdg_view_private.h"
 
 static const uint32_t WM_CAPABILITIES =
@@ -29,7 +30,7 @@ static void impl_configure(void *self, const wm_rect *client);
 static void impl_close(void *self);
 static pid_t impl_pid(void *self);
 static void impl_focus(void *self);
-static cairo_surface_t *impl_icon(void *self);
+static icon_slot *impl_icon(void *self);
 
 static const struct wlr_addon_interface xdg_view_addon = {
     .name = "xfwm-xdg-view",
@@ -126,6 +127,7 @@ static void handle_map(struct wl_listener *listener, void *data)
     xv->popup_parent.tree = view_popup_tree(xv->view);
     xv->toplevel->base->data = &xv->popup_parent;
     wm_window_desc desc = xdg_view_describe(xv);
+    xdg_sessions_apply_restore(xv->server->xdg_sessions, xv->toplevel, &desc);
     xv->size_hints = desc.size_hints;
     view_map(xv->view, &desc);
     icon_slot_lookup_app(xv->icon, xv->toplevel->app_id);
@@ -171,7 +173,8 @@ static void send_initial_configure(xdg_view *xv)
 {
     wlr_xdg_toplevel_set_wm_capabilities(xv->toplevel, WM_CAPABILITIES);
     xdg_decorations_send_mode(xv);
-    wlr_xdg_toplevel_set_size(xv->toplevel, 0, 0);
+    wm_size size = xdg_sessions_initial_size(xv->server->xdg_sessions, xv->toplevel);
+    wlr_xdg_toplevel_set_size(xv->toplevel, size.width, size.height);
 }
 
 static void acknowledge_configure(xdg_view *xv)
@@ -285,8 +288,8 @@ static void impl_focus(void *self)
     (void) self;
 }
 
-static cairo_surface_t *impl_icon(void *self)
+static icon_slot *impl_icon(void *self)
 {
     xdg_view *xv = self;
-    return icon_slot_surface(xv->icon);
+    return xv->icon;
 }

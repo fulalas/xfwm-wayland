@@ -59,19 +59,15 @@ static void handle_set_icon(struct wl_listener *listener, void *data)
 
 static void apply_icon(xdg_view *xv, const struct wlr_xdg_toplevel_icon_v1 *icon)
 {
-    icon_slot *slot = xdg_view_icon_slot(xv);
-    if (icon == NULL) {
-        icon_slot_set(slot, NULL);
-        icon_slot_lookup_app(slot, xdg_view_app_id(xv));
-        return;
+    app_icon wanted = {xdg_view_app_id(xv), NULL, NULL};
+    if (icon != NULL) {
+        struct wlr_buffer *buffer = best_buffer(icon);
+        wanted.name = icon->name;
+        wanted.pixels = buffer != NULL ? icon_convert_buffer(buffer) : NULL;
     }
-    struct wlr_buffer *buffer = best_buffer(icon);
-    cairo_surface_t *surface = buffer != NULL ? icon_convert_buffer(buffer) : NULL;
-    if (surface != NULL) {
-        icon_slot_set(slot, surface);
-        cairo_surface_destroy(surface);
-    } else if (icon->name != NULL) {
-        icon_slot_lookup_name(slot, xdg_view_app_id(xv), icon->name);
+    icon_slot_set_app(xdg_view_icon_slot(xv), &wanted);
+    if (wanted.pixels != NULL) {
+        cairo_surface_destroy(wanted.pixels);
     }
 }
 

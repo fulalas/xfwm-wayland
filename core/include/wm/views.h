@@ -30,8 +30,23 @@ typedef struct wm_opacity_view {
     double shadow;
 } wm_opacity_view;
 
+enum wm_allowed_action {
+    WM_ALLOW_MOVE = 1 << 0,
+    WM_ALLOW_RESIZE = 1 << 1,
+    WM_ALLOW_MINIMIZE = 1 << 2,
+    WM_ALLOW_SHADE = 1 << 3,
+    WM_ALLOW_STICK = 1 << 4,
+    WM_ALLOW_MAXIMIZE = 1 << 5,
+    WM_ALLOW_FULLSCREEN = 1 << 6,
+    WM_ALLOW_CHANGE_WORKSPACE = 1 << 7,
+    WM_ALLOW_CLOSE = 1 << 8,
+    WM_ALLOW_ABOVE = 1 << 9,
+    WM_ALLOW_BELOW = 1 << 10,
+};
+
 typedef struct wm_window_view {
     wm_rect client;
+    wm_rect restore_client;
     wm_rect frame;
     bool visible;
     bool activated;
@@ -47,6 +62,7 @@ typedef struct wm_window_view {
     bool resizing;
     uint32_t tiled_edges;
     int workspace;
+    unsigned workspace_id;
     wm_layer layer;
     bool has_shadow;
     wm_rect shadow;
@@ -58,12 +74,14 @@ typedef struct wm_window_view {
     void *parent;
     bool skip_taskbar;
     bool skip_pager;
+    uint32_t allowed_actions;
 } wm_window_view;
 
 typedef struct wm_workspaces_view {
     int count;
     int current;
     const char *names[WM_WORKSPACE_MAX];
+    unsigned ids[WM_WORKSPACE_MAX];
 } wm_workspaces_view;
 
 typedef struct wm_cycle_item {

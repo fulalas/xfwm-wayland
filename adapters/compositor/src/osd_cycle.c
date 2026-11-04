@@ -7,6 +7,7 @@
 #include "cairo_buffer.h"
 #include "osd_geometry.h"
 #include "osd_parts.h"
+#include "osd_preview.h"
 #include "output.h"
 
 enum {
@@ -18,7 +19,7 @@ struct osd_cycle {
     node_owner owner;
     struct wlr_scene_tree *tree;
     struct wlr_scene_buffer *panel;
-    struct wlr_scene_buffer *previews[WM_CYCLE_ITEM_MAX];
+    osd_preview *previews[WM_CYCLE_ITEM_MAX];
     wm_cycle_view view;
     char titles[WM_CYCLE_ITEM_MAX][CYCLE_TITLE_MAX];
     cycle_layout layout;
@@ -33,9 +34,10 @@ static void paint_panel(osd_cycle *cycle);
 static void collect_icons(const osd_cycle *cycle, cairo_surface_t **icons);
 static void update_previews(osd_cycle *cycle);
 static void update_preview(osd_cycle *cycle, size_t index);
-static struct wlr_scene_buffer *preview_node(osd_cycle *cycle, size_t index);
-static struct wlr_buffer *client_buffer(view *view);
+static osd_preview *preview_slot(osd_cycle *cycle, size_t index);
+static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node);
 static void clear_previews(osd_cycle *cycle);
+static void destroy_previews(osd_cycle *cycle);
 
 osd_cycle *osd_cycle_create(compositor *server, struct wlr_scene_tree *parent)
 {
@@ -58,6 +60,7 @@ osd_cycle *osd_cycle_create(compositor *server, struct wlr_scene_tree *parent)
 
 void osd_cycle_destroy(osd_cycle *cycle)
 {
+    destroy_previews(cycle);
     if (cycle->tree != NULL) {
         wlr_scene_node_destroy(&cycle->tree->node);
     }
@@ -118,7 +121,7 @@ void osd_cycle_view_destroyed(osd_cycle *cycle, view *v)
         }
         cycle->view.items[i].window = NULL;
         if (cycle->previews[i] != NULL) {
-            wlr_scene_buffer_set_buffer(cycle->previews[i], NULL);
+            osd_preview_clear(cycle->previews[i]);
         }
     }
 }
@@ -189,46 +192,51 @@ static void update_previews(osd_cycle *cycle)
 static void update_preview(osd_cycle *cycle, size_t index)
 {
     view *v = cycle->view.items[index].window;
-    struct wlr_scene_buffer *node = preview_node(cycle, index);
-    if (node == NULL) {
+    osd_preview *preview = preview_slot(cycle, index);
+    if (preview == NULL) {
         return;
     }
-    struct wlr_buffer *buffer = v != NULL ? client_buffer(v) : NULL;
-    wlr_scene_buffer_set_buffer(node, buffer);
-    wlr_scene_node_set_enabled(&node->node, buffer != NULL);
-    if (buffer == NULL) {
-        return;
+    struct wlr_scene_buffer *node = osd_preview_node(preview);
+    bool shown = v != NULL && osd_preview_show(preview, view_surface(v));
+    wlr_scene_node_set_enabled(&node->node, shown);
+    if (shown) {
+        place_preview(cycle, index, node);
     }
-    wm_size buffer_size = {buffer->width, buffer->height};
+}
+
+static osd_preview *preview_slot(osd_cycle *cycle, size_t index)
+{
+    if (cycle->previews[index] == NULL) {
+        cycle->previews[index] = osd_preview_create(cycle->server, cycle->tree);
+    }
+    return cycle->previews[index];
+}
+
+static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node)
+{
+    wm_size buffer_size = {node->buffer->width, node->buffer->height};
     wm_rect fitted = osd_fit_preview(buffer_size, &cycle->layout.previews[index]);
     wlr_scene_buffer_set_dest_size(node, fitted.width, fitted.height);
     wlr_scene_node_set_position(&node->node, cycle->origin.x + fitted.x,
                                 cycle->origin.y + fitted.y);
 }
 
-static struct wlr_scene_buffer *preview_node(osd_cycle *cycle, size_t index)
-{
-    if (cycle->previews[index] == NULL) {
-        cycle->previews[index] = wlr_scene_buffer_create(cycle->tree, NULL);
-    }
-    return cycle->previews[index];
-}
-
-static struct wlr_buffer *client_buffer(view *v)
-{
-    struct wlr_surface *surface = view_surface(v);
-    if (surface == NULL || surface->buffer == NULL) {
-        return NULL;
-    }
-    return &surface->buffer->base;
-}
-
 static void clear_previews(osd_cycle *cycle)
 {
     for (size_t i = 0; i < WM_CYCLE_ITEM_MAX; i++) {
         if (cycle->previews[i] != NULL) {
-            wlr_scene_buffer_set_buffer(cycle->previews[i], NULL);
-            wlr_scene_node_set_enabled(&cycle->previews[i]->node, false);
+            osd_preview_clear(cycle->previews[i]);
+            wlr_scene_node_set_enabled(&osd_preview_node(cycle->previews[i])->node, false);
+        }
+    }
+}
+
+static void destroy_previews(osd_cycle *cycle)
+{
+    for (size_t i = 0; i < WM_CYCLE_ITEM_MAX; i++) {
+        if (cycle->previews[i] != NULL) {
+            osd_preview_destroy(cycle->previews[i]);
+            cycle->previews[i] = NULL;
         }
     }
 }

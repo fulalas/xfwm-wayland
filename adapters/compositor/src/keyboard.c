@@ -9,6 +9,7 @@
 #include "keymap_cache.h"
 #include "listener.h"
 #include "seat_private.h"
+#include "xwayland.h"
 
 enum {
     XKB_KEYCODE_OFFSET = 8,
@@ -32,6 +33,7 @@ typedef struct keyboard {
 struct keyboards {
     seat *seat;
     keymap_cache *keymaps;
+    bool numlock_pref;
     struct wl_list list;
 };
 
@@ -88,6 +90,10 @@ void keyboards_add(keyboards *kbs, struct wlr_keyboard *wlr_keyboard)
     keyboard_prefs prefs = current_prefs(kbs);
     keymap_cache_update(kbs->keymaps, &prefs);
     keyboard_apply_prefs(kb, &prefs);
+    if (prefs.numlock) {
+        lock_numlock(wlr_keyboard);
+    }
+    kbs->numlock_pref = prefs.numlock;
     wlr_seat_set_keyboard(kbs->seat->wlr_seat, wlr_keyboard);
 }
 
@@ -101,13 +107,19 @@ void keyboards_add_virtual(keyboards *kbs, struct wlr_keyboard *wlr_keyboard)
 void keyboards_reload(keyboards *kbs)
 {
     keyboard_prefs prefs = current_prefs(kbs);
+    bool numlock_turned_on = prefs.numlock && !kbs->numlock_pref;
     keymap_cache_update(kbs->keymaps, &prefs);
     keyboard *kb;
     wl_list_for_each(kb, &kbs->list, link) {
-        if (kb->follows_prefs) {
-            keyboard_apply_prefs(kb, &prefs);
+        if (!kb->follows_prefs) {
+            continue;
+        }
+        keyboard_apply_prefs(kb, &prefs);
+        if (numlock_turned_on) {
+            lock_numlock(kb->wlr_keyboard);
         }
     }
+    kbs->numlock_pref = prefs.numlock;
 }
 
 static keyboard *keyboard_create(keyboards *owner, struct wlr_keyboard *wlr_keyboard)
@@ -149,9 +161,6 @@ static void keyboard_apply_prefs(keyboard *kb, const keyboard_prefs *prefs)
     int rate = prefs->repeat_rate > 0 ? prefs->repeat_rate : DEFAULT_REPEAT_RATE;
     int delay = prefs->repeat_delay_ms > 0 ? prefs->repeat_delay_ms : DEFAULT_REPEAT_DELAY_MS;
     wlr_keyboard_set_repeat_info(kb->wlr_keyboard, rate, delay);
-    if (prefs->numlock) {
-        lock_numlock(kb->wlr_keyboard);
-    }
 }
 
 static void lock_numlock(struct wlr_keyboard *wlr_keyboard)
@@ -225,17 +234,19 @@ static bool switch_vt(keyboard *kb, const struct wlr_keyboard_key_event *event)
 static wm_dispatch dispatch_key(keyboard *kb, const struct wlr_keyboard_key_event *event)
 {
     seat *s = kb->owner->seat;
+    bool released = event->state != WL_KEYBOARD_KEY_STATE_PRESSED;
+    bool press_was_consumed = released && take_consumed(kb, event->keycode);
     if (!core_receives_keys(s)) {
-        return WM_FORWARD;
+        return press_was_consumed ? WM_CONSUMED : WM_FORWARD;
     }
     wm_key_event key = {
         .keysym = input_mapping_keysym(base_keysym(kb->wlr_keyboard, event->keycode)),
         .modifiers = input_mapping_modifiers(wlr_keyboard_get_modifiers(kb->wlr_keyboard)),
         .time_ms = event->time_msec,
     };
-    if (event->state != WL_KEYBOARD_KEY_STATE_PRESSED) {
+    if (released) {
         wm_key_released(s->server->desktop, &key);
-        return take_consumed(kb, event->keycode) ? WM_CONSUMED : WM_FORWARD;
+        return press_was_consumed ? WM_CONSUMED : WM_FORWARD;
     }
     wm_dispatch result = wm_key_pressed(s->server->desktop, &key);
     if (result == WM_CONSUMED) {
@@ -249,7 +260,8 @@ static bool core_receives_keys(const seat *s)
     if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
         return false;
     }
-    return !shortcuts_inhibited(s->shortcuts, s->focus.current);
+    return !shortcuts_inhibited(s->shortcuts, s->focus.current) &&
+           !xwayland_shell_grabs_keyboard(s->server->xwayland, s->focus.current);
 }
 
 static uint32_t base_keysym(struct wlr_keyboard *wlr_keyboard, uint32_t keycode)
