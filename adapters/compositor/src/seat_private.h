@@ -87,7 +87,15 @@ void pointer_input_release_grab(pointer_input *pointer);
 
 cursor_image *cursor_image_create(seat *seat);
 void cursor_image_destroy(cursor_image *image);
+typedef struct cursor_surface {
+    struct wlr_surface *surface;
+    int32_t hotspot_x;
+    int32_t hotspot_y;
+} cursor_surface;
+
 void cursor_image_reload(cursor_image *image);
+void cursor_image_refresh(cursor_image *image);
+void cursor_image_set_surface(cursor_image *image, const cursor_surface *surface);
 void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape);
 void cursor_image_use_core(cursor_image *image);
 void cursor_image_use_client(cursor_image *image);

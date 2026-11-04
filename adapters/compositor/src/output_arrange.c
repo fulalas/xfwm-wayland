@@ -3,6 +3,7 @@
 #include "layer_shell.h"
 #include "lock.h"
 #include "output_private.h"
+#include "seat.h"
 #include "xfce_outputs.h"
 #include "xwayland.h"
 
@@ -59,6 +60,9 @@ static void update_max_scale(outputs *outs)
         return;
     }
     outs->max_scale = max_scale;
+    if (outs->server->seat != NULL) {
+        seat_refresh_cursor(outs->server->seat);
+    }
     const compositor_listener *listener = outs->server->listener;
     if (listener != NULL && listener->output_scale_changed != NULL) {
         listener->output_scale_changed(listener->self, max_scale);

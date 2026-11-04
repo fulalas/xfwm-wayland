@@ -7,6 +7,7 @@
 #include <wlr/util/log.h>
 
 #include "output.h"
+#include "output_color.h"
 #include "output_config.h"
 
 typedef struct pending_states {
@@ -15,30 +16,51 @@ typedef struct pending_states {
     size_t count;
 } pending_states;
 
-static bool prepare(const struct wlr_output_configuration_v1 *config, pending_states *pending);
+typedef bool (*backend_step)(struct wlr_backend *backend, const pending_states *pending);
+
+typedef enum color_pass {
+    COLOR_PASS_BEST,
+    COLOR_PASS_SAFE,
+} color_pass;
+
+typedef struct config_request {
+    compositor *server;
+    const struct wlr_output_configuration_v1 *config;
+    backend_step step;
+} config_request;
+
+static bool run_with_fallback(const config_request *request);
+static bool run_pass(const config_request *request, color_pass pass);
+static bool test_step(struct wlr_backend *backend, const pending_states *pending);
+static bool commit_step(struct wlr_backend *backend, const pending_states *pending);
+static bool prepare(const struct wlr_output_configuration_v1 *config, pending_states *pending,
+                    color_pass pass);
 static bool render_state(struct wlr_backend_output_state *state,
-                         struct wlr_swapchain **swapchain);
+                         struct wlr_swapchain **swapchain, color_pass pass);
+static void describe_color(output *output, struct wlr_output_state *state, color_pass pass);
+static void describe_color(output *o, struct wlr_output_state *state, color_pass pass)
+{
+    if (pass == COLOR_PASS_BEST) {
+        output_color_describe(o, state);
+    } else {
+        wlr_output_state_set_render_format(state, output_color_fallback_format());
+    }
+}
+
 static bool will_be_enabled(const struct wlr_backend_output_state *state);
 static void place_outputs(const struct wlr_output_configuration_v1 *config);
 static void finish(pending_states *pending);
 
 bool output_config_test(compositor *server, const struct wlr_output_configuration_v1 *config)
 {
-    pending_states pending = {0};
-    bool ok = prepare(config, &pending) &&
-              wlr_backend_test(server->backend, pending.states, pending.count);
-    finish(&pending);
-    return ok;
+    config_request request = {server, config, test_step};
+    return run_with_fallback(&request);
 }
 
 bool output_config_commit(compositor *server, const struct wlr_output_configuration_v1 *config)
 {
-    pending_states pending = {0};
-    bool ok = prepare(config, &pending) &&
-              wlr_backend_test(server->backend, pending.states, pending.count) &&
-              wlr_backend_commit(server->backend, pending.states, pending.count);
-    finish(&pending);
-    if (!ok) {
+    config_request request = {server, config, commit_step};
+    if (!run_with_fallback(&request)) {
         wlr_log(WLR_ERROR, "cannot apply the requested output configuration");
         return false;
     }
@@ -46,7 +68,38 @@ bool output_config_commit(compositor *server, const struct wlr_output_configurat
     return true;
 }
 
-static bool prepare(const struct wlr_output_configuration_v1 *config, pending_states *pending)
+static bool run_with_fallback(const config_request *request)
+{
+    if (run_pass(request, COLOR_PASS_BEST)) {
+        return true;
+    }
+    bool wants_more = output_color_wanted_format(request->server) !=
+                      output_color_fallback_format();
+    return wants_more && run_pass(request, COLOR_PASS_SAFE);
+}
+
+static bool run_pass(const config_request *request, color_pass pass)
+{
+    pending_states pending = {0};
+    bool ok = prepare(request->config, &pending, pass) &&
+              request->step(request->server->backend, &pending);
+    finish(&pending);
+    return ok;
+}
+
+static bool test_step(struct wlr_backend *backend, const pending_states *pending)
+{
+    return wlr_backend_test(backend, pending->states, pending->count);
+}
+
+static bool commit_step(struct wlr_backend *backend, const pending_states *pending)
+{
+    return test_step(backend, pending) &&
+           wlr_backend_commit(backend, pending->states, pending->count);
+}
+
+static bool prepare(const struct wlr_output_configuration_v1 *config, pending_states *pending,
+                    color_pass pass)
 {
     pending->states = wlr_output_configuration_v1_build_state(config, &pending->count);
     if (pending->states == NULL) {
@@ -58,7 +111,7 @@ static bool prepare(const struct wlr_output_configuration_v1 *config, pending_st
         return false;
     }
     for (size_t i = 0; i < pending->count; i++) {
-        if (!render_state(&pending->states[i], &pending->swapchains[i])) {
+        if (!render_state(&pending->states[i], &pending->swapchains[i], pass)) {
             return false;
         }
     }
@@ -66,12 +119,13 @@ static bool prepare(const struct wlr_output_configuration_v1 *config, pending_st
 }
 
 static bool render_state(struct wlr_backend_output_state *state,
-                         struct wlr_swapchain **swapchain)
+                         struct wlr_swapchain **swapchain, color_pass pass)
 {
     output *o = output_from_wlr(state->output);
     if (o == NULL || !will_be_enabled(state)) {
         return true;
     }
+    describe_color(o, &state->base, pass);
     struct wlr_scene_output *scene_output = output_scene(o);
     if (scene_output == NULL ||
         !wlr_output_configure_primary_swapchain(state->output, &state->base, swapchain)) {

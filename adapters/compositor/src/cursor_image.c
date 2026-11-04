@@ -10,7 +10,9 @@
 
 #include "cursor_names.h"
 #include "cursor_owner.h"
+#include "cursor_sprite.h"
 #include "listener.h"
+#include "output.h"
 #include "seat_private.h"
 
 enum {
@@ -22,6 +24,7 @@ struct cursor_image {
     seat *seat;
     cursor_prefs prefs;
     struct wlr_xcursor_manager *xcursors;
+    cursor_sprite *sprite;
     wm_cursor_shape core_shape;
     const char *client_shape;
     bool client_mode;
@@ -32,6 +35,9 @@ struct cursor_image {
 static cursor_prefs current_prefs(const seat *seat);
 static bool same_prefs(const cursor_prefs *a, const cursor_prefs *b);
 static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs);
+static int theme_size(const cursor_prefs *prefs);
+static cursor_theme_view theme_view(const cursor_image *image);
+static void apply_current(cursor_image *image);
 static void apply_core_shape(cursor_image *image);
 static void apply_client_shape(cursor_image *image);
 static void handle_request_set_cursor(struct wl_listener *listener, void *data);
@@ -46,6 +52,11 @@ cursor_image *cursor_image_create(seat *s)
         return NULL;
     }
     image->seat = s;
+    image->sprite = cursor_sprite_create(s->cursor, s->server->loop);
+    if (image->sprite == NULL) {
+        free(image);
+        return NULL;
+    }
     image->prefs = current_prefs(s);
     image->xcursors = load_theme(&image->prefs);
     wl_list_init(&image->request_set_shape.link);
@@ -64,6 +75,7 @@ void cursor_image_destroy(cursor_image *image)
 {
     listener_disconnect(&image->request_set_cursor);
     listener_disconnect(&image->request_set_shape);
+    cursor_sprite_destroy(image->sprite);
     if (image->xcursors != NULL) {
         wlr_xcursor_manager_destroy(image->xcursors);
     }
@@ -77,15 +89,26 @@ void cursor_image_reload(cursor_image *image)
         return;
     }
     image->prefs = prefs;
+    cursor_sprite_stop(image->sprite);
     if (image->xcursors != NULL) {
         wlr_xcursor_manager_destroy(image->xcursors);
     }
     image->xcursors = load_theme(&image->prefs);
-    if (!image->client_mode) {
-        apply_core_shape(image);
-    } else if (image->client_shape != NULL) {
-        apply_client_shape(image);
-    }
+    apply_current(image);
+}
+
+void cursor_image_refresh(cursor_image *image)
+{
+    apply_current(image);
+}
+
+void cursor_image_set_surface(cursor_image *image, const cursor_surface *surface)
+{
+    image->client_mode = true;
+    image->client_shape = NULL;
+    cursor_sprite_stop(image->sprite);
+    wlr_cursor_set_surface(image->seat->cursor, surface->surface, surface->hotspot_x,
+                           surface->hotspot_y);
 }
 
 void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape)
@@ -127,7 +150,7 @@ static bool same_prefs(const cursor_prefs *a, const cursor_prefs *b)
 
 static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs)
 {
-    int size = prefs->size > 0 ? prefs->size : DEFAULT_CURSOR_SIZE;
+    int size = theme_size(prefs);
     const char *theme = prefs->theme[0] != '\0' ? prefs->theme : NULL;
     char size_text[SIZE_TEXT_MAX];
     snprintf(size_text, sizeof(size_text), "%d", size);
@@ -144,19 +167,42 @@ static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs)
     return manager;
 }
 
+static int theme_size(const cursor_prefs *prefs)
+{
+    return prefs->size > 0 ? prefs->size : DEFAULT_CURSOR_SIZE;
+}
+
+static cursor_theme_view theme_view(const cursor_image *image)
+{
+    const compositor *server = image->seat->server;
+    return (cursor_theme_view) {
+        .manager = image->xcursors,
+        .scale = (float) outputs_max_scale(server->outputs),
+        .size = theme_size(&image->prefs),
+    };
+}
+
+static void apply_current(cursor_image *image)
+{
+    if (image->client_mode) {
+        if (image->client_shape != NULL) {
+            apply_client_shape(image);
+        }
+    } else if (!drag_active(image)) {
+        apply_core_shape(image);
+    }
+}
+
 static void apply_core_shape(cursor_image *image)
 {
-    if (image->xcursors == NULL) {
-        return;
-    }
+    cursor_theme_view view = theme_view(image);
     cursor_name_list names = cursor_names_for_shape(image->core_shape);
     for (int i = 0; i < CURSOR_NAME_CHOICES && names.names[i] != NULL; i++) {
-        if (wlr_xcursor_manager_get_xcursor(image->xcursors, names.names[i], 1.0f) != NULL) {
-            wlr_cursor_set_xcursor(image->seat->cursor, image->xcursors, names.names[i]);
+        if (cursor_sprite_show(image->sprite, &view, names.names[i])) {
             return;
         }
     }
-    wlr_cursor_set_xcursor(image->seat->cursor, image->xcursors, "default");
+    cursor_sprite_show(image->sprite, &view, "default");
 }
 
 static void handle_request_set_cursor(struct wl_listener *listener, void *data)
@@ -164,10 +210,8 @@ static void handle_request_set_cursor(struct wl_listener *listener, void *data)
     cursor_image *image = wl_container_of(listener, image, request_set_cursor);
     const struct wlr_seat_pointer_request_set_cursor_event *event = data;
     if (accepts_request(image, event->seat_client)) {
-        image->client_mode = true;
-        image->client_shape = NULL;
-        wlr_cursor_set_surface(image->seat->cursor, event->surface, event->hotspot_x,
-                               event->hotspot_y);
+        cursor_surface surface = {event->surface, event->hotspot_x, event->hotspot_y};
+        cursor_image_set_surface(image, &surface);
     }
 }
 
@@ -184,9 +228,8 @@ static void handle_request_set_shape(struct wl_listener *listener, void *data)
 
 static void apply_client_shape(cursor_image *image)
 {
-    if (image->xcursors != NULL) {
-        wlr_cursor_set_xcursor(image->seat->cursor, image->xcursors, image->client_shape);
-    }
+    cursor_theme_view view = theme_view(image);
+    cursor_sprite_show(image->sprite, &view, image->client_shape);
 }
 
 static bool accepts_request(const cursor_image *image, struct wlr_seat_client *client)

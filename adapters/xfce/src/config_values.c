@@ -110,7 +110,7 @@ wm_render_time config_render_time(const char *text)
     if (g_ascii_strcasecmp(text, "auto") == 0) {
         return (wm_render_time) {WM_RENDER_TIME_AUTO, 0};
     }
-    int ms = atoi(text);
+    int ms = config_int(text);
     if (ms < RENDER_TIME_MIN_MS || ms > RENDER_TIME_MAX_MS) {
         return (wm_render_time) {WM_RENDER_TIME_OFF, 0};
     }

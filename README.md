@@ -72,6 +72,12 @@ them instead of xfsettingsd.
   a number of milliseconds keeps that much time for drawing; `off` draws right
   away. It does nothing while variable refresh rate or tearing is active.
   Too small a value makes frames miss the refresh and stutter.
+* xfwm-wayland asks for realtime CPU priority at startup, so the screen keeps
+  up when every core is busy. A tiny helper, `xfwm-wayland-realtime`, does it:
+  it needs the `cap_sys_nice` capability (`setcap cap_sys_nice+ep
+  /usr/libexec/xfwm-wayland-realtime`, done by the package), raises only the
+  program that started it to the lowest realtime level, and exits. Without it,
+  xfwm-wayland runs at normal priority. Programs it starts get normal priority.
 * A monitor seen for the first time gets a scale guessed from its size and
   resolution (1 to 3, in steps of 0.25). Monitors that report no real size,
   and TVs, get 1. The Display settings override it.

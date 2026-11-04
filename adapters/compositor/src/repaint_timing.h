@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "present_rules.h"
+
 enum {
     RENDER_HISTORY_MAX = 16,
     REPAINT_NO_BUDGET = -1,
@@ -11,18 +13,12 @@ enum {
 
 typedef struct render_history {
     int64_t samples_ns[RENDER_HISTORY_MAX];
-    size_t count;
-    size_t next;
+    size_t total;
 } render_history;
-
-typedef struct vblank_prediction {
-    int64_t last_ns;
-    int64_t refresh_ns;
-} vblank_prediction;
 
 typedef struct repaint_plan {
     int64_t now_ns;
-    vblank_prediction vblank;
+    vblank_clock vblank;
     int64_t render_budget_ns;
 } repaint_plan;
 

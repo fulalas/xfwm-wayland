@@ -3,8 +3,7 @@
 
 static double guess(wm_size pixels, wm_size millimeters)
 {
-    scale_guess_panel panel = {pixels, millimeters};
-    return scale_guess(&panel);
+    return scale_guess(pixels, millimeters);
 }
 
 static void test_laptop_panels(void)

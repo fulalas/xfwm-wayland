@@ -28,10 +28,9 @@ typedef struct zoom_target {
 
 typedef struct output_repaint {
     struct wl_event_source *timer;
-    struct wl_listener present;
-    vblank_prediction vblank;
-    bool predictable;
-    bool can_time;
+    bool armed;
+    int64_t wake_due_ns;
+    int64_t wake_lateness_ns;
     render_history history;
     struct wlr_scene_timer render_timer;
 } output_repaint;
@@ -56,6 +55,7 @@ struct outputs {
     compositor *server;
     struct wl_list list;
     double max_scale;
+    bool can_time_renders;
     bool changed;
     struct wl_event_source *arrange_idle;
     struct wl_listener new_output;

@@ -153,9 +153,8 @@ static void handle_set_cursor(struct wl_listener *listener, void *data)
         event->seat_client->client != wl_resource_get_client(focus->resource)) {
         return;
     }
-    cursor_image_use_client(tool->owner->seat->image);
-    wlr_cursor_set_surface(tool->owner->seat->cursor, event->surface, event->hotspot_x,
-                           event->hotspot_y);
+    cursor_surface surface = {event->surface, event->hotspot_x, event->hotspot_y};
+    cursor_image_set_surface(tool->owner->seat->image, &surface);
 }
 
 static void remember_position(tablet_tool *tool, const struct wlr_tablet_tool_axis_event *axes)

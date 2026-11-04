@@ -7,9 +7,12 @@ executable(
   'wayland_source.c',
   'session_environment.c',
   'session_bus.c',
+  'realtime.c',
   c_args: [
     '-DAPP_VERSION="@0@"'.format(meson.project_version()),
     '-DAPP_LOCALE_DIR="@0@"'.format(get_option('prefix') / get_option('localedir')),
+    '-DAPP_TEXT_DOMAIN="@0@"'.format(meson.project_name()),
+    '-DAPP_REALTIME_HELPER="@0@"'.format(realtime_helper_install_path),
   ],
   dependencies: [
     compositor_dep,

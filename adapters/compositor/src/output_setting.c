@@ -12,20 +12,6 @@
 static const display_setting automatic_setting = {.enabled = true, .scale = 1.0};
 
 static bool commit_setting(output *output, const display_setting *setting);
-static double guessed_scale(const output *o)
-{
-    struct wlr_output *w = o->wlr_output;
-    struct wlr_output_mode *mode = wlr_output_preferred_mode(w);
-    if (mode == NULL) {
-        return automatic_setting.scale;
-    }
-    scale_guess_panel panel = {
-        .pixels = {mode->width, mode->height},
-        .millimeters = {w->phys_width, w->phys_height},
-    };
-    return scale_guess(&panel);
-}
-
 static bool commit_with_fallback(output *output, const display_setting *setting);
 static bool wants_adaptive_sync(const output *output);
 static void describe(struct wlr_output *wlr_output, const display_setting *setting,
@@ -102,6 +88,18 @@ bool output_apply_auto(output *o)
         return true;
     }
     return output_attach_auto(o);
+}
+
+static double guessed_scale(const output *o)
+{
+    struct wlr_output *w = o->wlr_output;
+    struct wlr_output_mode *mode = wlr_output_preferred_mode(w);
+    if (mode == NULL) {
+        return automatic_setting.scale;
+    }
+    wm_size pixels = {mode->width, mode->height};
+    wm_size millimeters = {w->phys_width, w->phys_height};
+    return scale_guess(pixels, millimeters);
 }
 
 void output_turn_off(output *o)

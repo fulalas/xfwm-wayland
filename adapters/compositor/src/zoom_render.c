@@ -13,6 +13,7 @@
 #include <wlr/util/transform.h>
 
 #include "output_private.h"
+#include "output_repaint.h"
 #include "render_sync.h"
 #include "zoom.h"
 #include "zoom_math.h"
@@ -73,7 +74,10 @@ static bool render_frame(const zoom *z, output *o)
     }
     struct wlr_output_state state;
     wlr_output_state_init(&state);
-    struct wlr_scene_output_state_options options = {.swapchain = o->zoom.swapchain};
+    struct wlr_scene_output_state_options options = {
+        .swapchain = o->zoom.swapchain,
+        .timer = output_repaint_timer(o),
+    };
     bool ok = wlr_scene_output_build_state(o->scene_output, &state, &options);
     if (ok) {
         keep_source(o, &state);

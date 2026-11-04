@@ -67,6 +67,12 @@ static void test_earliest_idle_is_next_vblank(void)
     CHECK_INT_EQ(LAST_NS + REFRESH_NS, timing_earliest_present(&steady, moment));
 }
 
+static void test_next_frame_after_vblank_stamped_ahead(void)
+{
+    CHECK_INT_EQ(LAST_NS + REFRESH_NS, vblank_clock_next_frame(&steady, LAST_NS - 1000));
+    CHECK_INT_EQ(LAST_NS + REFRESH_NS, vblank_clock_next_frame(&steady, LAST_NS + 1000));
+}
+
 static void test_earliest_with_queued_frame_is_one_later(void)
 {
     output_moment moment = {LAST_NS + 1000, true};
@@ -114,6 +120,7 @@ int main(void)
         {"fifo_counters_wrap", test_fifo_counters_wrap},
         {"vblank_next_is_strictly_after", test_vblank_next_is_strictly_after},
         {"earliest_idle_is_next_vblank", test_earliest_idle_is_next_vblank},
+        {"next_frame_after_vblank_stamped_ahead", test_next_frame_after_vblank_stamped_ahead},
         {"earliest_with_queued_frame_is_one_later", test_earliest_with_queued_frame_is_one_later},
         {"earliest_unknown_clock_is_now", test_earliest_unknown_clock_is_now},
         {"next_check_unknown_clock_is_target", test_next_check_unknown_clock_is_target},

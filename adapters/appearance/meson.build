@@ -40,6 +40,7 @@ appearance_lib = static_library(
     'src/xpm_reader.c',
   ),
   include_directories: [appearance_inc, appearance_src_inc, core_inc, compositor_api_inc],
+  c_args: ['-DAPPEARANCE_TEXT_DOMAIN="@0@"'.format(meson.project_name())],
   dependencies: appearance_deps,
 )
 

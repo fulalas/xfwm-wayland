@@ -6,7 +6,7 @@
 #include <glib/gi18n.h>
 
 static const char xfwm4_domain[] = "xfwm4";
-static const char own_domain[] = "xfwm-wayland";
+static const char own_domain[] = APPEARANCE_TEXT_DOMAIN;
 static const char workspace_format[] = "Workspace %d";
 
 typedef struct label_msgid {

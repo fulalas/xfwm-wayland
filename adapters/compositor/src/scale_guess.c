@@ -29,13 +29,13 @@ static bool is_aspect_only(wm_size millimeters);
 static double diagonal(wm_size size);
 static double round_scale(double raw);
 
-double scale_guess(const scale_guess_panel *panel)
+double scale_guess(wm_size pixels, wm_size millimeters)
 {
-    if (!is_real_size(panel->millimeters) || panel->millimeters.height > TV_HEIGHT_MM) {
+    if (!is_real_size(millimeters) || millimeters.height > TV_HEIGHT_MM) {
         return SCALE_NONE;
     }
-    double inches = diagonal(panel->millimeters) / MM_PER_INCH;
-    double dpi = diagonal(panel->pixels) / inches;
+    double inches = diagonal(millimeters) / MM_PER_INCH;
+    double dpi = diagonal(pixels) / inches;
     if (dpi < DPI_MIN || dpi > DPI_MAX) {
         return SCALE_NONE;
     }
@@ -55,8 +55,7 @@ static bool is_aspect_only(wm_size millimeters)
 {
     size_t count = sizeof(aspect_only_sizes) / sizeof(aspect_only_sizes[0]);
     for (size_t i = 0; i < count; i++) {
-        if (millimeters.width == aspect_only_sizes[i].width &&
-            millimeters.height == aspect_only_sizes[i].height) {
+        if (wm_size_equals(millimeters, aspect_only_sizes[i])) {
             return true;
         }
     }

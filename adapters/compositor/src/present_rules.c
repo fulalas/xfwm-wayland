@@ -26,12 +26,17 @@ int64_t vblank_clock_next(const vblank_clock *clock, int64_t time_ns)
     return clock->last_ns + periods * clock->refresh_ns;
 }
 
+int64_t vblank_clock_next_frame(const vblank_clock *clock, int64_t now_ns)
+{
+    return vblank_clock_next(clock, now_ns < clock->last_ns ? clock->last_ns : now_ns);
+}
+
 int64_t timing_earliest_present(const vblank_clock *clock, output_moment moment)
 {
     if (!clock->predictable) {
         return moment.now_ns;
     }
-    int64_t next = vblank_clock_next(clock, moment.now_ns);
+    int64_t next = vblank_clock_next_frame(clock, moment.now_ns);
     return moment.frame_pending ? next + clock->refresh_ns : next;
 }
 

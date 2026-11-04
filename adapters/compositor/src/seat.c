@@ -114,6 +114,11 @@ void seat_set_core_cursor(seat *s, wm_cursor_shape shape)
     cursor_image_set_core_shape(s->image, shape);
 }
 
+void seat_refresh_cursor(seat *s)
+{
+    cursor_image_refresh(s->image);
+}
+
 void seat_warp(seat *s, wm_point point)
 {
     wlr_cursor_warp_closest(s->cursor, NULL, point.x, point.y);

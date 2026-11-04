@@ -25,6 +25,7 @@ bool fifo_must_wait(const fifo_counters *counters);
 bool fifo_waiter_ready(const fifo_counters *counters, uint32_t needed);
 
 int64_t vblank_clock_next(const vblank_clock *clock, int64_t time_ns);
+int64_t vblank_clock_next_frame(const vblank_clock *clock, int64_t now_ns);
 int64_t timing_earliest_present(const vblank_clock *clock, output_moment moment);
 int64_t timing_next_check(const vblank_clock *clock, int64_t target_ns, int64_t now_ns);
 

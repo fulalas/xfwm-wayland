@@ -22,8 +22,8 @@ int main(int argc, char **argv)
     setlocale(LC_ALL, "");
     bindtextdomain("xfwm4", APP_LOCALE_DIR);
     bind_textdomain_codeset("xfwm4", "UTF-8");
-    bindtextdomain("xfwm-wayland", APP_LOCALE_DIR);
-    bind_textdomain_codeset("xfwm-wayland", "UTF-8");
+    bindtextdomain(APP_TEXT_DOMAIN, APP_LOCALE_DIR);
+    bind_textdomain_codeset(APP_TEXT_DOMAIN, "UTF-8");
     if (!parse_options(argc, argv, &options)) {
         fputs(usage, stderr);
         return EXIT_FAILURE;
@@ -32,6 +32,7 @@ int main(int argc, char **argv)
         printf("xfwm-wayland %s\n", APP_VERSION);
         return EXIT_SUCCESS;
     }
+    app_realtime_start();
     GPid bus = app_session_bus_start();
     app = app_create(&options);
     status = app ? app_run(app) : EXIT_FAILURE;

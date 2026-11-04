@@ -127,6 +127,7 @@ compositor_sources = files(
   'src/cursor_image.c',
   'src/cursor_names.c',
   'src/cursor_owner.c',
+  'src/cursor_sprite.c',
   'src/decorations.c',
   'src/device_list.c',
   'src/device_list_entry.c',

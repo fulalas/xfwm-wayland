@@ -29,6 +29,7 @@ outputs *outputs_create(compositor *server)
     }
     outs->server = server;
     outs->max_scale = 1.0;
+    outs->can_time_renders = output_repaint_renderer_can_time(server->renderer);
     wl_list_init(&outs->list);
     listener_connect(&outs->new_output, &server->backend->events.new_output, handle_new_output);
     listener_connect(&outs->layout_change, &server->layout->events.change, handle_layout_change);
@@ -186,13 +187,12 @@ static output *output_create(outputs *outs, struct wlr_output *wlr_output)
     o->server = outs->server;
     o->wlr_output = wlr_output;
     o->stats = paint_stats_init();
-    wlr_output->data = o;
-    wl_list_init(&o->scene_destroy.link);
     if (!output_repaint_init(o)) {
-        output_repaint_finish(o);
         free(o);
         return NULL;
     }
+    wlr_output->data = o;
+    wl_list_init(&o->scene_destroy.link);
     listener_connect(&o->frame, &wlr_output->events.frame, handle_frame);
     listener_connect(&o->request_state, &wlr_output->events.request_state, handle_request_state);
     listener_connect(&o->destroy, &wlr_output->events.destroy, handle_destroy);

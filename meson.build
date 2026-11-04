@@ -4,7 +4,14 @@ project(
   version: files('VERSION'),
   license: 'GPL-2.0-or-later',
   meson_version: '>=1.0',
-  default_options: ['c_std=c11', 'warning_level=2', 'werror=true', 'buildtype=debugoptimized'],
+  default_options: [
+    'c_std=c11',
+    'warning_level=2',
+    'werror=true',
+    'buildtype=release',
+    'b_ndebug=if-release',
+    'b_lto=true',
+  ],
 )
 
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
@@ -17,6 +24,7 @@ subdir('adapters/appearance')
 subdir('adapters/xfce')
 subdir('adapters/compositor')
 subdir('helper')
+subdir('realtime')
 subdir('app')
 subdir('data')
 subdir('po')

@@ -44,6 +44,7 @@ wm_commands app_commands(app *app);
 GSource *app_wayland_source_new(compositor *compositor);
 void app_start_session(app *app);
 void app_export_x11_display(app *app);
+void app_realtime_start(void);
 GPid app_session_bus_start(void);
 void app_session_bus_stop(GPid bus);
 
