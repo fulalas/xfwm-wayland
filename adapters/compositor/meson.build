@@ -7,6 +7,8 @@ libinput_dep = dependency('libinput')
 pixman_dep = dependency('pixman-1')
 cairo_dep = dependency('cairo')
 glib_dep = dependency('glib-2.0')
+json_glib_dep = dependency('json-glib-1.0')
+rsvg_dep = dependency('librsvg-2.0')
 xcb_dep = dependency('xcb')
 xcb_ewmh_dep = dependency('xcb-ewmh')
 xcb_icccm_dep = dependency('xcb-icccm')
@@ -211,6 +213,8 @@ compositor_sources = files(
   'src/repaint_timing.c',
   'src/resource.c',
 'src/restart_policy.c',
+  'src/scalable_cursor.c',
+  'src/scalable_layout.c',
   'src/scale_guess.c',
   'src/scene_buffers.c',
 'src/sealed_memfd.c',
@@ -306,6 +310,8 @@ compositor_lib = static_library(
     pixman_dep,
     cairo_dep,
     glib_dep,
+    json_glib_dep,
+    rsvg_dep,
     xcb_dep,
     xcb_ewmh_dep,
     xcb_icccm_dep,
@@ -326,6 +332,8 @@ compositor_dep = declare_dependency(
     libinput_dep,
     pixman_dep,
     cairo_dep,
+    json_glib_dep,
+    rsvg_dep,
     xcb_dep,
     xcb_ewmh_dep,
     xcb_icccm_dep,

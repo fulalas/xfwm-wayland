@@ -8,7 +8,7 @@ through XWayland.
 ## Build
 
 Needs wlroots 0.20, wayland, xkbcommon, libinput, pixman, cairo, pango,
-gdk-pixbuf, glib, xfconf and GTK 3 (for the helper program).
+gdk-pixbuf, glib, json-glib, librsvg, xfconf and GTK 3 (for the helper program).
 
     meson setup build
     ninja -C build
@@ -78,6 +78,9 @@ them instead of xfsettingsd.
   /usr/libexec/xfwm-wayland-realtime`, done by the package), raises only the
   program that started it to the lowest realtime level, and exits. Without it,
   xfwm-wayland runs at normal priority. Programs it starts get normal priority.
+* The cursor is drawn at exactly the size set in Mouse and Touchpad. Themes
+  with scalable (SVG) cursors, in KDE's `cursors_scalable` format, stay sharp
+  at any size; other themes have their nearest image scaled.
 * A monitor seen for the first time gets a scale guessed from its size and
   resolution (1 to 3, in steps of 0.25). Monitors that report no real size,
   and TVs, get 1. The Display settings override it.

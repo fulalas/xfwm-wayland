@@ -14,6 +14,8 @@
 
 enum {
     FORWARDED_BUTTONS_MAX = 16,
+    HELD_BUTTONS_MAX = 16,
+    STUCK_RELEASES_MAX = 64,
     AXIS_COUNT = 2,
     US_PER_MS = 1000,
 };
@@ -24,6 +26,8 @@ struct pointer_input {
     struct wlr_surface *grab_surface;
     uint32_t forwarded[FORWARDED_BUTTONS_MAX];
     size_t forwarded_count;
+    uint32_t held[HELD_BUTTONS_MAX];
+    size_t held_count;
     int32_t axis_remainder[AXIS_COUNT];
     struct wl_listener grab_node_destroy;
     struct wl_listener motion;
@@ -64,6 +68,10 @@ static wm_dispatch dispatch_button(pointer_input *pointer, const pointer_hit *hi
 static void start_grab(pointer_input *pointer, const pointer_hit *hit);
 static void end_grab(pointer_input *pointer);
 static bool take_forwarded(pointer_input *pointer, uint32_t button);
+static void note_held(pointer_input *pointer, const button_input *input);
+static bool grab_is_stale(const pointer_input *pointer);
+static void clear_stale_grab(pointer_input *pointer, uint32_t time_ms);
+static void release_stuck_buttons(pointer_input *pointer, uint32_t time_ms);
 static wm_dispatch dispatch_axis(pointer_input *pointer,
                                  const struct wlr_pointer_axis_event *event);
 
@@ -98,6 +106,9 @@ void pointer_input_destroy(pointer_input *p)
 void pointer_input_motion(pointer_input *p, uint32_t time_ms)
 {
     seat *s = p->seat;
+    if (grab_is_stale(p)) {
+        clear_stale_grab(p, time_ms);
+    }
     selection_move_icons(s->selection);
     if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
         pointer_input_release_grab(p);
@@ -122,10 +133,17 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
 void pointer_input_button(pointer_input *p, const button_input *input)
 {
     seat_notify_activity(p->seat);
+    if (grab_is_stale(p)) {
+        pointer_input_motion(p, input->time_ms);
+    }
+    note_held(p, input);
     if (input->pressed) {
         press(p, input);
     } else {
         release(p, input);
+        if (grab_is_stale(p)) {
+            pointer_input_motion(p, input->time_ms);
+        }
     }
 }
 
@@ -188,6 +206,9 @@ static void handle_axis(struct wl_listener *listener, void *data)
     pointer_input *p = wl_container_of(listener, p, axis);
     const struct wlr_pointer_axis_event *event = data;
     seat_notify_activity(p->seat);
+    if (grab_is_stale(p)) {
+        pointer_input_motion(p, event->time_msec);
+    }
     if (dispatch_axis(p, event) == WM_FORWARD) {
         wlr_seat_pointer_notify_axis(p->seat->wlr_seat, event->time_msec, event->orientation,
                                      event->delta, event->delta_discrete, event->source,
@@ -393,4 +414,43 @@ static wm_dispatch dispatch_axis(pointer_input *p, const struct wlr_pointer_axis
         axis.horizontal_steps = steps.steps;
     }
     return wm_pointer_axis(p->seat->server->desktop, &axis);
+}
+
+static void note_held(pointer_input *p, const button_input *input)
+{
+    for (size_t i = 0; i < p->held_count; i++) {
+        if (p->held[i] == input->button) {
+            if (!input->pressed) {
+                p->held[i] = p->held[--p->held_count];
+            }
+            return;
+        }
+    }
+    if (input->pressed && p->held_count < HELD_BUTTONS_MAX) {
+        p->held[p->held_count++] = input->button;
+    }
+}
+
+static bool grab_is_stale(const pointer_input *p)
+{
+    if (p->held_count > 0) {
+        return false;
+    }
+    return p->grab_surface != NULL || p->forwarded_count > 0 ||
+           p->seat->wlr_seat->pointer_state.button_count > 0;
+}
+
+static void clear_stale_grab(pointer_input *p, uint32_t time_ms)
+{
+    release_stuck_buttons(p, time_ms);
+    end_grab(p);
+}
+
+static void release_stuck_buttons(pointer_input *p, uint32_t time_ms)
+{
+    struct wlr_seat *wlr_seat = p->seat->wlr_seat;
+    for (int i = 0; i < STUCK_RELEASES_MAX && wlr_seat->pointer_state.button_count > 0; i++) {
+        wlr_seat_pointer_notify_button(wlr_seat, time_ms, wlr_seat->pointer_state.buttons[0].button,
+                                       WL_POINTER_BUTTON_STATE_RELEASED);
+    }
 }

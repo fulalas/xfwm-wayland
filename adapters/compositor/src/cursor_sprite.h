@@ -4,12 +4,15 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
+#include "scalable_cursor.h"
+
 struct wlr_cursor;
 struct wlr_xcursor_manager;
 
 typedef struct cursor_sprite cursor_sprite;
 
 typedef struct cursor_theme_view {
+    scalable_theme *scalable;
     struct wlr_xcursor_manager *manager;
     float scale;
     int size;

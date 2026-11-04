@@ -24,6 +24,8 @@ struct cursor_image {
     seat *seat;
     cursor_prefs prefs;
     struct wlr_xcursor_manager *xcursors;
+    scalable_theme *scalable;
+    scalable_theme_request scalable_key;
     cursor_sprite *sprite;
     wm_cursor_shape core_shape;
     const char *client_shape;
@@ -36,7 +38,9 @@ static cursor_prefs current_prefs(const seat *seat);
 static bool same_prefs(const cursor_prefs *a, const cursor_prefs *b);
 static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs);
 static int theme_size(const cursor_prefs *prefs);
-static cursor_theme_view theme_view(const cursor_image *image);
+static cursor_theme_view theme_view(cursor_image *image);
+static void refresh_scalable(cursor_image *image, int size, double scale);
+static void close_scalable(cursor_image *image);
 static void apply_current(cursor_image *image);
 static void apply_core_shape(cursor_image *image);
 static void apply_client_shape(cursor_image *image);
@@ -76,6 +80,7 @@ void cursor_image_destroy(cursor_image *image)
     listener_disconnect(&image->request_set_cursor);
     listener_disconnect(&image->request_set_shape);
     cursor_sprite_destroy(image->sprite);
+    close_scalable(image);
     if (image->xcursors != NULL) {
         wlr_xcursor_manager_destroy(image->xcursors);
     }
@@ -90,6 +95,7 @@ void cursor_image_reload(cursor_image *image)
     }
     image->prefs = prefs;
     cursor_sprite_stop(image->sprite);
+    close_scalable(image);
     if (image->xcursors != NULL) {
         wlr_xcursor_manager_destroy(image->xcursors);
     }
@@ -172,14 +178,38 @@ static int theme_size(const cursor_prefs *prefs)
     return prefs->size > 0 ? prefs->size : DEFAULT_CURSOR_SIZE;
 }
 
-static cursor_theme_view theme_view(const cursor_image *image)
+static cursor_theme_view theme_view(cursor_image *image)
 {
-    const compositor *server = image->seat->server;
+    double scale = outputs_max_scale(image->seat->server->outputs);
+    int size = theme_size(&image->prefs);
+    refresh_scalable(image, size, scale);
     return (cursor_theme_view) {
+        .scalable = image->scalable,
         .manager = image->xcursors,
-        .scale = (float) outputs_max_scale(server->outputs),
-        .size = theme_size(&image->prefs),
+        .scale = (float) scale,
+        .size = size,
     };
+}
+
+static void refresh_scalable(cursor_image *image, int size, double scale)
+{
+    scalable_theme_request *key = &image->scalable_key;
+    if (key->name != NULL && key->size == size && key->scale == scale) {
+        return;
+    }
+    cursor_sprite_stop(image->sprite);
+    close_scalable(image);
+    *key = (scalable_theme_request) {image->prefs.theme, size, scale};
+    image->scalable = scalable_theme_open(key);
+}
+
+static void close_scalable(cursor_image *image)
+{
+    if (image->scalable != NULL) {
+        scalable_theme_close(image->scalable);
+        image->scalable = NULL;
+    }
+    image->scalable_key.name = NULL;
 }
 
 static void apply_current(cursor_image *image)
