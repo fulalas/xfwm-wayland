@@ -78,6 +78,8 @@ them instead of xfsettingsd.
   /usr/libexec/xfwm-wayland-realtime`, done by the package), raises only the
   program that started it to the lowest realtime level, and exits. Without it,
   xfwm-wayland runs at normal priority. Programs it starts get normal priority.
+* Drag and drop works as on X11: a left-button drag moves or copies directly;
+  dragging with the right or middle button, or holding Alt, asks what to do.
 * The cursor is drawn at exactly the size set in Mouse and Touchpad. Themes
   with scalable (SVG) cursors, in KDE's `cursors_scalable` format, stay sharp
   at any size; other themes have their nearest image scaled.

@@ -51,6 +51,16 @@ test(
 )
 
 test(
+  'compositor_drag_actions',
+  executable(
+    'test_compositor_drag_actions',
+    ['test_drag_actions.c', '../src/drag_actions.c'],
+    include_directories: compositor_test_inc,
+    dependencies: [check_dep, wayland_server_dep],
+  ),
+)
+
+test(
   'compositor_layer_mapping',
   executable(
     'test_compositor_layer_mapping',

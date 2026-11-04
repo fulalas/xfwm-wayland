@@ -141,6 +141,7 @@ compositor_sources = files(
   'src/display_batch.c',
   'src/display_modules.c',
   'src/display_policy.c',
+  'src/drag_actions.c',
   'src/displays.c',
   'src/drm_lease.c',
   'src/edid.c',

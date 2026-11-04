@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 
+#include "drag_actions.h"
 #include "listener.h"
 #include "scene_layers.h"
 #include "seat_private.h"
@@ -15,12 +16,18 @@ struct selection {
     struct wl_listener request_set_primary;
     struct wl_listener request_start_drag;
     struct wl_listener start_drag;
+    struct wl_listener drag_drop;
+    struct wl_listener drag_destroy;
 };
 
 static void handle_request_set_selection(struct wl_listener *listener, void *data);
 static void handle_request_set_primary(struct wl_listener *listener, void *data);
 static void handle_request_start_drag(struct wl_listener *listener, void *data);
 static void handle_start_drag(struct wl_listener *listener, void *data);
+static void handle_drag_drop(struct wl_listener *listener, void *data);
+static void handle_drag_destroy(struct wl_listener *listener, void *data);
+static void offer_actions(const selection *selection, struct wlr_drag *drag, uint32_t button);
+static void keep_target_after_drop(struct wlr_drag *drag);
 static struct wlr_scene_tree *drag_tree(const selection *selection);
 
 selection *selection_create(seat *s)
@@ -38,6 +45,8 @@ selection *selection_create(seat *s)
     listener_connect(&sel->request_start_drag, &wlr_seat->events.request_start_drag,
                      handle_request_start_drag);
     listener_connect(&sel->start_drag, &wlr_seat->events.start_drag, handle_start_drag);
+    wl_list_init(&sel->drag_drop.link);
+    wl_list_init(&sel->drag_destroy.link);
     return sel;
 }
 
@@ -47,6 +56,8 @@ void selection_destroy(selection *sel)
     listener_disconnect(&sel->request_set_primary);
     listener_disconnect(&sel->request_start_drag);
     listener_disconnect(&sel->start_drag);
+    listener_disconnect(&sel->drag_drop);
+    listener_disconnect(&sel->drag_destroy);
     free(sel);
 }
 
@@ -80,11 +91,13 @@ static void handle_request_start_drag(struct wl_listener *listener, void *data)
     const struct wlr_seat_request_start_drag_event *event = data;
     struct wlr_seat *wlr_seat = sel->seat->wlr_seat;
     if (wlr_seat_validate_pointer_grab_serial(wlr_seat, event->origin, event->serial)) {
+        offer_actions(sel, event->drag, wlr_seat->pointer_state.grab_button);
         wlr_seat_start_pointer_drag(wlr_seat, event->drag, event->serial);
         return;
     }
     struct wlr_touch_point *point;
     if (wlr_seat_validate_touch_grab_serial(wlr_seat, event->origin, event->serial, &point)) {
+        offer_actions(sel, event->drag, 0);
         wlr_seat_start_touch_drag(wlr_seat, event->drag, event->serial, point);
         return;
     }
@@ -97,10 +110,54 @@ static void handle_start_drag(struct wl_listener *listener, void *data)
 {
     selection *sel = wl_container_of(listener, sel, start_drag);
     struct wlr_drag *drag = data;
+    listener_disconnect(&sel->drag_drop);
+    listener_disconnect(&sel->drag_destroy);
+    listener_connect(&sel->drag_drop, &drag->events.drop, handle_drag_drop);
+    listener_connect(&sel->drag_destroy, &drag->events.destroy, handle_drag_destroy);
     if (drag->icon != NULL) {
         wlr_scene_drag_icon_create(drag_tree(sel), drag->icon);
     }
     selection_move_icons(sel);
+}
+
+static void handle_drag_drop(struct wl_listener *listener, void *data)
+{
+    (void) listener;
+    const struct wlr_drag_drop_event *event = data;
+    keep_target_after_drop(event->drag);
+}
+
+static void handle_drag_destroy(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    selection *sel = wl_container_of(listener, sel, drag_destroy);
+    listener_disconnect(&sel->drag_drop);
+    listener_disconnect(&sel->drag_destroy);
+}
+
+static void offer_actions(const selection *sel, struct wlr_drag *drag, uint32_t button)
+{
+    if (drag->source == NULL) {
+        return;
+    }
+    drag_start start = {
+        .source_actions = drag->source->actions,
+        .button = button,
+        .alt_held = (seat_modifiers(sel->seat) & WM_MOD_ALT) != 0,
+    };
+    drag->source->actions = drag_actions_offered(&start);
+}
+
+static void keep_target_after_drop(struct wlr_drag *drag)
+{
+    bool button_still_held = drag->grab_type == WLR_DRAG_GRAB_KEYBOARD_POINTER &&
+                             drag->seat->pointer_state.button_count > 0;
+    if (drag->focus_client == NULL || button_still_held) {
+        return;
+    }
+    wl_list_remove(&drag->WLR_PRIVATE.seat_client_destroy.link);
+    wl_list_init(&drag->WLR_PRIVATE.seat_client_destroy.link);
+    drag->focus_client = NULL;
 }
 
 static struct wlr_scene_tree *drag_tree(const selection *sel)
