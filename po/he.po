@@ -1,0 +1,35 @@
+# xfwm-wayland translations.
+# Distributed under the GNU GPL version 2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"PO-Revision-Date: 2026-11-04 22:40+0000\n"
+"Last-Translator: xfwm-wayland\n"
+"Language-Team: he\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: he\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Monitor Left"
+msgstr "הצג השמאלי"
+
+msgid "Monitor Right"
+msgstr "הצג הימני"
+
+msgid "Monitor Up"
+msgstr "הצג העליון"
+
+msgid "Monitor Down"
+msgstr "הצג התחתון"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "סשן Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "יש להשתמש בסשן זה כדי להריץ את Xfce על Wayland עם xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;שולחן עבודה;סביבה;סשן;הפעלה;"

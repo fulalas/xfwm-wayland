@@ -30,3 +30,12 @@ msgstr "മുകളിലെ മോണിറ്റർ"
 
 msgid "Monitor Down"
 msgstr "തഴുത്തെ മോണിറ്റർ"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce സെഷൻ (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "xfwm-wayland ഉപയോഗിച്ച് Wayland-ൽ Xfce പ്രവർത്തിപ്പിക്കാൻ ഈ സെഷൻ ഉപയോഗിക്കുക"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;desktop;ഡെസ്ക്ടോപ്പ്;environment;പരിസ്ഥിതി;session;സെഷൻ;"

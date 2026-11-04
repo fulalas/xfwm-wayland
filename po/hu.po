@@ -31,3 +31,12 @@ msgstr "Felső monitor"
 
 msgid "Monitor Down"
 msgstr "Alsó monitor"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce munkamenet (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Az Xfce futtatása Waylanden az xfwm-wayland segítségével"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;asztal;környezet;munkamenet;"

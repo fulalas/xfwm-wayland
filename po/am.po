@@ -1,0 +1,35 @@
+# xfwm-wayland translations.
+# Distributed under the GNU GPL version 2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"PO-Revision-Date: 2026-11-04 22:40+0000\n"
+"Last-Translator: xfwm-wayland\n"
+"Language-Team: am\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: am\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Monitor Left"
+msgstr "የግራ ማሳያ"
+
+msgid "Monitor Right"
+msgstr "የቀኝ ማሳያ"
+
+msgid "Monitor Up"
+msgstr "የላይ ማሳያ"
+
+msgid "Monitor Down"
+msgstr "የታች ማሳያ"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "የXfce ክፍለ ጊዜ (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Xfce ን በWayland ላይ በxfwm-wayland ለማሄድ ይህን ክፍለ ጊዜ ይጠቀሙ"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;ዴስክቶፕ;አካባቢ;ክፍለ ጊዜ;"

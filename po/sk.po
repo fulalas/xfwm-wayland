@@ -32,3 +32,12 @@ msgstr "Monitor hore"
 
 msgid "Monitor Down"
 msgstr "Monitor dole"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Relácia Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Použite túto reláciu na spustenie Xfce v prostredí Wayland s xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;pracovná plocha;desktop;prostredie;relácia;session;"

@@ -11,7 +11,7 @@
 #include "listener.h"
 #include "osd.h"
 #include "output.h"
-#include "output_color.h"
+#include "renderer_switch.h"
 #include "scene_layers.h"
 #include "seat.h"
 #include "server_modules.h"
@@ -26,6 +26,8 @@ static bool services_are_complete(const compositor_services *services);
 static bool create_display(compositor *server);
 static bool create_backend(compositor *server);
 static bool create_scene(compositor *server);
+static bool color_config_changed(const wm_compositing_config *old,
+                                 const wm_compositing_config *new_config);
 static void destroy_backend(compositor *server);
 static void apply_scanout(compositor *server);
 static void handle_backend_destroy(struct wl_listener *listener, void *data);
@@ -83,10 +85,10 @@ bool compositor_start(compositor *c, wm_desktop *desktop)
 
 void compositor_set_config(compositor *c, const wm_config *config)
 {
-    bool depth_changed = c->config.compositing.ten_bit_color != config->compositing.ten_bit_color;
+    bool color_changed = color_config_changed(&c->config.compositing, &config->compositing);
     c->config = *config;
-    if (depth_changed) {
-        outputs_apply_color_depth(c->outputs);
+    if (color_changed) {
+        renderer_follow_config(c);
     }
     apply_scanout(c);
     outputs_schedule_frames(c->outputs);
@@ -188,20 +190,12 @@ static bool create_display(compositor *c)
 
 static bool create_backend(compositor *c)
 {
-    if (!c->config.compositing.use_gl) {
-        setenv("WLR_RENDERER", "pixman", 1);
-    }
     c->backend = wlr_backend_autocreate(c->loop, &c->session);
     if (c->backend == NULL) {
         return false;
     }
     listener_connect(&c->backend_destroy, &c->backend->events.destroy, handle_backend_destroy);
-    c->renderer = wlr_renderer_autocreate(c->backend);
-    if (c->renderer == NULL) {
-        return false;
-    }
-    c->allocator = wlr_allocator_autocreate(c->backend, c->renderer);
-    return c->allocator != NULL;
+    return renderer_create_initial(c);
 }
 
 static bool create_scene(compositor *c)
@@ -238,6 +232,7 @@ static void destroy_backend(compositor *c)
     if (c->shadows != NULL) {
         shadow_cache_destroy(c->shadows);
     }
+    renderer_release(c);
     if (c->allocator != NULL) {
         wlr_allocator_destroy(c->allocator);
     }
@@ -268,4 +263,11 @@ static int handle_timer(void *data)
     compositor *c = data;
     wm_desktop_handle_timer(c->desktop);
     return 0;
+}
+
+static bool color_config_changed(const wm_compositing_config *old,
+                                 const wm_compositing_config *new_config)
+{
+    return old->ten_bit_color != new_config->ten_bit_color || old->hdr != new_config->hdr ||
+           old->use_gl != new_config->use_gl;
 }

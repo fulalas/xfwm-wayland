@@ -41,6 +41,14 @@ void output_send_frame_done(output *o)
     wlr_scene_output_send_frame_done(o->scene_output, &now);
 }
 
+void output_tell_scene_color(const output *o, struct wlr_output_state *state)
+{
+    const struct wlr_output_image_description *now = o->wlr_output->image_description;
+    if ((now != NULL) != o->scene_hdr) {
+        wlr_output_state_set_image_description(state, now);
+    }
+}
+
 bool output_commit_state(output *o, struct wlr_output_state *state)
 {
     bool painted = (state->committed & WLR_OUTPUT_STATE_BUFFER) != 0;
@@ -54,6 +62,9 @@ bool output_commit_state(output *o, struct wlr_output_state *state)
     if (painted) {
         paint_stats_note(&o->stats, o->wlr_output->name);
     }
+    if ((state->committed & WLR_OUTPUT_STATE_IMAGE_DESCRIPTION) != 0) {
+        o->scene_hdr = state->image_description != NULL;
+    }
     return true;
 }
 
@@ -65,6 +76,7 @@ static void output_render_scene(output *o)
     struct wlr_output_state state;
     wlr_output_state_init(&state);
     struct wlr_scene_output_state_options options = {.timer = output_repaint_timer(o)};
+    output_tell_scene_color(o, &state);
     if (wlr_scene_output_build_state(o->scene_output, &state, &options)) {
         output_commit_state(o, &state);
     }

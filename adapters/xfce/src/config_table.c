@@ -74,6 +74,7 @@ static const config_setting config_settings[] = {
     { "frame_border_top", CONFIG_INT, "0", apply_int, AT(frame.border_top) },
     { "frame_opacity", CONFIG_INT, "100", apply_percent, AT(compositing.frame_opacity_percent) },
     { "full_width_title", CONFIG_BOOL, "true", apply_bool, AT(frame.title.full_width) },
+    { "hdr", CONFIG_BOOL, "false", apply_bool, AT(compositing.hdr) },
     { "horiz_scroll_opacity", CONFIG_BOOL, "false", apply_bool, AT(mouse.horiz_scroll_opacity) },
     { "inactive_opacity", CONFIG_INT, "100", apply_percent,
       AT(compositing.inactive_opacity_percent) },

@@ -31,3 +31,12 @@ msgstr "Заслон горе"
 
 msgid "Monitor Down"
 msgstr "Заслон доле"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce седница (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Користите ову седницу за покретање Xfce-а на Wayland-у помоћу xfwm-wayland-а"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;радна површ;окружење;седница;сесија;"

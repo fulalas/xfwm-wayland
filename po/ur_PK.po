@@ -1,0 +1,35 @@
+# xfwm-wayland translations.
+# Distributed under the GNU GPL version 2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"PO-Revision-Date: 2026-11-04 22:40+0000\n"
+"Last-Translator: xfwm-wayland\n"
+"Language-Team: ur_PK\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ur_PK\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Monitor Left"
+msgstr "بائیں مانیٹر"
+
+msgid "Monitor Right"
+msgstr "دائیں مانیٹر"
+
+msgid "Monitor Up"
+msgstr "اوپر والا مانیٹر"
+
+msgid "Monitor Down"
+msgstr "نیچے والا مانیٹر"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce سیشن (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "xfwm-wayland کے ساتھ Wayland پر Xfce چلانے کے لیے یہ سیشن استعمال کریں"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;ڈیسک ٹاپ;ماحول;سیشن;desktop;session;"

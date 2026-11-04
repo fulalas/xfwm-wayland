@@ -31,3 +31,12 @@ msgstr "Жоғарыдағы монитор"
 
 msgid "Monitor Down"
 msgstr "Төмендегі монитор"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce сессиясы (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Xfce-ті Wayland ортасында xfwm-wayland арқылы іске қосу үшін осы сессияны қолданыңыз"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;жұмыс үстелі;орта;сессия;desktop;session;"

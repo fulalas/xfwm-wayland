@@ -31,3 +31,12 @@ msgstr "Monitorul de sus"
 
 msgid "Monitor Down"
 msgstr "Monitorul de jos"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Sesiune Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Folosiți această sesiune pentru a rula Xfce pe Wayland cu xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;desktop;birou;mediu;sesiune;"

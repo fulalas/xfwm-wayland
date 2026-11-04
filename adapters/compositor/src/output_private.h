@@ -39,6 +39,7 @@ struct output {
     compositor *server;
     struct wlr_output *wlr_output;
     struct wlr_scene_output *scene_output;
+    bool scene_hdr;
     wm_rect usable;
     paint_stats stats;
     zoom_target zoom;
@@ -46,6 +47,7 @@ struct output {
     output_display display;
     struct wl_list link;
     struct wl_listener frame;
+    struct wl_listener commit;
     struct wl_listener request_state;
     struct wl_listener destroy;
     struct wl_listener scene_destroy;
@@ -66,6 +68,7 @@ bool output_attach_auto(output *output);
 void output_render(output *output);
 void output_render_frame(output *output);
 void output_send_frame_done(output *output);
+void output_tell_scene_color(const output *output, struct wlr_output_state *state);
 bool output_wants_tearing(const output *output);
 bool output_commit_state(output *output, struct wlr_output_state *state);
 void outputs_arrange(outputs *outputs);

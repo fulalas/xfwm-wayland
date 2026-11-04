@@ -31,3 +31,12 @@ msgstr "Монитор отгоре"
 
 msgid "Monitor Down"
 msgstr "Монитор отдолу"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Сесия на Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Използвайте тази сесия, за да стартирате Xfce под Wayland с xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;работен плот;среда;сесия;desktop;session;"

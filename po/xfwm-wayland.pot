@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: xfwm-wayland\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-04 13:12+0100\n"
+"POT-Creation-Date: 2026-11-04 22:25+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -31,4 +31,16 @@ msgstr ""
 
 #: adapters/appearance/src/menu_labels.c:38
 msgid "Monitor Down"
+msgstr ""
+
+#: data/xfwm-wayland.desktop.in:2
+msgid "Xfce Session (xfwm-wayland)"
+msgstr ""
+
+#: data/xfwm-wayland.desktop.in:3
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr ""
+
+#: data/xfwm-wayland.desktop.in:8
+msgid "xfce;wayland;desktop;environment;session;"
 msgstr ""

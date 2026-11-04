@@ -1,6 +1,8 @@
+#include <stdlib.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_alpha_modifier_v1.h>
 #include <wlr/types/wlr_buffer.h>
+#include <wlr/types/wlr_color_management_v1.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_content_type_v1.h>
 #include <wlr/types/wlr_data_control_v1.h>
@@ -37,6 +39,11 @@ enum {
     LINUX_DMABUF_VERSION = 4,
     PRESENTATION_VERSION = 2,
     STAGING_VERSION = 1,
+    COLOR_MANAGER_VERSION = 1,
+};
+
+static const enum wp_color_manager_v1_render_intent render_intents[] = {
+    WP_COLOR_MANAGER_V1_RENDER_INTENT_PERCEPTUAL,
 };
 
 static bool create_core(compositor *server);
@@ -45,6 +52,7 @@ static void create_capture(compositor *server);
 static void create_clipboard(compositor *server);
 static void create_shell_extras(compositor *server);
 static void create_foreign(compositor *server);
+static struct wlr_color_manager_v1_options color_manager_options(void);
 
 bool protocols_create(compositor *server)
 {
@@ -57,7 +65,31 @@ bool protocols_create(compositor *server)
     create_clipboard(server);
     create_shell_extras(server);
     create_foreign(server);
+    protocols_create_color(server);
     return true;
+}
+
+void protocols_create_color(compositor *server)
+{
+    struct wlr_renderer *renderer = server->renderer;
+    if (server->globals.color_manager != NULL || !renderer->features.input_color_transform) {
+        return;
+    }
+    struct wlr_color_manager_v1_options options = color_manager_options();
+    enum wp_color_manager_v1_transfer_function *transfer_functions =
+        wlr_color_manager_v1_transfer_function_list_from_renderer(
+            renderer, &options.transfer_functions_len);
+    enum wp_color_manager_v1_primaries *primaries =
+        wlr_color_manager_v1_primaries_list_from_renderer(renderer, &options.primaries_len);
+    options.transfer_functions = transfer_functions;
+    options.primaries = primaries;
+    server->globals.color_manager =
+        wlr_color_manager_v1_create(server->display, COLOR_MANAGER_VERSION, &options);
+    free(transfer_functions);
+    free(primaries);
+    if (server->globals.color_manager != NULL) {
+        wlr_scene_set_color_manager_v1(server->scene, server->globals.color_manager);
+    }
 }
 
 static bool create_core(compositor *server)
@@ -134,4 +166,13 @@ static void create_foreign(compositor *server)
     }
     wlr_xdg_foreign_v1_create(server->display, registry);
     wlr_xdg_foreign_v2_create(server->display, registry);
+}
+
+static struct wlr_color_manager_v1_options color_manager_options(void)
+{
+    return (struct wlr_color_manager_v1_options) {
+        .features = {.parametric = true, .set_mastering_display_primaries = true},
+        .render_intents = render_intents,
+        .render_intents_len = sizeof(render_intents) / sizeof(render_intents[0]),
+    };
 }

@@ -32,3 +32,12 @@ msgstr "Beeldscherm boven"
 
 msgid "Monitor Down"
 msgstr "Beeldscherm onder"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce-sessie (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Gebruik deze sessie om Xfce op Wayland uit te voeren met xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;bureaublad;omgeving;sessie;desktop;"

@@ -51,6 +51,7 @@ typedef struct protocol_globals {
     struct wlr_xdg_decoration_manager_v1 *xdg_decoration;
     struct wlr_server_decoration_manager *server_decoration;
     struct wlr_security_context_manager_v1 *security_context;
+    struct wlr_color_manager_v1 *color_manager;
     struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel;
     struct wlr_ext_foreign_toplevel_list_v1 *foreign_toplevel_list;
     struct wlr_ext_workspace_manager_v1 *workspace;
@@ -66,6 +67,20 @@ typedef struct view_signals {
     struct wl_signal unmapped;
 } view_signals;
 
+typedef enum renderer_kind {
+    RENDERER_KIND_NONE,
+    RENDERER_KIND_DEFAULT,
+    RENDERER_KIND_VULKAN,
+    RENDERER_KIND_PIXMAN,
+} renderer_kind;
+
+typedef struct renderer_state {
+    renderer_kind current;
+    renderer_kind failed;
+    bool forced;
+    struct wl_listener lost;
+} renderer_state;
+
 struct compositor {
     const compositor_painter *painter;
     const compositor_services *services;
@@ -78,6 +93,7 @@ struct compositor {
     struct wlr_session *session;
     struct wlr_renderer *renderer;
     struct wlr_allocator *allocator;
+    renderer_state render;
     struct wlr_scene *scene;
     struct wlr_output_layout *layout;
     struct wlr_scene_output_layout *scene_layout;

@@ -18,10 +18,7 @@ typedef struct pending_states {
 
 typedef bool (*backend_step)(struct wlr_backend *backend, const pending_states *pending);
 
-typedef enum color_pass {
-    COLOR_PASS_BEST,
-    COLOR_PASS_SAFE,
-} color_pass;
+typedef void (*color_step)(output *output, struct wlr_output_state *state);
 
 typedef struct config_request {
     compositor *server;
@@ -30,23 +27,14 @@ typedef struct config_request {
 } config_request;
 
 static bool run_with_fallback(const config_request *request);
-static bool run_pass(const config_request *request, color_pass pass);
+static bool wants_rich_color(const compositor *server);
+static bool run_pass(const config_request *request, color_step color);
 static bool test_step(struct wlr_backend *backend, const pending_states *pending);
 static bool commit_step(struct wlr_backend *backend, const pending_states *pending);
 static bool prepare(const struct wlr_output_configuration_v1 *config, pending_states *pending,
-                    color_pass pass);
+                    color_step color);
 static bool render_state(struct wlr_backend_output_state *state,
-                         struct wlr_swapchain **swapchain, color_pass pass);
-static void describe_color(output *output, struct wlr_output_state *state, color_pass pass);
-static void describe_color(output *o, struct wlr_output_state *state, color_pass pass)
-{
-    if (pass == COLOR_PASS_BEST) {
-        output_color_describe(o, state);
-    } else {
-        wlr_output_state_set_render_format(state, output_color_fallback_format());
-    }
-}
-
+                         struct wlr_swapchain **swapchain, color_step color);
 static bool will_be_enabled(const struct wlr_backend_output_state *state);
 static void place_outputs(const struct wlr_output_configuration_v1 *config);
 static void finish(pending_states *pending);
@@ -70,18 +58,21 @@ bool output_config_commit(compositor *server, const struct wlr_output_configurat
 
 static bool run_with_fallback(const config_request *request)
 {
-    if (run_pass(request, COLOR_PASS_BEST)) {
-        return true;
-    }
-    bool wants_more = output_color_wanted_format(request->server) !=
-                      output_color_fallback_format();
-    return wants_more && run_pass(request, COLOR_PASS_SAFE);
+    return run_pass(request, output_color_describe) ||
+           (wants_rich_color(request->server) &&
+            run_pass(request, output_color_describe_basic));
 }
 
-static bool run_pass(const config_request *request, color_pass pass)
+static bool wants_rich_color(const compositor *server)
+{
+    const wm_compositing_config *config = &server->config.compositing;
+    return config->hdr || config->ten_bit_color;
+}
+
+static bool run_pass(const config_request *request, color_step color)
 {
     pending_states pending = {0};
-    bool ok = prepare(request->config, &pending, pass) &&
+    bool ok = prepare(request->config, &pending, color) &&
               request->step(request->server->backend, &pending);
     finish(&pending);
     return ok;
@@ -99,7 +90,7 @@ static bool commit_step(struct wlr_backend *backend, const pending_states *pendi
 }
 
 static bool prepare(const struct wlr_output_configuration_v1 *config, pending_states *pending,
-                    color_pass pass)
+                    color_step color)
 {
     pending->states = wlr_output_configuration_v1_build_state(config, &pending->count);
     if (pending->states == NULL) {
@@ -111,7 +102,7 @@ static bool prepare(const struct wlr_output_configuration_v1 *config, pending_st
         return false;
     }
     for (size_t i = 0; i < pending->count; i++) {
-        if (!render_state(&pending->states[i], &pending->swapchains[i], pass)) {
+        if (!render_state(&pending->states[i], &pending->swapchains[i], color)) {
             return false;
         }
     }
@@ -119,13 +110,13 @@ static bool prepare(const struct wlr_output_configuration_v1 *config, pending_st
 }
 
 static bool render_state(struct wlr_backend_output_state *state,
-                         struct wlr_swapchain **swapchain, color_pass pass)
+                         struct wlr_swapchain **swapchain, color_step color)
 {
     output *o = output_from_wlr(state->output);
     if (o == NULL || !will_be_enabled(state)) {
         return true;
     }
-    describe_color(o, &state->base, pass);
+    color(o, &state->base);
     struct wlr_scene_output *scene_output = output_scene(o);
     if (scene_output == NULL ||
         !wlr_output_configure_primary_swapchain(state->output, &state->base, swapchain)) {

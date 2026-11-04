@@ -32,3 +32,12 @@ msgstr "Ekran Yukarı"
 
 msgid "Monitor Down"
 msgstr "Ekran Aşağı"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce Oturumu (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Xfce'yi Wayland üzerinde xfwm-wayland ile çalıştırmak için bu oturumu kullanın"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;masaüstü;ortam;oturum;desktop;session;"

@@ -30,3 +30,12 @@ msgstr "ຈໍພາບດ້ານເທິງ"
 
 msgid "Monitor Down"
 msgstr "ຈໍພາບດ້ານລຸ່ມ"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "ເຊດຊັນ Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "ໃຊ້ເຊດຊັນນີ້ເພື່ອເປີດ Xfce ເທິງ Wayland ດ້ວຍ xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;desktop;ເດັສທັອບ;environment;ສະພາບແວດລ້ອມ;session;ເຊດຊັນ;"

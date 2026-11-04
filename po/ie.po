@@ -1,0 +1,35 @@
+# xfwm-wayland translations.
+# Distributed under the GNU GPL version 2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"PO-Revision-Date: 2026-11-04 22:40+0000\n"
+"Last-Translator: xfwm-wayland\n"
+"Language-Team: ie\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: ie\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Monitor Left"
+msgstr "Monitor a levul"
+
+msgid "Monitor Right"
+msgstr "Monitor a dextri"
+
+msgid "Monitor Up"
+msgstr "Monitor in alt"
+
+msgid "Monitor Down"
+msgstr "Monitor in bass"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Session de Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Usar ti-ci session por executer Xfce sur Wayland con xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;pupitre;ambientie;session;"

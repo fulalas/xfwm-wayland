@@ -31,3 +31,12 @@ msgstr "Į monitorių viršuje"
 
 msgid "Monitor Down"
 msgstr "Į monitorių apačioje"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce seansas (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Naudokite šį seansą, kad paleistumėte Xfce Wayland aplinkoje su xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;darbalaukis;aplinka;seansas;desktop;session;"

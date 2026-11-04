@@ -111,4 +111,5 @@ static void handle_scene_destroy(struct wl_listener *listener, void *data)
     output *o = wl_container_of(listener, o, scene_destroy);
     listener_disconnect(&o->scene_destroy);
     o->scene_output = NULL;
+    o->scene_hdr = false;
 }

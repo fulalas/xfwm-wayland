@@ -13,6 +13,7 @@ static void collect_render_time(output_repaint *repaint);
 static int planned_delay(output *output);
 static int64_t render_budget(const output *output);
 static bool wants_auto(const output *output);
+static void drop_render_timer(output_repaint *repaint);
 
 bool output_repaint_init(output *o)
 {
@@ -60,6 +61,12 @@ bool output_repaint_renderer_can_time(struct wlr_renderer *renderer)
     return true;
 }
 
+void output_repaint_reset_timing(output *o)
+{
+    drop_render_timer(&o->repaint);
+    o->repaint.history = (render_history) {0};
+}
+
 static int handle_timer(void *data)
 {
     output *o = data;
@@ -82,8 +89,7 @@ static void collect_render_time(output_repaint *r)
     if (duration >= 0) {
         render_history_add(&r->history, duration + lateness);
     }
-    wlr_scene_timer_finish(&r->render_timer);
-    r->render_timer = (struct wlr_scene_timer) {0};
+    drop_render_timer(r);
 }
 
 static int planned_delay(output *o)
@@ -112,4 +118,10 @@ static bool wants_auto(const output *o)
 {
     return o->server->config.compositing.max_render_time.mode == WM_RENDER_TIME_AUTO &&
            o->server->outputs->can_time_renders;
+}
+
+static void drop_render_timer(output_repaint *r)
+{
+    wlr_scene_timer_finish(&r->render_timer);
+    r->render_timer = (struct wlr_scene_timer) {0};
 }

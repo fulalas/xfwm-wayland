@@ -50,14 +50,19 @@ toplevel_capture *toplevel_capture_create(compositor *server)
 
 void toplevel_capture_destroy(toplevel_capture *c)
 {
+    toplevel_capture_drop_sources(c);
+    listener_disconnect(&c->new_request);
+    listener_disconnect(&c->unmapped);
+    free(c);
+}
+
+void toplevel_capture_drop_sources(toplevel_capture *c)
+{
     capture_entry *entry;
     capture_entry *tmp;
     wl_list_for_each_safe(entry, tmp, &c->entries, link) {
         entry_destroy(entry);
     }
-    listener_disconnect(&c->new_request);
-    listener_disconnect(&c->unmapped);
-    free(c);
 }
 
 static void handle_new_request(struct wl_listener *listener, void *data)

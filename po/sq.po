@@ -31,3 +31,12 @@ msgstr "Monitori Sipër"
 
 msgid "Monitor Down"
 msgstr "Monitori Poshtë"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Sesion Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Përdoreni këtë sesion që të xhironi Xfce-në në Wayland me xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;desktop;mjedis;sesion;"

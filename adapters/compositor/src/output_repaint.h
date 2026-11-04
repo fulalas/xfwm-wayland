@@ -13,5 +13,6 @@ bool output_repaint_init(output *output);
 void output_repaint_finish(output *output);
 void output_repaint_frame(output *output);
 struct wlr_scene_timer *output_repaint_timer(output *output);
+void output_repaint_reset_timing(output *output);
 
 #endif

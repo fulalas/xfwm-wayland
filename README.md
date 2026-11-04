@@ -55,17 +55,28 @@ them instead of xfsettingsd.
 
 ## What maps differently on Wayland
 
-* **Use OpenGL for compositing** picks the GPU renderer; off uses the software
-  renderer. Compositing itself cannot be turned off on Wayland; turning it off
-  in the settings removes shadows, transparency, zoom and Alt+Tab previews.
-* **Suspend compositing for focused fullscreen windows** lets a fullscreen
-  window go straight to the screen (direct scanout).
+* **Use the GPU for compositing** picks the GPU renderer; off uses the
+  software renderer. The change takes effect at the next login. Compositing
+  itself cannot be turned off on Wayland; turning it off in the settings
+  removes shadows, transparency, zoom and Alt+Tab previews.
+* **Show focused fullscreen windows directly** lets a fullscreen window go
+  straight to the screen (direct scanout).
 * **vblank_mode**: `auto` syncs every frame, `off` allows tearing, `adaptive`
   uses variable refresh rate where the screen supports it. Fullscreen games
   that ask for tearing get it.
 * **ten_bit_color** (Settings Editor, `xfwm4` channel): `true` draws
   the screen in 10 bits per color, falling back to 8 bits where the screen or
   driver refuses. Off by default.
+* **hdr** (Settings Editor, `xfwm4` channel): `true` turns on HDR (HDR10) on
+  every monitor that supports it, in 10-bit color; other monitors stay SDR.
+  HDR needs the Vulkan renderer: xfwm-wayland switches to it in the running
+  session when HDR is turned on, and back when it is turned off (the screen
+  may blink once). If Vulkan cannot drive the screens it switches straight
+  back and HDR stays off. Programs started before the switch keep the buffer
+  formats of the old renderer, so a few (video players, games) may need a
+  restart. Normal content is shown at a fixed 203 nits; HDR-aware programs
+  (mpv, games) send real HDR through the color-management protocol. With
+  Vulkan, `max_render_time=auto` acts as `off`.
 * **max_render_time** (Settings Editor, `xfwm4` channel) lowers input lag by
   drawing the screen as late as possible before each refresh. `auto` (default)
   measures the drawing time (OpenGL renderer only, otherwise acts as `off`);
@@ -109,8 +120,8 @@ them instead of xfsettingsd.
   programs see the pen as a mouse, with the side buttons as middle and right.
 * VR headsets are not part of the desktop. VR programs (SteamVR, Monado) take
   them over with DRM leasing, except while the screen is locked.
-* The "Monitor Left/Right/Up/Down" window menu items use translations from
-  [xfwl4](https://gitlab.xfce.org/xfce/xfwl4) in `po/`, which are under the
-  GNU GPL version 3 or later.
+* Translations live in `po/` (69 languages). The "Monitor Left/Right/Up/Down"
+  translations of 34 of them come from [xfwl4](https://gitlab.xfce.org/xfce/xfwl4)
+  and are under the GNU GPL version 3 or later.
 * `XFWM4_PAINT_STATS=1` prints the number of frames painted per second every
   5 seconds.

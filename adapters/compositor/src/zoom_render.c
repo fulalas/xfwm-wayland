@@ -32,7 +32,6 @@ typedef struct zoom_pass {
 static void sync_cursor_lock(output *output, bool locked);
 static bool render_frame(const zoom *zoom, output *output);
 static bool ensure_swapchain(output *output);
-static bool primary_format_ready(output *output);
 static void keep_source(output *output, const struct wlr_output_state *state);
 static bool compose(const zoom *zoom, output *output, struct wlr_output_state *state);
 static bool draw_zoomed(const zoom *zoom, output *output, const zoom_pass *pass);
@@ -78,6 +77,7 @@ static bool render_frame(const zoom *z, output *o)
         .swapchain = o->zoom.swapchain,
         .timer = output_repaint_timer(o),
     };
+    output_tell_scene_color(o, &state);
     bool ok = wlr_scene_output_build_state(o->scene_output, &state, &options);
     if (ok) {
         keep_source(o, &state);
@@ -100,7 +100,7 @@ static bool ensure_swapchain(output *o)
         wlr_swapchain_destroy(current);
         o->zoom.swapchain = NULL;
     }
-    if (!primary_format_ready(o)) {
+    if (!output_rebuild_swapchain(o)) {
         return false;
     }
     o->zoom.swapchain = wlr_swapchain_create(o->server->allocator, wlr_output->width,
@@ -111,16 +111,6 @@ static bool ensure_swapchain(output *o)
         o->zoom.timeline = render_sync_timeline_create(o->server);
     }
     return o->zoom.swapchain != NULL;
-}
-
-static bool primary_format_ready(output *o)
-{
-    struct wlr_output_state empty;
-    wlr_output_state_init(&empty);
-    bool ok = wlr_output_configure_primary_swapchain(o->wlr_output, &empty,
-                                                     &o->wlr_output->swapchain);
-    wlr_output_state_finish(&empty);
-    return ok && o->wlr_output->swapchain != NULL;
 }
 
 static void keep_source(output *o, const struct wlr_output_state *state)

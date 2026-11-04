@@ -24,6 +24,9 @@ double outputs_max_scale(const outputs *outputs);
 void outputs_schedule_arrange(outputs *outputs);
 void outputs_mark_changed(outputs *outputs);
 void outputs_schedule_frames(outputs *outputs);
+bool outputs_renderer_changed(outputs *outputs);
+bool outputs_rebuild_swapchains(outputs *outputs);
+bool output_rebuild_swapchain(output *output);
 
 bool output_is_active(const output *output);
 bool output_place(output *output, wm_point position);

@@ -7,12 +7,14 @@
 #include "mode_choice.h"
 #include "output_color.h"
 #include "output_private.h"
+#include "renderer_switch.h"
 #include "scale_guess.h"
 
 static const display_setting automatic_setting = {.enabled = true, .scale = 1.0};
 
 static bool commit_setting(output *output, const display_setting *setting);
 static bool commit_with_fallback(output *output, const display_setting *setting);
+static bool commit_any_setting(output *output, const display_setting *setting);
 static bool wants_adaptive_sync(const output *output);
 static void describe(struct wlr_output *wlr_output, const display_setting *setting,
                      struct wlr_output_state *state);
@@ -128,11 +130,17 @@ void output_remember(output *o)
 
 static bool commit_with_fallback(output *o, const display_setting *setting)
 {
-    if (commit_setting(o, setting) || commit_setting(o, &automatic_setting)) {
+    if (commit_any_setting(o, setting) ||
+        (renderer_fall_back(o->server) && commit_any_setting(o, setting))) {
         return true;
     }
     wlr_log(WLR_ERROR, "cannot enable output %s", o->wlr_output->name);
     return false;
+}
+
+static bool commit_any_setting(output *o, const display_setting *setting)
+{
+    return commit_setting(o, setting) || commit_setting(o, &automatic_setting);
 }
 
 static bool commit_setting(output *o, const display_setting *setting)

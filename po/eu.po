@@ -31,3 +31,12 @@ msgstr "Goiko monitorea"
 
 msgid "Monitor Down"
 msgstr "Beheko monitorea"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce saioa (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Erabili saio hau Xfce Wayland-en exekutatzeko xfwm-wayland-ekin"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;mahaigaina;ingurunea;saioa;desktop;session;"

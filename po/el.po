@@ -1,0 +1,35 @@
+# xfwm-wayland translations.
+# Distributed under the GNU GPL version 2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"PO-Revision-Date: 2026-11-04 22:40+0000\n"
+"Last-Translator: xfwm-wayland\n"
+"Language-Team: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: el\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Monitor Left"
+msgstr "Αριστερή οθόνη"
+
+msgid "Monitor Right"
+msgstr "Δεξιά οθόνη"
+
+msgid "Monitor Up"
+msgstr "Επάνω οθόνη"
+
+msgid "Monitor Down"
+msgstr "Κάτω οθόνη"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Συνεδρία Xfce (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Χρησιμοποιήστε αυτή τη συνεδρία για να εκτελέσετε το Xfce σε Wayland με το xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;επιφάνεια εργασίας;περιβάλλον;συνεδρία;desktop;session;"

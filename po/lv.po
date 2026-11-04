@@ -1,0 +1,35 @@
+# xfwm-wayland translations.
+# Distributed under the GNU GPL version 2 or later.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"PO-Revision-Date: 2026-11-04 22:40+0000\n"
+"Last-Translator: xfwm-wayland\n"
+"Language-Team: lv\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: lv\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Monitor Left"
+msgstr "Kreisais monitors"
+
+msgid "Monitor Right"
+msgstr "Labais monitors"
+
+msgid "Monitor Up"
+msgstr "Augšējais monitors"
+
+msgid "Monitor Down"
+msgstr "Apakšējais monitors"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce sesija (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "Izmantojiet šo sesiju, lai palaistu Xfce uz Wayland ar xfwm-wayland"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;darbvirsma;vide;sesija;desktop;session;"

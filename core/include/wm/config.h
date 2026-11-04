@@ -179,6 +179,7 @@ typedef struct wm_compositing_config {
     bool unredirect_overlays;
     wm_vblank_mode vblank_mode;
     bool ten_bit_color;
+    bool hdr;
     wm_render_time max_render_time;
 } wm_compositing_config;
 

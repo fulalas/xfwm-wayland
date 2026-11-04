@@ -31,3 +31,12 @@ msgstr "ეკრანი მაღლა"
 
 msgid "Monitor Down"
 msgstr "ეკრანი დაბლა"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce სესია (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "გამოიყენეთ ეს სესია Xfce-ის Wayland-ზე xfwm-wayland-ით გასაშვებად"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;სამუშაო მაგიდა;გარემო;სესია;desktop;session;"

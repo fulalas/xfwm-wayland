@@ -31,3 +31,12 @@ msgstr "ئۈستى ئېكران"
 
 msgid "Monitor Down"
 msgstr "ئاستى ئېكران"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce ئەڭگىمىسى (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "بۇ ئەڭگىمە ئارقىلىق Xfce نى Wayland دا xfwm-wayland بىلەن ئىجرا قىلىڭ"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;ئۈستەلئۈستى;مۇھىت;ئەڭگىمە;desktop;session;"

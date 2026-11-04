@@ -32,3 +32,12 @@ msgstr "모니터 상단"
 
 msgid "Monitor Down"
 msgstr "모니터 하단"
+
+msgid "Xfce Session (xfwm-wayland)"
+msgstr "Xfce 세션 (xfwm-wayland)"
+
+msgid "Use this session to run Xfce on Wayland with xfwm-wayland"
+msgstr "xfwm-wayland로 Wayland에서 Xfce를 실행하는 세션입니다"
+
+msgid "xfce;wayland;desktop;environment;session;"
+msgstr "xfce;wayland;데스크톱;환경;세션;"
