@@ -63,6 +63,18 @@ them instead of xfsettingsd.
 * **vblank_mode**: `auto` syncs every frame, `off` allows tearing, `adaptive`
   uses variable refresh rate where the screen supports it. Fullscreen games
   that ask for tearing get it.
+* **ten_bit_color** (Settings Editor, `xfwm4` channel): `true` draws
+  the screen in 10 bits per color, falling back to 8 bits where the screen or
+  driver refuses. Off by default.
+* **max_render_time** (Settings Editor, `xfwm4` channel) lowers input lag by
+  drawing the screen as late as possible before each refresh. `auto` (default)
+  measures the drawing time (OpenGL renderer only, otherwise acts as `off`);
+  a number of milliseconds keeps that much time for drawing; `off` draws right
+  away. It does nothing while variable refresh rate or tearing is active.
+  Too small a value makes frames miss the refresh and stutter.
+* A monitor seen for the first time gets a scale guessed from its size and
+  resolution (1 to 3, in steps of 0.25). Monitors that report no real size,
+  and TVs, get 1. The Display settings override it.
 * Windows that draw their own title bar (most GTK 4 and some GTK 3
   applications) keep it; the xfwm4 theme frames the others.
 * Programs that support Wayland window sessions (`xdg-session-management`)
@@ -86,5 +98,8 @@ them instead of xfsettingsd.
   programs see the pen as a mouse, with the side buttons as middle and right.
 * VR headsets are not part of the desktop. VR programs (SteamVR, Monado) take
   them over with DRM leasing, except while the screen is locked.
+* The "Monitor Left/Right/Up/Down" window menu items use translations from
+  [xfwl4](https://gitlab.xfce.org/xfce/xfwl4) in `po/`, which are under the
+  GNU GPL version 3 or later.
 * `XFWM4_PAINT_STATS=1` prints the number of frames painted per second every
   5 seconds.

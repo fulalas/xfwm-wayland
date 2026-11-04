@@ -1,0 +1,33 @@
+# xfwm-wayland translations.
+# Copyright (C) YEAR Xfce
+# Distributed under the GNU GPL version 3 or later.
+#
+# Translators:
+# Xfce Bot <transifex@xfce.org>, 2026
+# 黃柏諺 <s8321414@gmail.com>, 2026
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"Report-Msgid-Bugs-To: https://gitlab.xfce.org/\n"
+"POT-Creation-Date: 2026-06-22 14:50+0200\n"
+"PO-Revision-Date: 2026-06-22 12:46+0000\n"
+"Last-Translator: 黃柏諺 <s8321414@gmail.com>, 2026\n"
+"Language-Team: Chinese (Taiwan) (https://app.transifex.com/xfce/teams/16840/zh_TW/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_TW\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Monitor Left"
+msgstr "左側螢幕"
+
+msgid "Monitor Right"
+msgstr "右側螢幕"
+
+msgid "Monitor Up"
+msgstr "上方螢幕"
+
+msgid "Monitor Down"
+msgstr "下方螢幕"

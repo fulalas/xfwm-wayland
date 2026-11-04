@@ -48,6 +48,17 @@ typedef enum wm_vblank_mode {
     WM_VBLANK_ADAPTIVE,
 } wm_vblank_mode;
 
+typedef enum wm_render_time_mode {
+    WM_RENDER_TIME_OFF,
+    WM_RENDER_TIME_FIXED,
+    WM_RENDER_TIME_AUTO,
+} wm_render_time_mode;
+
+typedef struct wm_render_time {
+    wm_render_time_mode mode;
+    int ms;
+} wm_render_time;
+
 typedef enum wm_tabwin_mode {
     WM_TABWIN_GRID = 0,
     WM_TABWIN_LIST = 1,
@@ -167,6 +178,8 @@ typedef struct wm_compositing_config {
     bool suspend_fullscreen;
     bool unredirect_overlays;
     wm_vblank_mode vblank_mode;
+    bool ten_bit_color;
+    wm_render_time max_render_time;
 } wm_compositing_config;
 
 typedef struct wm_config {

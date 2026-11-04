@@ -5,6 +5,11 @@
 
 #include "accelerator.h"
 
+enum {
+    RENDER_TIME_MIN_MS = 1,
+    RENDER_TIME_MAX_MS = 100,
+};
+
 typedef struct value_name {
     const char *name;
     int value;
@@ -98,6 +103,18 @@ wm_title_shadow config_title_shadow(const char *text)
 wm_vblank_mode config_vblank_mode(const char *text)
 {
     return lookup_value(&vblank_table, text);
+}
+
+wm_render_time config_render_time(const char *text)
+{
+    if (g_ascii_strcasecmp(text, "auto") == 0) {
+        return (wm_render_time) {WM_RENDER_TIME_AUTO, 0};
+    }
+    int ms = atoi(text);
+    if (ms < RENDER_TIME_MIN_MS || ms > RENDER_TIME_MAX_MS) {
+        return (wm_render_time) {WM_RENDER_TIME_OFF, 0};
+    }
+    return (wm_render_time) {WM_RENDER_TIME_FIXED, ms};
 }
 
 uint32_t config_easy_click(const char *text)

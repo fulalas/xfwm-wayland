@@ -39,6 +39,7 @@ static void apply_alignment(wm_config *config, size_t offset, const char *text);
 static void apply_title_shadow(wm_config *config, size_t offset, const char *text);
 static void apply_easy_click(wm_config *config, size_t offset, const char *text);
 static void apply_vblank_mode(wm_config *config, size_t offset, const char *text);
+static void apply_render_time(wm_config *config, size_t offset, const char *text);
 static void apply_double_click_overrides(wm_config *config, const setting_source *xsettings);
 static void *field(wm_config *config, size_t offset);
 
@@ -81,6 +82,8 @@ static const config_setting config_settings[] = {
     { "margin_right", CONFIG_INT, NULL, apply_margin, AT(placement.margins.right) },
     { "margin_top", CONFIG_INT, NULL, apply_margin, AT(placement.margins.top) },
     { "maximized_offset", CONFIG_INT, "0", apply_int, AT(frame.maximized_offset) },
+    { "max_render_time", CONFIG_TEXT, "auto", apply_render_time,
+      AT(compositing.max_render_time) },
     { "mousewheel_rollup", CONFIG_BOOL, "true", apply_bool, AT(mouse.mousewheel_rollup) },
     { "move_opacity", CONFIG_INT, "100", apply_percent, AT(compositing.move_opacity_percent) },
     { "placement_mode", CONFIG_TEXT, "center", apply_placement_mode, AT(placement.mode) },
@@ -110,6 +113,7 @@ static const config_setting config_settings[] = {
     { "snap_width", CONFIG_INT, "10", apply_int, AT(move.snap_width) },
     { "suspend_compositing_fullscreen", CONFIG_BOOL, "true", apply_bool,
       AT(compositing.suspend_fullscreen) },
+    { "ten_bit_color", CONFIG_BOOL, "false", apply_bool, AT(compositing.ten_bit_color) },
     { "theme", CONFIG_TEXT, "Default", NULL, 0 },
     { "tile_on_move", CONFIG_BOOL, "true", apply_bool, AT(move.tile_on_move) },
     { "title_alignment", CONFIG_TEXT, "center", apply_alignment, AT(frame.title.alignment) },
@@ -285,6 +289,11 @@ static void apply_easy_click(wm_config *config, size_t offset, const char *text)
 static void apply_vblank_mode(wm_config *config, size_t offset, const char *text)
 {
     *(wm_vblank_mode *) field(config, offset) = config_vblank_mode(text);
+}
+
+static void apply_render_time(wm_config *config, size_t offset, const char *text)
+{
+    *(wm_render_time *) field(config, offset) = config_render_time(text);
 }
 
 static void *field(wm_config *config, size_t offset)

@@ -65,6 +65,18 @@ static void test_vblank_mode(void)
     CHECK_INT_EQ(WM_VBLANK_AUTO, config_vblank_mode("glx"));
 }
 
+static void test_render_time(void)
+{
+    wm_render_time fixed = config_render_time("7");
+
+    CHECK_INT_EQ(WM_RENDER_TIME_OFF, config_render_time("off").mode);
+    CHECK_INT_EQ(WM_RENDER_TIME_AUTO, config_render_time("auto").mode);
+    CHECK_INT_EQ(WM_RENDER_TIME_FIXED, fixed.mode);
+    CHECK_INT_EQ(7, fixed.ms);
+    CHECK_INT_EQ(WM_RENDER_TIME_OFF, config_render_time("0").mode);
+    CHECK_INT_EQ(WM_RENDER_TIME_OFF, config_render_time("1000").mode);
+}
+
 static void test_easy_click(void)
 {
     CHECK_INT_EQ(WM_MOD_ALT, config_easy_click("Alt"));
@@ -224,8 +236,8 @@ static void test_defaults_visit_stored_keys_only(void)
     config_default_visitor visitor = { .self = &count, .visit = count_default };
 
     config_visit_defaults(&visitor);
-    CHECK_INT_EQ(81, count.stored);
-    CHECK_INT_EQ(11, count.texts);
+    CHECK_INT_EQ(83, count.stored);
+    CHECK_INT_EQ(12, count.texts);
     CHECK(!count.has_margin);
 }
 
@@ -237,6 +249,7 @@ int main(void)
         { "placement_and_alignment", test_placement_and_alignment },
         { "title_shadow", test_title_shadow },
         { "vblank_mode", test_vblank_mode },
+        { "render_time", test_render_time },
         { "easy_click", test_easy_click },
         { "bool_and_int_values", test_bool_and_int_values },
         { "clamped_values", test_clamped_values },

@@ -22,6 +22,8 @@ compositor_pure_tests = {
   'session_book': ['../src/session_book.c', '../src/session_record.c'],
   'session_apply': ['../src/session_apply.c'],
   'present_rules': ['../src/present_rules.c'],
+  'repaint_timing': ['../src/repaint_timing.c'],
+  'scale_guess': ['../src/scale_guess.c'],
 }
 
 foreach name, sources : compositor_pure_tests

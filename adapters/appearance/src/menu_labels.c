@@ -1,11 +1,12 @@
 #include "menu_labels.h"
 
-#include <libintl.h>
 #include <string.h>
 
 #include <glib.h>
+#include <glib/gi18n.h>
 
-static const char text_domain[] = "xfwm4";
+static const char xfwm4_domain[] = "xfwm4";
+static const char own_domain[] = "xfwm-wayland";
 static const char workspace_format[] = "Workspace %d";
 
 typedef struct label_msgid {
@@ -31,15 +32,16 @@ static const label_msgid label_msgids[] = {
     { WM_MENU_STICK, "Always on _Visible Workspace" },
     { WM_MENU_WORKSPACES, "Move to Another _Workspace" },
     { WM_MENU_MONITORS, "Move to Another Monitor" },
-    { WM_MENU_MONITOR_LEFT, "Monitor _Left" },
-    { WM_MENU_MONITOR_RIGHT, "Monitor _Right" },
-    { WM_MENU_MONITOR_UP, "Monitor _Up" },
-    { WM_MENU_MONITOR_DOWN, "Monitor _Down" },
+    { WM_MENU_MONITOR_LEFT, N_("Monitor Left") },
+    { WM_MENU_MONITOR_RIGHT, N_("Monitor Right") },
+    { WM_MENU_MONITOR_UP, N_("Monitor Up") },
+    { WM_MENU_MONITOR_DOWN, N_("Monitor Down") },
     { WM_MENU_CLOSE, "_Close" },
 };
 
 static char *workspace_entry_text(const wm_menu_level *level, size_t index);
 static int workspace_ordinal(const wm_menu_level *level, size_t index);
+static const char *translate(const char *msgid);
 
 const char *appearance_menu_label_msgid(wm_menu_label label)
 {
@@ -62,7 +64,7 @@ char *appearance_menu_item_text(const wm_menu_level *level, size_t index)
     if (msgid == NULL) {
         return g_strdup(item->text != NULL ? item->text : "");
     }
-    return appearance_strip_mnemonics(dgettext(text_domain, msgid));
+    return appearance_strip_mnemonics(translate(msgid));
 }
 
 char *appearance_strip_mnemonics(const char *label)
@@ -85,7 +87,7 @@ static char *workspace_entry_text(const wm_menu_level *level, size_t index)
     if (text != NULL) {
         return appearance_strip_mnemonics(text);
     }
-    return g_strdup_printf(dgettext(text_domain, workspace_format),
+    return g_strdup_printf(dgettext(xfwm4_domain, workspace_format),
                            workspace_ordinal(level, index));
 }
 
@@ -99,4 +101,10 @@ static int workspace_ordinal(const wm_menu_level *level, size_t index)
         }
     }
     return ordinal;
+}
+
+static const char *translate(const char *msgid)
+{
+    const char *text = dgettext(xfwm4_domain, msgid);
+    return text != msgid ? text : dgettext(own_domain, msgid);
 }

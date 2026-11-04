@@ -5,11 +5,27 @@
 #include <wlr/util/log.h>
 
 #include "mode_choice.h"
+#include "output_color.h"
 #include "output_private.h"
+#include "scale_guess.h"
 
 static const display_setting automatic_setting = {.enabled = true, .scale = 1.0};
 
 static bool commit_setting(output *output, const display_setting *setting);
+static double guessed_scale(const output *o)
+{
+    struct wlr_output *w = o->wlr_output;
+    struct wlr_output_mode *mode = wlr_output_preferred_mode(w);
+    if (mode == NULL) {
+        return automatic_setting.scale;
+    }
+    scale_guess_panel panel = {
+        .pixels = {mode->width, mode->height},
+        .millimeters = {w->phys_width, w->phys_height},
+    };
+    return scale_guess(&panel);
+}
+
 static bool commit_with_fallback(output *output, const display_setting *setting);
 static bool wants_adaptive_sync(const output *output);
 static void describe(struct wlr_output *wlr_output, const display_setting *setting,
@@ -21,6 +37,7 @@ static struct wlr_output_mode *find_mode(struct wlr_output *wlr_output,
 static int pick_mode(struct wlr_output *wlr_output, const display_mode *wanted);
 static struct wlr_output_mode *mode_at(struct wlr_output *wlr_output, int index);
 static display_setting output_current_setting(const output *output);
+static double guessed_scale(const output *output);
 
 output_display *output_display_of(output *o)
 {
@@ -76,7 +93,9 @@ bool output_apply_at(output *o, const display_setting *setting)
 
 bool output_apply_auto(output *o)
 {
-    if (!commit_with_fallback(o, &automatic_setting)) {
+    display_setting setting = automatic_setting;
+    setting.scale = guessed_scale(o);
+    if (!commit_with_fallback(o, &setting)) {
         return false;
     }
     if (output_is_active(o)) {
@@ -123,6 +142,7 @@ static bool commit_setting(output *o, const display_setting *setting)
     struct wlr_output_state state;
     wlr_output_state_init(&state);
     describe(o->wlr_output, setting, &state);
+    output_color_describe(o, &state);
     bool ok = false;
     if (wants_adaptive_sync(o)) {
         wlr_output_state_set_adaptive_sync_enabled(&state, true);

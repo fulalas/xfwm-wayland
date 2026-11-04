@@ -88,7 +88,8 @@ static bool ensure_swapchain(output *o)
     struct wlr_output *wlr_output = o->wlr_output;
     struct wlr_swapchain *current = o->zoom.swapchain;
     if (current != NULL && current->width == wlr_output->width &&
-        current->height == wlr_output->height) {
+        current->height == wlr_output->height &&
+        current->format.format == wlr_output->render_format) {
         return true;
     }
     if (current != NULL) {

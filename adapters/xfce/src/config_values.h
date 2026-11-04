@@ -14,6 +14,7 @@ wm_placement_mode config_placement_mode(const char *text);
 wm_alignment config_alignment(const char *text);
 wm_title_shadow config_title_shadow(const char *text);
 wm_vblank_mode config_vblank_mode(const char *text);
+wm_render_time config_render_time(const char *text);
 uint32_t config_easy_click(const char *text);
 
 #endif

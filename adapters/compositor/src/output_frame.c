@@ -5,16 +5,21 @@
 #include <wlr/types/wlr_tearing_control_v1.h>
 
 #include "output_private.h"
+#include "output_repaint.h"
 #include "seat.h"
 #include "view.h"
 #include "zoom.h"
 
 static void output_render_scene(output *output);
-static bool output_wants_tearing(const output *output);
 static bool focused_view_wants_tearing(const output *output);
-static void send_frame_done(output *output);
 
 void output_render(output *o)
+{
+    output_render_frame(o);
+    output_send_frame_done(o);
+}
+
+void output_render_frame(output *o)
 {
     if (o->scene_output == NULL) {
         return;
@@ -24,7 +29,16 @@ void output_render(output *o)
     } else {
         output_render_scene(o);
     }
-    send_frame_done(o);
+}
+
+void output_send_frame_done(output *o)
+{
+    if (o->scene_output == NULL) {
+        return;
+    }
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    wlr_scene_output_send_frame_done(o->scene_output, &now);
 }
 
 bool output_commit_state(output *o, struct wlr_output_state *state)
@@ -50,13 +64,14 @@ static void output_render_scene(output *o)
     }
     struct wlr_output_state state;
     wlr_output_state_init(&state);
-    if (wlr_scene_output_build_state(o->scene_output, &state, NULL)) {
+    struct wlr_scene_output_state_options options = {.timer = output_repaint_timer(o)};
+    if (wlr_scene_output_build_state(o->scene_output, &state, &options)) {
         output_commit_state(o, &state);
     }
     wlr_output_state_finish(&state);
 }
 
-static bool output_wants_tearing(const output *o)
+bool output_wants_tearing(const output *o)
 {
     if (o->server->config.compositing.vblank_mode == WM_VBLANK_OFF) {
         return true;
@@ -79,11 +94,4 @@ static bool focused_view_wants_tearing(const output *o)
     return wlr_tearing_control_manager_v1_surface_hint_from_surface(server->globals.tearing,
                                                                     surface) ==
            WP_TEARING_CONTROL_V1_PRESENTATION_HINT_ASYNC;
-}
-
-static void send_frame_done(output *o)
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    wlr_scene_output_send_frame_done(o->scene_output, &now);
 }

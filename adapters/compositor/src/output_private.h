@@ -3,10 +3,12 @@
 
 #include <stdint.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_scene.h>
 
 #include "output.h"
 #include "output_display.h"
 #include "paint_stats.h"
+#include "repaint_timing.h"
 
 struct wlr_buffer;
 struct wlr_drm_syncobj_timeline;
@@ -24,6 +26,16 @@ typedef struct zoom_target {
     int failures;
 } zoom_target;
 
+typedef struct output_repaint {
+    struct wl_event_source *timer;
+    struct wl_listener present;
+    vblank_prediction vblank;
+    bool predictable;
+    bool can_time;
+    render_history history;
+    struct wlr_scene_timer render_timer;
+} output_repaint;
+
 struct output {
     compositor *server;
     struct wlr_output *wlr_output;
@@ -31,6 +43,7 @@ struct output {
     wm_rect usable;
     paint_stats stats;
     zoom_target zoom;
+    output_repaint repaint;
     output_display display;
     struct wl_list link;
     struct wl_listener frame;
@@ -51,6 +64,9 @@ struct outputs {
 
 bool output_attach_auto(output *output);
 void output_render(output *output);
+void output_render_frame(output *output);
+void output_send_frame_done(output *output);
+bool output_wants_tearing(const output *output);
 bool output_commit_state(output *output, struct wlr_output_state *state);
 void outputs_arrange(outputs *outputs);
 

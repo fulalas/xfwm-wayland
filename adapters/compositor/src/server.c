@@ -11,6 +11,7 @@
 #include "listener.h"
 #include "osd.h"
 #include "output.h"
+#include "output_color.h"
 #include "scene_layers.h"
 #include "seat.h"
 #include "server_modules.h"
@@ -82,7 +83,11 @@ bool compositor_start(compositor *c, wm_desktop *desktop)
 
 void compositor_set_config(compositor *c, const wm_config *config)
 {
+    bool depth_changed = c->config.compositing.ten_bit_color != config->compositing.ten_bit_color;
     c->config = *config;
+    if (depth_changed) {
+        outputs_apply_color_depth(c->outputs);
+    }
     apply_scanout(c);
     outputs_schedule_frames(c->outputs);
 }

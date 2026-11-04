@@ -169,6 +169,7 @@ static wm_compositing_config compositing_defaults(void)
     return (wm_compositing_config) {
         .enabled = true,
         .use_gl = true,
+        .max_render_time = {WM_RENDER_TIME_AUTO, 0},
         .frame_opacity_percent = DEFAULT_OPAQUE_PERCENT,
         .inactive_opacity_percent = DEFAULT_OPAQUE_PERCENT,
         .move_opacity_percent = DEFAULT_OPAQUE_PERCENT,

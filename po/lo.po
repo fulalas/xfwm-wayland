@@ -1,0 +1,32 @@
+# xfwm-wayland translations.
+# Copyright (C) YEAR Xfce
+# Distributed under the GNU GPL version 3 or later.
+#
+# Translators:
+# BoneNI, 2026
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: xfwm-wayland\n"
+"Report-Msgid-Bugs-To: https://gitlab.xfce.org/\n"
+"POT-Creation-Date: 2026-07-30 13:05+0200\n"
+"PO-Revision-Date: 2026-06-22 12:46+0000\n"
+"Last-Translator: BoneNI, 2026\n"
+"Language-Team: Lao (https://app.transifex.com/xfce/teams/16840/lo/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: lo\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Monitor Left"
+msgstr "ຈໍພາບເບື້ອງຊ້າຍ"
+
+msgid "Monitor Right"
+msgstr "ຈໍພາບເບື້ອງຂວາ"
+
+msgid "Monitor Up"
+msgstr "ຈໍພາບດ້ານເທິງ"
+
+msgid "Monitor Down"
+msgstr "ຈໍພາບດ້ານລຸ່ມ"

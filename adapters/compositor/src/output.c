@@ -9,6 +9,7 @@
 #include "layer_shell.h"
 #include "listener.h"
 #include "output_private.h"
+#include "output_repaint.h"
 #include "zoom.h"
 
 static void handle_new_output(struct wl_listener *listener, void *data);
@@ -146,7 +147,7 @@ static void handle_frame(struct wl_listener *listener, void *data)
 {
     (void) data;
     output *o = wl_container_of(listener, o, frame);
-    output_render(o);
+    output_repaint_frame(o);
 }
 
 static void handle_request_state(struct wl_listener *listener, void *data)
@@ -187,6 +188,11 @@ static output *output_create(outputs *outs, struct wlr_output *wlr_output)
     o->stats = paint_stats_init();
     wlr_output->data = o;
     wl_list_init(&o->scene_destroy.link);
+    if (!output_repaint_init(o)) {
+        output_repaint_finish(o);
+        free(o);
+        return NULL;
+    }
     listener_connect(&o->frame, &wlr_output->events.frame, handle_frame);
     listener_connect(&o->request_state, &wlr_output->events.request_state, handle_request_state);
     listener_connect(&o->destroy, &wlr_output->events.destroy, handle_destroy);
@@ -197,6 +203,7 @@ static output *output_create(outputs *outs, struct wlr_output *wlr_output)
 static void output_destroy(output *o)
 {
     zoom_release(o);
+    output_repaint_finish(o);
     if (o->server->layer_shell != NULL) {
         layer_shell_output_destroyed(o->server->layer_shell, o);
     }

@@ -24,7 +24,7 @@ static void test_msgids_match_xfwm4(void)
     CHECK(strcmp(appearance_menu_label_msgid(WM_MENU_SHADE), "Roll Window Up") == 0);
     CHECK(strcmp(appearance_menu_label_msgid(WM_MENU_STICK), "Always on _Visible Workspace")
           == 0);
-    CHECK(strcmp(appearance_menu_label_msgid(WM_MENU_MONITOR_DOWN), "Monitor _Down") == 0);
+    CHECK(strcmp(appearance_menu_label_msgid(WM_MENU_MONITOR_DOWN), "Monitor Down") == 0);
     CHECK(strcmp(appearance_menu_label_msgid(WM_MENU_CLOSE), "_Close") == 0);
     CHECK(appearance_menu_label_msgid(WM_MENU_SEPARATOR) == NULL);
     CHECK(appearance_menu_label_msgid(WM_MENU_WORKSPACE_ENTRY) == NULL);
