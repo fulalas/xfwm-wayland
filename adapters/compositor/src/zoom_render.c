@@ -12,6 +12,7 @@
 #include <wlr/util/log.h>
 #include <wlr/util/transform.h>
 
+#include "output_brightness.h"
 #include "output_private.h"
 #include "output_repaint.h"
 #include "render_sync.h"
@@ -78,6 +79,7 @@ static bool render_frame(const zoom *z, output *o)
         .timer = output_repaint_timer(o),
     };
     output_tell_scene_color(o, &state);
+    output_brightness_frame(o, &state);
     bool ok = wlr_scene_output_build_state(o->scene_output, &state, &options);
     if (ok) {
         keep_source(o, &state);

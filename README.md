@@ -77,6 +77,11 @@ them instead of xfsettingsd.
   restart. Normal content is shown at a fixed 203 nits; HDR-aware programs
   (mpv, games) send real HDR through the color-management protocol. With
   Vulkan, `max_render_time=auto` acts as `off`.
+* **hdr_brightness** (Window Manager Tweaks, under "Enable HDR"): brightness
+  of the whole picture while HDR is on, from 50% to 200% (default 100%, normal
+  content at 203 nits). It changes HDR videos and games too, because wlroots
+  0.20 cannot change normal content alone. Night-light programs override it
+  while they run.
 * **max_render_time** (Settings Editor, `xfwm4` channel) lowers input lag by
   drawing the screen as late as possible before each refresh. `auto` (default)
   measures the drawing time (OpenGL renderer only, otherwise acts as `off`);

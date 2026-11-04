@@ -11,6 +11,7 @@
 #include "repaint_timing.h"
 
 struct wlr_buffer;
+struct wlr_color_transform;
 struct wlr_drm_syncobj_timeline;
 struct wlr_scene_output;
 struct wlr_swapchain;
@@ -25,6 +26,13 @@ typedef struct zoom_target {
     bool view_changed;
     int failures;
 } zoom_target;
+
+typedef struct output_brightness {
+    struct wlr_color_transform *curve;
+    int curve_percent;
+    int on_screen;
+    int failed_percent;
+} output_brightness;
 
 typedef struct output_repaint {
     struct wl_event_source *timer;
@@ -45,6 +53,7 @@ struct output {
     zoom_target zoom;
     output_repaint repaint;
     output_display display;
+    output_brightness brightness;
     struct wl_list link;
     struct wl_listener frame;
     struct wl_listener commit;

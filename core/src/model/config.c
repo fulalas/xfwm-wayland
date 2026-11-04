@@ -20,6 +20,7 @@ enum {
     DEFAULT_WORKSPACE_COUNT = 4,
     DEFAULT_OPAQUE_PERCENT = 100,
     DEFAULT_SHADOW_OPACITY_PERCENT = 50,
+    DEFAULT_HDR_BRIGHTNESS_PERCENT = 100,
     DEFAULT_SHADOW_DELTA_X = 0,
     DEFAULT_SHADOW_DELTA_Y = -3,
     DEFAULT_SHADOW_DELTA_WIDTH = 0,
@@ -186,5 +187,6 @@ static wm_compositing_config compositing_defaults(void)
         .suspend_fullscreen = true,
         .unredirect_overlays = true,
         .vblank_mode = WM_VBLANK_AUTO,
+        .hdr_brightness_percent = DEFAULT_HDR_BRIGHTNESS_PERCENT,
     };
 }

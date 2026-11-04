@@ -11,6 +11,7 @@
 #include "displays.h"
 #include "layer_shell.h"
 #include "listener.h"
+#include "output_brightness.h"
 #include "output_private.h"
 #include "output_repaint.h"
 #include "zoom.h"
@@ -195,6 +196,7 @@ static void handle_commit(struct wl_listener *listener, void *data)
 {
     output *o = wl_container_of(listener, o, commit);
     const struct wlr_output_event_commit *event = data;
+    output_brightness_committed(o, event->state);
     bool color_changed = (event->state->committed & WLR_OUTPUT_STATE_IMAGE_DESCRIPTION) != 0;
     if (!color_changed) {
         return;
@@ -242,6 +244,7 @@ static output *output_create(outputs *outs, struct wlr_output *wlr_output)
     o->server = outs->server;
     o->wlr_output = wlr_output;
     o->stats = paint_stats_init();
+    output_brightness_init(o);
     if (!output_repaint_init(o)) {
         free(o);
         return NULL;
@@ -260,6 +263,7 @@ static void output_destroy(output *o)
 {
     zoom_release(o);
     output_repaint_finish(o);
+    output_brightness_release(o);
     if (o->server->layer_shell != NULL) {
         layer_shell_output_destroyed(o->server->layer_shell, o);
     }

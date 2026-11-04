@@ -9,6 +9,8 @@
 
 enum {
     PERCENT_MAX = 100,
+    HDR_BRIGHTNESS_MIN = 50,
+    HDR_BRIGHTNESS_MAX = 200,
     WORKSPACE_COUNT_MIN = 1,
     TABWIN_MODE_MAX = WM_TABWIN_LIST,
 };
@@ -28,6 +30,7 @@ static void apply_bool(wm_config *config, size_t offset, const char *text);
 static void apply_int(wm_config *config, size_t offset, const char *text);
 static void apply_abs_int(wm_config *config, size_t offset, const char *text);
 static void apply_percent(wm_config *config, size_t offset, const char *text);
+static void apply_hdr_brightness(wm_config *config, size_t offset, const char *text);
 static void apply_margin(wm_config *config, size_t offset, const char *text);
 static void apply_workspace_count(wm_config *config, size_t offset, const char *text);
 static void apply_tabwin_mode(wm_config *config, size_t offset, const char *text);
@@ -75,6 +78,8 @@ static const config_setting config_settings[] = {
     { "frame_opacity", CONFIG_INT, "100", apply_percent, AT(compositing.frame_opacity_percent) },
     { "full_width_title", CONFIG_BOOL, "true", apply_bool, AT(frame.title.full_width) },
     { "hdr", CONFIG_BOOL, "false", apply_bool, AT(compositing.hdr) },
+    { "hdr_brightness", CONFIG_INT, "100", apply_hdr_brightness,
+      AT(compositing.hdr_brightness_percent) },
     { "horiz_scroll_opacity", CONFIG_BOOL, "false", apply_bool, AT(mouse.horiz_scroll_opacity) },
     { "inactive_opacity", CONFIG_INT, "100", apply_percent,
       AT(compositing.inactive_opacity_percent) },
@@ -231,6 +236,12 @@ static void apply_abs_int(wm_config *config, size_t offset, const char *text)
 static void apply_percent(wm_config *config, size_t offset, const char *text)
 {
     *(int *) field(config, offset) = CLAMP(config_int(text), 0, PERCENT_MAX);
+}
+
+static void apply_hdr_brightness(wm_config *config, size_t offset, const char *text)
+{
+    *(int *) field(config, offset) =
+        CLAMP(config_int(text), HDR_BRIGHTNESS_MIN, HDR_BRIGHTNESS_MAX);
 }
 
 static void apply_margin(wm_config *config, size_t offset, const char *text)

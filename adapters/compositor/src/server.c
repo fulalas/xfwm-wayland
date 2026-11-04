@@ -11,6 +11,7 @@
 #include "listener.h"
 #include "osd.h"
 #include "output.h"
+#include "output_brightness.h"
 #include "renderer_switch.h"
 #include "scene_layers.h"
 #include "seat.h"
@@ -90,6 +91,7 @@ void compositor_set_config(compositor *c, const wm_config *config)
     if (color_changed) {
         renderer_follow_config(c);
     }
+    outputs_brightness_changed(c->outputs);
     apply_scanout(c);
     outputs_schedule_frames(c->outputs);
 }

@@ -180,6 +180,7 @@ typedef struct wm_compositing_config {
     wm_vblank_mode vblank_mode;
     bool ten_bit_color;
     bool hdr;
+    int hdr_brightness_percent;
     wm_render_time max_render_time;
 } wm_compositing_config;
 

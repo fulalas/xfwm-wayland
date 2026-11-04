@@ -4,6 +4,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_tearing_control_v1.h>
 
+#include "output_brightness.h"
 #include "output_private.h"
 #include "output_repaint.h"
 #include "seat.h"
@@ -77,6 +78,7 @@ static void output_render_scene(output *o)
     wlr_output_state_init(&state);
     struct wlr_scene_output_state_options options = {.timer = output_repaint_timer(o)};
     output_tell_scene_color(o, &state);
+    output_brightness_frame(o, &state);
     if (wlr_scene_output_build_state(o->scene_output, &state, &options)) {
         output_commit_state(o, &state);
     }

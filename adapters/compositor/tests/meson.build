@@ -12,6 +12,7 @@ compositor_pure_tests = {
   'usable_area': ['../src/usable_area.c'],
   'cursor_names': ['../src/cursor_names.c'],
   'cursor_owner': ['../src/cursor_owner.c'],
+  'brightness_curve': ['../src/brightness_curve.c'],
   'color_plan': ['../src/color_plan.c'],
   'display_policy': ['../src/display_policy.c'],
   'mode_choice': ['../src/mode_choice.c'],
