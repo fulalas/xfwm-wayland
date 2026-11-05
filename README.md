@@ -1,35 +1,35 @@
 # xfwm-wayland
 
-A Wayland compositor for [Xfce] built on [wlroots] that behaves like [xfwm4]:
+A Wayland compositor for `Xfce` built on `wlroots` that behaves like `xfwm4`:
 same themes, settings, shortcuts and window management. X11 programs run
-through [XWayland].
+through `XWayland`.
 
 It supports:
 
-* [xfwm4] themes, the Window Manager, Tweaks and Workspaces settings and
-  [Xfce] keyboard shortcuts
+* `xfwm4` themes, the Window Manager, Tweaks and Workspaces settings and
+  `Xfce` keyboard shortcuts
 * Alt+Tab with window previews, the window menu, snapping, tiling, zoom,
   shadows and opacity
 * HDR10, switched on and off without logging out, with a brightness slider
 * 10-bit color, variable refresh rate and tearing for games
-* [Xfce] display profiles, fractional scaling and multiple monitors
-* screenshots and screen sharing (through [xdg-desktop-portal-wlr]),
+* `Xfce` display profiles, fractional scaling and multiple monitors
+* screenshots and screen sharing (through `xdg-desktop-portal-wlr`),
   touchscreens, drawing tablets and VR headsets
 * restoring window size and position for programs that support it
 * 69 languages
 
 ## Why this exists
 
-The [Xfce] Wayland session runs on [labwc] by default. It works, but it is not
-[xfwm4]: it has its own themes and configuration files, so the [xfwm4]
+The `Xfce` Wayland session runs on `labwc` by default. It works, but it is not
+`xfwm4`: it has its own themes and configuration files, so the `xfwm4`
 themes, settings dialogs and shortcuts don't apply to it.
 
-[xfwl4], [Xfce]'s official Wayland compositor, is still in development and
+`xfwl4`, `Xfce`'s official Wayland compositor, is still in development and
 not ready for daily use. Compared on the same machine:
 
-|                                      | [xfwl4]            | xfwm-wayland             |
+|                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
-| Written in                           | Rust, on [Smithay] | C, on [wlroots]          |
+| Written in                           | Rust, on `Smithay` | C, on `wlroots`          |
 | Dependencies built                   | 286                | 21                       |
 | Build time (release)                 | 138 s              | 7 s                      |
 | Program size                         | 26.4 MB            | 2.0 MB                   |
@@ -40,17 +40,17 @@ not ready for daily use. Compared on the same machine:
 | Unit tests                           | 49                 | 643                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate, tearing       | no                 | yes                      |
-| [xfwm4] compositing settings         | some ignored       | all                      |
+| `xfwm4` compositing settings         | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
 | Sharp X11 programs when scaling      | yes                | no                       |
 
-Power, CPU time and delay come from [wmbench] on an AMD Ryzen 7 7840HS at
+Power, CPU time and delay come from `wmbench` on an AMD Ryzen 7 7840HS at
 3840x2160, 60 Hz.
 
 ## Build
 
-Needs [wlroots] 0.20, wayland, xkbcommon, libinput, pixman, cairo, pango,
-gdk-pixbuf, glib, json-glib, librsvg, [xfconf] and GTK 3.
+Needs `wlroots` 0.20, wayland, xkbcommon, libinput, pixman, cairo, pango,
+gdk-pixbuf, glib, json-glib, librsvg, `xfconf` and GTK 3.
 
     meson setup build
     ninja -C build
@@ -58,16 +58,15 @@ gdk-pixbuf, glib, json-glib, librsvg, [xfconf] and GTK 3.
 
 ## Usage
 
-Pick "Xfce Session (xfwm-wayland)" at login, or start [Xfce] from a text
+Pick "Xfce Session (xfwm-wayland)" at login, or start `Xfce` from a text
 console:
 
     startxfce4 --wayland xfwm-wayland
 
-Settings are read from the same [xfconf] channels as [xfwm4]. Keyboard, mouse
-and cursor settings are applied by the compositor instead of [xfsettingsd].
+Settings are read from the same `xfconf` channels as `xfwm4`. Keyboard, mouse
+and cursor settings are applied by the compositor instead of `xfsettingsd`.
 
-It needs [xfwm4] or [xfwm4-gl] installed for the themes. [xfwm4-gl] is highly
-recommended:
+Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) is highly recommended:
 
 * its settings dialogs open on Wayland; the original ones check for an X11
   window manager and refuse to start
@@ -110,8 +109,8 @@ Windows
 * Window sessions use the Wayland protocol instead of the X11 session manager:
   programs that support it get their size, position, state and workspace back.
   They are kept in `~/.local/state/xfwm-wayland/sessions` for 90 days.
-* X11 programs look blurry on scaled screens: [wlroots] 0.20 can't scale
-  [XWayland] sharply (see
+* X11 programs look blurry on scaled screens: `wlroots` 0.20 can't scale
+  `XWayland` sharply (see
   [wlroots !2064](https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/2064)).
 
 Other
@@ -123,5 +122,5 @@ Other
 
 ## License
 
-Same as [xfwm4]: GNU General Public License, version 2 or later. See
+Same as `xfwm4`: GNU General Public License, version 2 or later. See
 [COPYING](COPYING) for the full text.
