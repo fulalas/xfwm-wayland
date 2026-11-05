@@ -1,7 +1,10 @@
+#include <math.h>
 #include <stdlib.h>
 #include <wlr/backend.h>
 #include <wlr/interfaces/wlr_output.h>
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_damage_ring.h>
+#include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
@@ -151,6 +154,13 @@ wm_rect output_usable(const output *o)
 struct wlr_output *output_wlr(const output *o)
 {
     return o->wlr_output;
+}
+
+void output_announce_scale(const output *o, struct wlr_surface *surface)
+{
+    float scale = o->wlr_output->scale;
+    wlr_fractional_scale_v1_notify_scale(surface, scale);
+    wlr_surface_set_preferred_buffer_scale(surface, (int32_t) ceilf(scale));
 }
 
 output *output_from_wlr(struct wlr_output *wlr_output)

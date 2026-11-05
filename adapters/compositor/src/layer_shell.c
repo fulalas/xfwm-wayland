@@ -118,6 +118,7 @@ static void handle_new_surface(struct wl_listener *listener, void *data)
         }
         wlr->output = output_wlr(o);
     }
+    output_announce_scale(output_from_wlr(wlr->output), wlr->surface);
     if (layer_surface_create(shell, wlr) == NULL) {
         wlr_log(WLR_ERROR, "cannot create layer surface %s", wlr->namespace);
         wlr_layer_surface_v1_destroy(wlr);

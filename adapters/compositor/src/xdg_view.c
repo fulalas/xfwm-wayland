@@ -4,6 +4,8 @@
 #include <wlr/util/log.h>
 
 #include "listener.h"
+#include "output.h"
+#include "seat.h"
 #include "xdg_session.h"
 #include "xdg_view_private.h"
 
@@ -68,6 +70,10 @@ xdg_view *xdg_view_create(compositor *server, struct wlr_xdg_toplevel *toplevel)
     listener_connect(&xv->map, &surface->events.map, handle_map);
     listener_connect(&xv->unmap, &surface->events.unmap, handle_unmap);
     listener_connect(&xv->destroy, &toplevel->events.destroy, handle_destroy);
+    output *o = outputs_at_point(server->outputs, seat_pointer_position(server->seat));
+    if (o != NULL) {
+        output_announce_scale(o, surface);
+    }
     xdg_requests_connect(xv);
     xdg_decorations_init(xv);
     return xv;

@@ -8,6 +8,7 @@
 
 struct wlr_output;
 struct wlr_scene_output;
+struct wlr_surface;
 
 typedef struct output output;
 
@@ -36,6 +37,7 @@ struct wlr_scene_output *output_scene(output *output);
 wm_rect output_full(const output *output);
 wm_rect output_usable(const output *output);
 struct wlr_output *output_wlr(const output *output);
+void output_announce_scale(const output *output, struct wlr_surface *surface);
 output *output_from_wlr(struct wlr_output *wlr_output);
 
 #endif
