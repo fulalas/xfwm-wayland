@@ -22,7 +22,8 @@ void view_refresh(wm_desktop *desktop, wm_window *window)
     refresh_decor(desktop, window);
     wm_window_view *view = &window->view;
     view->client = window->frozen ? window->frozen_client : window->client;
-    view->frame = frame_rect_for_client(desktop, window, &view->client);
+    view->shown_client = window_shown_client(window);
+    view->frame = frame_rect_for_client(desktop, window, &view->shown_client);
     view->restore_client = restore_client_of(window);
     view->visible = window->visible;
     view->activated = desktop->focus.focused == window;

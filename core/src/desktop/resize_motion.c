@@ -32,6 +32,8 @@ void resize_session_motion(wm_desktop *desktop)
     }
     apply_constraints(desktop, window, edges);
     window->moving_edges = resize_moving_edges(session->handle);
+    window->follow_drawn = true;
+    window->follow_edges = window->moving_edges;
     window_mark_dirty(window);
     if (session->box) {
         wm_rect frame = frame_rect(desktop, window);

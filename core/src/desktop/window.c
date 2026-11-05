@@ -25,6 +25,7 @@ wm_window *window_create(const wm_window_desc *desc, unsigned long serial)
     window->states = desc->states & ~(uint32_t) WM_STATE_URGENT;
     window->serial = serial;
     window->client = desc->geometry;
+    window->drawn = (wm_size) {desc->geometry.width, desc->geometry.height};
     window->hints = desc->size_hints;
     window->title = copy_text(desc->title);
     window->app_id = copy_text(desc->app_id);
@@ -87,6 +88,26 @@ bool window_has_state(const wm_window *window, uint32_t states)
 bool window_has_flag(const wm_window *window, uint32_t flags)
 {
     return (window->flags & flags) != 0;
+}
+
+wm_rect window_shown_client(const wm_window *window)
+{
+    if (window->frozen) {
+        return window->frozen_client;
+    }
+    const wm_rect *client = &window->client;
+    if (!window->follow_drawn) {
+        return *client;
+    }
+    wm_size drawn = window->drawn;
+    wm_rect shown = {client->x, client->y, drawn.width, drawn.height};
+    if (window->follow_edges & WM_EDGE_LEFT) {
+        shown.x = client->x + client->width - drawn.width;
+    }
+    if (window->follow_edges & WM_EDGE_TOP) {
+        shown.y = client->y + client->height - drawn.height;
+    }
+    return shown;
 }
 
 bool window_is_maximized(const wm_window *window)

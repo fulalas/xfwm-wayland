@@ -93,6 +93,9 @@ void view_committed(view *v, wm_size size)
     view_handshake *h = &v->handshake;
     bool changed = !wm_size_equals(size, h->committed);
     h->committed = size;
+    if (changed && v->window != NULL) {
+        wm_window_content_drawn(v->server->desktop, v->window, size);
+    }
     if (changed && !h->awaiting) {
         report_committed_size(v, size);
     }

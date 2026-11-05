@@ -46,6 +46,9 @@ struct wm_window {
     bool configure_pending;
     bool frozen;
     wm_rect frozen_client;
+    wm_size drawn;
+    bool follow_drawn;
+    uint32_t follow_edges;
     uint32_t moving_edges;
     wm_size_hints hints;
     wm_window *parent;
@@ -90,6 +93,7 @@ uint32_t window_opacity_from_double(double opacity);
 bool window_has_state(const wm_window *window, uint32_t states);
 bool window_has_flag(const wm_window *window, uint32_t flags);
 bool window_is_maximized(const wm_window *window);
+wm_rect window_shown_client(const wm_window *window);
 bool window_is_minimized(const wm_window *window);
 bool window_is_fullscreen(const wm_window *window);
 bool window_is_shaded(const wm_window *window);

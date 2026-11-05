@@ -168,6 +168,7 @@ void wm_window_set_size_hints(wm_desktop *desktop, wm_window *window, const wm_s
 void wm_window_set_parent(wm_desktop *desktop, wm_window *window, wm_window *parent);
 void wm_window_set_opacity(wm_desktop *desktop, wm_window *window, double opacity);
 void wm_window_size_committed(wm_desktop *desktop, wm_window *window, wm_size size);
+void wm_window_content_drawn(wm_desktop *desktop, wm_window *window, wm_size size);
 void wm_window_demand_attention(wm_desktop *desktop, wm_window *window);
 void wm_window_clear_attention(wm_desktop *desktop, wm_window *window);
 void wm_window_not_responding(wm_desktop *desktop, wm_window *window);

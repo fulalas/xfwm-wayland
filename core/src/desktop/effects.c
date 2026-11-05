@@ -49,7 +49,8 @@ wm_rect effects_shadow_rect(const wm_desktop *desktop, const wm_window *window)
     if (!effects_has_shadow(desktop, window)) {
         return (wm_rect) {0, 0, 0, 0};
     }
-    wm_rect frame = frame_rect(desktop, window);
+    wm_rect shown = window_shown_client(window);
+    wm_rect frame = frame_rect_for_client(desktop, window, &shown);
     return wm_shadow_rect(&frame, &desktop->config.compositing);
 }
 

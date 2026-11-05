@@ -70,6 +70,21 @@ void wm_window_size_committed(wm_desktop *desktop, wm_window *window, wm_size si
     client->width = size.width;
     client->height = size.height;
     window->configured = *client;
+    window->follow_drawn = false;
+    window_mark_dirty(window);
+    present_flush(desktop);
+}
+
+void wm_window_content_drawn(wm_desktop *desktop, wm_window *window, wm_size size)
+{
+    window->drawn = size;
+    if (!window->follow_drawn || window->frozen) {
+        return;
+    }
+    bool caught_up = size.width == window->client.width && size.height == window->client.height;
+    if (caught_up && !window->resizing) {
+        window->follow_drawn = false;
+    }
     window_mark_dirty(window);
     present_flush(desktop);
 }

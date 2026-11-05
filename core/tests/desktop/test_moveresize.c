@@ -151,6 +151,40 @@ static void test_resize_from_right_edge(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_frame_follows_drawn_size_during_resize(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_click click = fake_on_part(window, WM_PART_SIDE_LEFT, WM_MOUSE_LEFT);
+    fake_press(&world, desktop, &click);
+    drag_to(&world, desktop, &click, (wm_point) {click.point.x - 50, click.point.y});
+    CHECK_RECT_EQ(((wm_rect) {760, 398, 400, 300}), wm_window_current_view(window).shown_client);
+    CHECK_RECT_EQ(((wm_rect) {710, 398, 450, 300}), wm_window_current_view(window).client);
+    fake_release(&world, desktop, &click);
+    CHECK_RECT_EQ(((wm_rect) {760, 398, 400, 300}), wm_window_current_view(window).shown_client);
+    wm_window_content_drawn(desktop, window, (wm_size) {450, 300});
+    CHECK_RECT_EQ(((wm_rect) {710, 398, 450, 300}), wm_window_current_view(window).shown_client);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_frame_follows_drawn_size_from_top_edge(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_click click = fake_on_part(window, WM_PART_SIDE_TOP, WM_MOUSE_LEFT);
+    fake_press(&world, desktop, &click);
+    drag_to(&world, desktop, &click, (wm_point) {click.point.x, click.point.y - 40});
+    wm_window_view view = wm_window_current_view(window);
+    CHECK_INT_EQ(view.client.y + view.client.height, view.shown_client.y + 300);
+    CHECK_INT_EQ(300, view.shown_client.height);
+    fake_release(&world, desktop, &click);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_resize_respects_minimum_size(void)
 {
     fake_world world;
@@ -228,6 +262,8 @@ int main(void)
         {"drag_maximized_restores_size", test_drag_maximized_restores_size},
         {"box_move_shows_outline", test_box_move_shows_outline},
         {"resize_from_right_edge", test_resize_from_right_edge},
+        {"frame_follows_drawn_size_during_resize", test_frame_follows_drawn_size_during_resize},
+        {"frame_follows_drawn_size_from_top_edge", test_frame_follows_drawn_size_from_top_edge},
         {"resize_respects_minimum_size", test_resize_respects_minimum_size},
         {"easy_click_moves_from_content", test_easy_click_moves_from_content},
         {"drag_wraps_to_next_workspace", test_drag_wraps_to_next_workspace},

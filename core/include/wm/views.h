@@ -46,6 +46,7 @@ enum wm_allowed_action {
 
 typedef struct wm_window_view {
     wm_rect client;
+    wm_rect shown_client;
     wm_rect restore_client;
     wm_rect frame;
     bool visible;

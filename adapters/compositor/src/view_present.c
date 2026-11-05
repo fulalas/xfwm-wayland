@@ -35,8 +35,8 @@ void view_present(view *v, const wm_window_view *state)
 void view_apply_geometry(view *v)
 {
     const wm_window_view *s = &v->target.state;
-    int content_x = s->client.x - s->frame.x;
-    int content_y = s->client.y - s->frame.y;
+    int content_x = s->shown_client.x - s->frame.x;
+    int content_y = s->shown_client.y - s->frame.y;
     wlr_scene_node_set_position(&v->tree->node, s->frame.x, s->frame.y);
     wlr_scene_node_set_position(&v->content->node, content_x, content_y);
     wlr_scene_node_set_position(&v->popups->node, content_x, content_y);
@@ -80,7 +80,7 @@ static bool geometry_ready(const view *v)
     if (!v->presented || !s->visible || !v->handshake.awaiting) {
         return true;
     }
-    wm_size target = {s->client.width, s->client.height};
+    wm_size target = {s->shown_client.width, s->shown_client.height};
     return wm_size_equals(target, v->handshake.committed);
 }
 

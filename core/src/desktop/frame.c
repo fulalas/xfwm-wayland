@@ -12,7 +12,8 @@ wm_decor_window frame_decor_window(const wm_desktop *desktop, const wm_window *w
 {
     wm_decor_window decor;
     memset(&decor, 0, sizeof(decor));
-    decor.client_size = (wm_size) {window->client.width, window->client.height};
+    wm_rect shown = window_shown_client(window);
+    decor.client_size = (wm_size) {shown.width, shown.height};
     decor.state = frame_is_drawn_active(desktop, window) ? WM_FRAME_ACTIVE : WM_FRAME_INACTIVE;
     for (int i = 0; i < WM_BUTTON_COUNT; i++) {
         decor.buttons[i] = window->buttons[i];
