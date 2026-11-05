@@ -3,7 +3,7 @@
 static void add_stretched(const decor_frame *frame, wm_decor_layout *layout, wm_rect area);
 static wm_paint_op tiled_part_op(const decor_title *title, wm_rect area, int part);
 static wm_pixmap_kind top_strip_kind(const decor_frame *frame, int part);
-static wm_rect stretched_text_clip(const decor_plan *plan, wm_point position, wm_rect area);
+static wm_rect text_clip(const decor_title *title, wm_rect area);
 
 void decor_paint_title(const decor_plan *plan, wm_decor_layout *layout)
 {
@@ -51,14 +51,10 @@ wm_text_op decor_title_text(const decor_plan *plan)
     wm_text_op text = {
         .visible = title->drawn && title->text_visible,
         .position = {area.x + title->text.x, area.y + title->text.y},
-        .clip = area,
         .state = frame->state,
         .shadow = decor_title_shadow(frame),
+        .clip = text_clip(title, area),
     };
-
-    if (title->stretched) {
-        text.clip = stretched_text_clip(plan, text.position, area);
-    }
     return text;
 }
 
@@ -93,14 +89,8 @@ static wm_pixmap_kind top_strip_kind(const decor_frame *frame, int part)
     return WM_PIXMAP_TOP;
 }
 
-static wm_rect stretched_text_clip(const decor_plan *plan, wm_point position, wm_rect area)
+static wm_rect text_clip(const decor_title *title, wm_rect area)
 {
-    const decor_title *title = plan->title;
-    wm_rect text_area = {
-        position.x,
-        position.y,
-        title->right - title->part_width[DECOR_TITLE_RIGHT_EDGE],
-        plan->frame->title_height,
-    };
+    wm_rect text_area = {area.x, area.y, title->text_limit, area.height};
     return wm_rect_intersection(&area, &text_area);
 }

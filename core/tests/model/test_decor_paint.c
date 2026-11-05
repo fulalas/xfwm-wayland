@@ -149,7 +149,7 @@ static void test_title_stretch_clips_text_before_right_edge(void)
     CHECK(text.visible);
     CHECK_INT_EQ(55, text.position.x);
     CHECK_INT_EQ(7, text.position.y);
-    CHECK_RECT_EQ(((wm_rect) {55, 7, 131, 17}), text.clip);
+    CHECK_RECT_EQ(((wm_rect) {6, 0, 131, 24}), text.clip);
 }
 
 static void test_shaded_frame_skips_left_and_right(void)

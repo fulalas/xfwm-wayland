@@ -177,6 +177,8 @@ static void set_part_positions(decor_title *title)
     int *x = title->part_x;
     int right_edge_limit = title->right - width[DECOR_TITLE_RIGHT_EDGE];
 
+    title->text_limit = right_edge_limit;
+
     x[DECOR_TITLE_LEFT_FILL] = 0;
     x[DECOR_TITLE_LEFT_EDGE] = wm_max(0, width[DECOR_TITLE_LEFT_FILL]);
     x[DECOR_TITLE_MIDDLE] = x[DECOR_TITLE_LEFT_EDGE] + width[DECOR_TITLE_LEFT_EDGE];

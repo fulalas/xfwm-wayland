@@ -130,10 +130,36 @@ static void test_inactive_title_uses_inactive_settings(void)
     CHECK_INT_EQ(WM_TITLE_SHADOW_UNDER, text.shadow);
 }
 
-static void test_text_is_clipped_to_title_pixmap(void)
+static void test_text_is_clipped_before_right_title_edge(void)
 {
     decor_fixture fixture = fixture_create();
-    CHECK_RECT_EQ(((wm_rect) {6, 0, 196, 20}), fixture_layout(&fixture).title_text.clip);
+    CHECK_RECT_EQ(((wm_rect) {6, 0, 131, 20}), fixture_layout(&fixture).title_text.clip);
+}
+
+static int first_button_right_of(const wm_decor_layout *layout, int x)
+{
+    int first = layout->frame_size.width;
+    for (size_t i = 0; i < layout->part_count; i++) {
+        const wm_part_rect *part = &layout->parts[i];
+        bool is_button = part->part >= WM_PART_BUTTON_FIRST && part->part <= WM_PART_BUTTON_LAST;
+        if (is_button && part->rect.x > x && part->rect.x < first) {
+            first = part->rect.x;
+        }
+    }
+    return first;
+}
+
+static void test_long_title_stops_before_buttons(void)
+{
+    for (int full_width = 0; full_width <= 1; full_width++) {
+        decor_fixture fixture = aligned_fixture(WM_ALIGN_CENTER, full_width);
+        fixture.window.client_size.width = 120;
+        fixture.window.title_text_size.width = 500;
+        wm_decor_layout layout = fixture_layout(&fixture);
+        wm_rect clip = layout.title_text.clip;
+        CHECK(clip.width > 0);
+        CHECK(wm_rect_right(&clip) <= first_button_right_of(&layout, clip.x));
+    }
 }
 
 static void test_border_top_shifts_title_up(void)
@@ -144,7 +170,7 @@ static void test_border_top_shifts_title_up(void)
     fixture.config.border_top = 2;
     wm_text_op text = fixture_layout(&fixture).title_text;
     CHECK_INT_EQ(3, text.position.y);
-    CHECK_RECT_EQ(((wm_rect) {0, -2, 200, 20}), text.clip);
+    CHECK_RECT_EQ(((wm_rect) {0, -2, 133, 20}), text.clip);
 }
 
 static void test_no_title_when_corners_fill_the_width(void)
@@ -173,7 +199,8 @@ int main(void)
         {"vertical_offset_moves_text_down", test_vertical_offset_moves_text_down},
         {"vertical_offset_cannot_push_text_out", test_vertical_offset_cannot_push_text_out},
         {"inactive_title_uses_inactive_settings", test_inactive_title_uses_inactive_settings},
-        {"text_is_clipped_to_title_pixmap", test_text_is_clipped_to_title_pixmap},
+        {"text_is_clipped_before_right_title_edge", test_text_is_clipped_before_right_title_edge},
+        {"long_title_stops_before_buttons", test_long_title_stops_before_buttons},
         {"border_top_shifts_title_up", test_border_top_shifts_title_up},
         {"no_title_when_corners_fill_the_width", test_no_title_when_corners_fill_the_width},
     };

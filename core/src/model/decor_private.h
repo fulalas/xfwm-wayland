@@ -42,6 +42,7 @@ typedef struct decor_title {
     int top_height;
     int left;
     int right;
+    int text_limit;
     wm_point text;
     int part_x[WM_TITLE_PART_COUNT];
     int part_width[WM_TITLE_PART_COUNT];
