@@ -78,6 +78,20 @@ void touch_input_destroy(touch_input *touch)
     free(touch);
 }
 
+void touch_input_cancel_all(touch_input *touch)
+{
+    struct wlr_seat *wlr_seat = touch->seat->wlr_seat;
+    int points = wlr_seat_touch_num_points(wlr_seat);
+    for (int i = 0; i < points && !wl_list_empty(&wlr_seat->touch_state.touch_points); i++) {
+        struct wlr_touch_point *point =
+            wl_container_of(wlr_seat->touch_state.touch_points.next, point, link);
+        wlr_seat_touch_notify_cancel(wlr_seat, point->client);
+    }
+    for (int i = 0; i < TOUCH_POINTS_MAX; i++) {
+        point_release(&touch->points[i]);
+    }
+}
+
 static void handle_down(struct wl_listener *listener, void *data)
 {
     touch_input *touch = wl_container_of(listener, touch, down);

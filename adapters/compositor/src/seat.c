@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <wlr/backend.h>
+#include <wlr/backend/session.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_input_device.h>
@@ -30,6 +31,9 @@ static void seat_destroy_modules(seat *seat);
 static void destroy_pointer_modules(seat *seat);
 static void handle_new_input(struct wl_listener *listener, void *data);
 static void handle_device_destroy(struct wl_listener *listener, void *data);
+static void handle_session_active(struct wl_listener *listener, void *data);
+static void release_presses(seat *seat);
+static void release_device_presses(seat *seat, struct wlr_input_device *device);
 static void add_device(seat *seat, struct wlr_input_device *device);
 static input_device *track_device(seat *seat, struct wlr_input_device *device);
 static void free_device(input_device *device);
@@ -47,6 +51,7 @@ seat *seat_create(compositor *server)
     s->server = server;
     wl_list_init(&s->devices);
     wl_list_init(&s->new_input.link);
+    wl_list_init(&s->session_active.link);
     s->wlr_seat = wlr_seat_create(server->display, "seat0");
     s->cursor = wlr_cursor_create();
     if (s->wlr_seat == NULL || s->cursor == NULL || !seat_create_modules(s)) {
@@ -56,6 +61,10 @@ seat *seat_create(compositor *server)
     }
     wlr_cursor_attach_output_layout(s->cursor, server->layout);
     listener_connect(&s->new_input, &server->backend->events.new_input, handle_new_input);
+    if (server->session != NULL) {
+        listener_connect(&s->session_active, &server->session->events.active,
+                         handle_session_active);
+    }
     update_capabilities(s);
     return s;
 }
@@ -63,6 +72,7 @@ seat *seat_create(compositor *server)
 void seat_destroy(seat *s)
 {
     listener_disconnect(&s->new_input);
+    listener_disconnect(&s->session_active);
     input_device *device;
     input_device *tmp;
     wl_list_for_each_safe(device, tmp, &s->devices, link) {
@@ -230,8 +240,45 @@ static void handle_device_destroy(struct wl_listener *listener, void *data)
     (void) data;
     input_device *device = wl_container_of(listener, device, destroy);
     seat *s = device->seat;
+    release_device_presses(s, device->device);
     free_device(device);
     update_capabilities(s);
+}
+
+static void handle_session_active(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    seat *s = wl_container_of(listener, s, session_active);
+    if (!s->server->session->active) {
+        release_presses(s);
+    }
+}
+
+static void release_presses(seat *s)
+{
+    uint32_t now = (uint32_t) clock_now_ms();
+    pointer_input_release_all(s->pointer, now);
+    tablet_input_release_tips(s->tablet, now);
+    touch_input_cancel_all(s->touch);
+}
+
+static void release_device_presses(seat *s, struct wlr_input_device *device)
+{
+    uint32_t now = (uint32_t) clock_now_ms();
+    switch (device->type) {
+    case WLR_INPUT_DEVICE_POINTER:
+        pointer_input_release_device(s->pointer, device, now);
+        break;
+    case WLR_INPUT_DEVICE_TABLET:
+        tablet_input_release_tips(s->tablet, now);
+        pointer_input_release_device(s->pointer, device, now);
+        break;
+    case WLR_INPUT_DEVICE_TOUCH:
+        touch_input_cancel_all(s->touch);
+        break;
+    default:
+        break;
+    }
 }
 
 static void add_device(seat *s, struct wlr_input_device *device)

@@ -62,7 +62,7 @@ void tablet_route_hold_target(tablet_tool *tool)
 wm_dispatch tablet_route_tip_to_core(tablet_tool *tool, const button_input *input)
 {
     seat *s = tool->owner->seat;
-    if (seat_input_route(s) != INPUT_ROUTE_NORMAL) {
+    if (input->pressed && seat_input_route(s) != INPUT_ROUTE_NORMAL) {
         return WM_FORWARD;
     }
     pointer_hit hit = hit_at_cursor(tool);

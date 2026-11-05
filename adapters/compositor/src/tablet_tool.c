@@ -8,6 +8,7 @@
 #include <wlr/util/log.h>
 
 #include "absolute_input.h"
+#include "clock.h"
 #include "listener.h"
 #include "tablet_private.h"
 
@@ -17,6 +18,7 @@ static void handle_set_cursor(struct wl_listener *listener, void *data);
 static void remember_position(tablet_tool *tool, const struct wlr_tablet_tool_axis_event *axes);
 static void warp(tablet_tool *tool, const tool_event *event);
 static void release_grab_when_idle(tablet_tool *tool);
+static void release_tip(tablet_tool *tool, uint32_t time_ms);
 static uint32_t emulated_button(uint32_t stylus_button);
 
 tablet_tool *tablet_tool_get(tablet_input *tablets, struct wlr_tablet_tool *tool)
@@ -29,6 +31,7 @@ tablet_tool *tablet_tool_get(tablet_input *tablets, struct wlr_tablet_tool *tool
 
 void tablet_tool_free(tablet_tool *tool)
 {
+    release_tip(tool, (uint32_t) clock_now_ms());
     tablet_route_drop_grab(tool);
     listener_disconnect(&tool->set_cursor);
     listener_disconnect(&tool->destroy);
@@ -45,6 +48,7 @@ void tablet_tool_enter(tablet_tool *tool, const tool_event *event)
 
 void tablet_tool_leave(tablet_tool *tool)
 {
+    release_tip(tool, (uint32_t) clock_now_ms());
     if (tool->route == TOOL_ROUTE_CLIENT) {
         wlr_tablet_v2_tablet_tool_notify_proximity_out(tool->v2);
     }
@@ -65,7 +69,12 @@ void tablet_tool_axis(tablet_tool *tool, const tool_event *event,
 
 void tablet_tool_press_tip(tablet_tool *tool, const tool_event *event)
 {
-    button_input input = {.button = BTN_LEFT, .pressed = true, .time_ms = event->time_ms};
+    button_input input = {
+        .button = BTN_LEFT,
+        .pressed = true,
+        .time_ms = event->time_ms,
+        .device = event->tablet != NULL ? &event->tablet->tablet->base : NULL,
+    };
     tool->tip_down = true;
     if (tool->route != TOOL_ROUTE_CLIENT) {
         pointer_input_button(tool->owner->seat->pointer, &input);
@@ -84,16 +93,19 @@ void tablet_tool_press_tip(tablet_tool *tool, const tool_event *event)
 
 void tablet_tool_release_tip(tablet_tool *tool, const tool_event *event)
 {
-    button_input input = {.button = BTN_LEFT, .pressed = false, .time_ms = event->time_ms};
-    tool->tip_down = false;
-    if (tool->route != TOOL_ROUTE_CLIENT) {
-        pointer_input_button(tool->owner->seat->pointer, &input);
-        return;
+    bool to_client = tool->route == TOOL_ROUTE_CLIENT;
+    release_tip(tool, event->time_ms);
+    if (to_client) {
+        tablet_route_update(tool, event);
     }
-    wlr_tablet_v2_tablet_tool_notify_up(tool->v2);
-    tablet_route_tip_to_core(tool, &input);
-    release_grab_when_idle(tool);
-    tablet_route_update(tool, event);
+}
+
+void tablet_input_release_tips(tablet_input *tablets, uint32_t time_ms)
+{
+    tablet_tool *tool;
+    wl_list_for_each(tool, &tablets->tools, link) {
+        release_tip(tool, time_ms);
+    }
 }
 
 void tablet_tool_button(tablet_tool *tool, const button_input *input)
@@ -193,4 +205,20 @@ static uint32_t emulated_button(uint32_t stylus_button)
     default:
         return stylus_button;
     }
+}
+
+static void release_tip(tablet_tool *tool, uint32_t time_ms)
+{
+    if (!tool->tip_down) {
+        return;
+    }
+    button_input input = {.button = BTN_LEFT, .pressed = false, .time_ms = time_ms};
+    tool->tip_down = false;
+    if (tool->route != TOOL_ROUTE_CLIENT) {
+        pointer_input_button(tool->owner->seat->pointer, &input);
+        return;
+    }
+    wlr_tablet_v2_tablet_tool_notify_up(tool->v2);
+    tablet_route_tip_to_core(tool, &input);
+    release_grab_when_idle(tool);
 }

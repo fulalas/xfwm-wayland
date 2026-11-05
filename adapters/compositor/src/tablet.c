@@ -141,6 +141,7 @@ static void handle_button(struct wl_listener *listener, void *data)
         .button = event->button,
         .pressed = event->state == WLR_BUTTON_PRESSED,
         .time_ms = event->time_msec,
+        .device = &event->tablet->base,
     };
     seat_notify_activity(tablets->seat);
     tablet_tool_button(tool, &input);

@@ -25,6 +25,7 @@ typedef struct button_input {
     uint32_t button;
     bool pressed;
     uint32_t time_ms;
+    const struct wlr_input_device *device;
 } button_input;
 
 typedef struct motion_delta {
@@ -62,6 +63,7 @@ struct seat {
     seat_focus focus;
     struct wl_list devices;
     struct wl_listener new_input;
+    struct wl_listener session_active;
     struct wl_event_source *warp_motion;
 };
 
@@ -83,6 +85,9 @@ void pointer_input_destroy(pointer_input *pointer);
 void pointer_input_motion(pointer_input *pointer, uint32_t time_ms);
 void pointer_input_button(pointer_input *pointer, const button_input *input);
 void pointer_input_surface_gone(pointer_input *pointer, struct wlr_surface *surface);
+void pointer_input_release_device(pointer_input *pointer, const struct wlr_input_device *device,
+                                  uint32_t time_ms);
+void pointer_input_release_all(pointer_input *pointer, uint32_t time_ms);
 void pointer_input_release_grab(pointer_input *pointer);
 
 cursor_image *cursor_image_create(seat *seat);
@@ -103,8 +108,10 @@ struct wlr_xcursor_manager *cursor_image_xcursors(const cursor_image *image);
 
 touch_input *touch_input_create(seat *seat);
 void touch_input_destroy(touch_input *touch);
+void touch_input_cancel_all(touch_input *touch);
 tablet_input *tablet_input_create(seat *seat);
 void tablet_input_destroy(tablet_input *tablet);
+void tablet_input_release_tips(tablet_input *tablet, uint32_t time_ms);
 gestures *gestures_create(seat *seat);
 void gestures_destroy(gestures *gestures);
 constraints *constraints_create(seat *seat);

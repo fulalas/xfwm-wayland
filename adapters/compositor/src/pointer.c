@@ -15,10 +15,14 @@
 enum {
     FORWARDED_BUTTONS_MAX = 16,
     HELD_BUTTONS_MAX = 16,
-    STUCK_RELEASES_MAX = 64,
     AXIS_COUNT = 2,
     US_PER_MS = 1000,
 };
+
+typedef struct held_button {
+    uint32_t button;
+    const struct wlr_input_device *device;
+} held_button;
 
 struct pointer_input {
     seat *seat;
@@ -26,7 +30,7 @@ struct pointer_input {
     struct wlr_surface *grab_surface;
     uint32_t forwarded[FORWARDED_BUTTONS_MAX];
     size_t forwarded_count;
-    uint32_t held[HELD_BUTTONS_MAX];
+    held_button held[HELD_BUTTONS_MAX];
     size_t held_count;
     int32_t axis_remainder[AXIS_COUNT];
     struct wl_listener grab_node_destroy;
@@ -70,9 +74,9 @@ static void close_client_menus(pointer_input *pointer);
 static void end_grab(pointer_input *pointer);
 static bool take_forwarded(pointer_input *pointer, uint32_t button);
 static void note_held(pointer_input *pointer, const button_input *input);
-static bool grab_is_stale(const pointer_input *pointer);
-static void clear_stale_grab(pointer_input *pointer, uint32_t time_ms);
-static void release_stuck_buttons(pointer_input *pointer, uint32_t time_ms);
+static void release_held_at(pointer_input *pointer, size_t index, uint32_t time_ms);
+static void handle_button_input(pointer_input *pointer, const button_input *input);
+static bool is_held(const pointer_input *pointer, uint32_t button);
 static wm_dispatch dispatch_axis(pointer_input *pointer,
                                  const struct wlr_pointer_axis_event *event);
 
@@ -107,9 +111,6 @@ void pointer_input_destroy(pointer_input *p)
 void pointer_input_motion(pointer_input *p, uint32_t time_ms)
 {
     seat *s = p->seat;
-    if (grab_is_stale(p)) {
-        clear_stale_grab(p, time_ms);
-    }
     selection_move_icons(s->selection);
     if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
         pointer_input_release_grab(p);
@@ -134,24 +135,30 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
 void pointer_input_button(pointer_input *p, const button_input *input)
 {
     seat_notify_activity(p->seat);
-    if (grab_is_stale(p)) {
-        pointer_input_motion(p, input->time_ms);
-    }
-    note_held(p, input);
-    if (input->pressed) {
-        press(p, input);
-    } else {
-        release(p, input);
-        if (grab_is_stale(p)) {
-            pointer_input_motion(p, input->time_ms);
-        }
-    }
+    handle_button_input(p, input);
 }
 
 void pointer_input_surface_gone(pointer_input *p, struct wlr_surface *surface)
 {
     if (p->grab_surface == surface) {
         end_grab(p);
+    }
+}
+
+void pointer_input_release_device(pointer_input *p, const struct wlr_input_device *device,
+                                  uint32_t time_ms)
+{
+    for (size_t i = p->held_count; i-- > 0;) {
+        if (p->held[i].device == device) {
+            release_held_at(p, i, time_ms);
+        }
+    }
+}
+
+void pointer_input_release_all(pointer_input *p, uint32_t time_ms)
+{
+    while (p->held_count > 0) {
+        release_held_at(p, p->held_count - 1, time_ms);
     }
 }
 
@@ -198,6 +205,7 @@ static void handle_button(struct wl_listener *listener, void *data)
         .button = event->button,
         .pressed = event->state == WL_POINTER_BUTTON_STATE_PRESSED,
         .time_ms = event->time_msec,
+        .device = &event->pointer->base,
     };
     pointer_input_button(p, &input);
 }
@@ -207,9 +215,6 @@ static void handle_axis(struct wl_listener *listener, void *data)
     pointer_input *p = wl_container_of(listener, p, axis);
     const struct wlr_pointer_axis_event *event = data;
     seat_notify_activity(p->seat);
-    if (grab_is_stale(p)) {
-        pointer_input_motion(p, event->time_msec);
-    }
     if (dispatch_axis(p, event) == WM_FORWARD) {
         wlr_seat_pointer_notify_axis(p->seat->wlr_seat, event->time_msec, event->orientation,
                                      event->delta, event->delta_discrete, event->source,
@@ -356,7 +361,7 @@ static wm_dispatch dispatch_button(pointer_input *p, const pointer_hit *hit,
                                    const button_input *input)
 {
     uint32_t button = input_mapping_button(input->button);
-    if (button == 0 || !core_receives_pointer(p)) {
+    if (button == 0 || (input->pressed && !core_receives_pointer(p))) {
         return WM_FORWARD;
     }
     wm_button_event event = {
@@ -390,7 +395,6 @@ static void end_grab(pointer_input *p)
     listener_disconnect(&p->grab_node_destroy);
     p->grab_surface = NULL;
     p->grab_node = NULL;
-    p->forwarded_count = 0;
 }
 
 static bool take_forwarded(pointer_input *p, uint32_t button)
@@ -429,7 +433,7 @@ static wm_dispatch dispatch_axis(pointer_input *p, const struct wlr_pointer_axis
 static void note_held(pointer_input *p, const button_input *input)
 {
     for (size_t i = 0; i < p->held_count; i++) {
-        if (p->held[i] == input->button) {
+        if (p->held[i].button == input->button) {
             if (!input->pressed) {
                 p->held[i] = p->held[--p->held_count];
             }
@@ -437,30 +441,40 @@ static void note_held(pointer_input *p, const button_input *input)
         }
     }
     if (input->pressed && p->held_count < HELD_BUTTONS_MAX) {
-        p->held[p->held_count++] = input->button;
+        p->held[p->held_count++] = (held_button){input->button, input->device};
     }
 }
 
-static bool grab_is_stale(const pointer_input *p)
+static void release_held_at(pointer_input *p, size_t index, uint32_t time_ms)
 {
-    if (p->held_count > 0) {
-        return false;
-    }
-    return p->grab_surface != NULL || p->forwarded_count > 0 ||
-           p->seat->wlr_seat->pointer_state.button_count > 0;
+    button_input input = {
+        .button = p->held[index].button,
+        .pressed = false,
+        .time_ms = time_ms,
+        .device = p->held[index].device,
+    };
+    handle_button_input(p, &input);
 }
 
-static void clear_stale_grab(pointer_input *p, uint32_t time_ms)
+static void handle_button_input(pointer_input *p, const button_input *input)
 {
-    release_stuck_buttons(p, time_ms);
-    end_grab(p);
+    if (!input->pressed && !is_held(p, input->button)) {
+        return;
+    }
+    note_held(p, input);
+    if (input->pressed) {
+        press(p, input);
+    } else {
+        release(p, input);
+    }
 }
 
-static void release_stuck_buttons(pointer_input *p, uint32_t time_ms)
+static bool is_held(const pointer_input *p, uint32_t button)
 {
-    struct wlr_seat *wlr_seat = p->seat->wlr_seat;
-    for (int i = 0; i < STUCK_RELEASES_MAX && wlr_seat->pointer_state.button_count > 0; i++) {
-        wlr_seat_pointer_notify_button(wlr_seat, time_ms, wlr_seat->pointer_state.buttons[0].button,
-                                       WL_POINTER_BUTTON_STATE_RELEASED);
+    for (size_t i = 0; i < p->held_count; i++) {
+        if (p->held[i].button == button) {
+            return true;
+        }
     }
+    return false;
 }
