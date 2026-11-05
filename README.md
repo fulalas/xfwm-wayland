@@ -66,7 +66,7 @@ console:
 Settings are read from the same `xfconf` channels as `xfwm4`. Keyboard, mouse
 and cursor settings are applied by the compositor instead of `xfsettingsd`.
 
-Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) is highly recommended:
+Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) is highly recommended because:
 
 * its settings dialogs open on Wayland; the original ones check for an X11
   window manager and refuse to start
