@@ -220,6 +220,7 @@ static void handle_modifiers(struct wl_listener *listener, void *data)
     wlr_seat_keyboard_notify_modifiers(s->wlr_seat, &kb->wlr_keyboard->modifiers);
     uint32_t mods = input_mapping_modifiers(wlr_keyboard_get_modifiers(kb->wlr_keyboard));
     wm_modifiers_changed(s->server->desktop, mods);
+    selection_modifiers_changed(s->selection, mods);
 }
 
 static void handle_destroy(struct wl_listener *listener, void *data)

@@ -6,6 +6,8 @@
 #include "transients.h"
 
 static void raise_internal(wm_desktop *desktop, wm_window *window);
+static window_list take_group(wm_desktop *desktop, wm_window *window, const wm_window *limit);
+static void put_group(window_list *stack, window_list *group, size_t index);
 static void restack_relayered(wm_desktop *desktop, wm_window *window);
 static size_t top_of_layer(const window_list *stack, wm_layer layer);
 static size_t bottom_of_layer(const window_list *stack, wm_layer layer);
@@ -111,6 +113,19 @@ void stack_place_below(wm_desktop *desktop, wm_window *window, const wm_window *
     stack_mark_changed(desktop);
 }
 
+void stack_place_above_parent(wm_desktop *desktop, wm_window *window)
+{
+    const wm_window *parent = window->parent;
+    window_list *stack = &desktop->stack;
+    if (parent == NULL || parent->layer != window->layer
+        || window_list_index_of(stack, window) > window_list_index_of(stack, parent)) {
+        return;
+    }
+    window_list group = take_group(desktop, window, parent);
+    put_group(stack, &group, window_list_index_of(stack, parent) + 1);
+    stack_mark_changed(desktop);
+}
+
 bool stack_is_top_most(const wm_desktop *desktop, const wm_window *window)
 {
     const window_list *stack = &desktop->stack;
@@ -124,23 +139,35 @@ bool stack_is_top_most(const wm_desktop *desktop, const wm_window *window)
 
 static void raise_internal(wm_desktop *desktop, wm_window *window)
 {
-    window_list moved = {0};
+    window_list group = take_group(desktop, window, NULL);
+    put_group(&desktop->stack, &group, top_of_layer(&desktop->stack, window->layer));
+}
+
+static window_list take_group(wm_desktop *desktop, wm_window *window, const wm_window *limit)
+{
     window_list *stack = &desktop->stack;
     window_list group = transient_list(desktop, window);
+    window_list taken = {0};
+    size_t limit_index = limit != NULL ? window_list_index_of(stack, limit) : stack->count;
     for (size_t i = 0; i < group.count; i++) {
-        if (group.items[i] == window || group.items[i]->layer <= window->layer) {
-            window_list_append(&moved, group.items[i]);
+        wm_window *member = group.items[i];
+        if (member->layer <= window->layer && window_list_index_of(stack, member) < limit_index) {
+            window_list_append(&taken, member);
         }
     }
-    for (size_t i = 0; i < moved.count; i++) {
-        window_list_remove(stack, moved.items[i]);
-    }
-    size_t index = top_of_layer(stack, window->layer);
-    for (size_t i = 0; i < moved.count; i++) {
-        window_list_insert(stack, index + i, moved.items[i]);
+    for (size_t i = 0; i < taken.count; i++) {
+        window_list_remove(stack, taken.items[i]);
     }
     window_list_free(&group);
-    window_list_free(&moved);
+    return taken;
+}
+
+static void put_group(window_list *stack, window_list *group, size_t index)
+{
+    for (size_t i = 0; i < group->count; i++) {
+        window_list_insert(stack, index + i, group->items[i]);
+    }
+    window_list_free(group);
 }
 
 static void restack_relayered(wm_desktop *desktop, wm_window *window)

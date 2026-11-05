@@ -46,6 +46,7 @@ void wm_window_set_parent(wm_desktop *desktop, wm_window *window, wm_window *par
     if (known && transient_parent_allowed(window, parent)) {
         window->parent = parent;
         refresh_type(desktop, window);
+        stack_place_above_parent(desktop, window);
     }
     present_flush(desktop);
 }

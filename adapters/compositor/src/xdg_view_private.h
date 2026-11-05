@@ -48,6 +48,8 @@ struct xdg_view {
     bool has_deferred_size;
     xdg_decorations decorations;
     xdg_requests requests;
+    struct wl_list waiting_children;
+    struct wl_list waiting_link;
     struct wlr_addon addon;
     struct wl_listener commit;
     struct wl_listener map;

@@ -28,6 +28,8 @@ static void handle_drag_drop(struct wl_listener *listener, void *data);
 static void handle_drag_destroy(struct wl_listener *listener, void *data);
 static void offer_actions(const selection *selection, struct wlr_drag *drag, uint32_t button);
 static void keep_target_after_drop(struct wlr_drag *drag);
+static void refresh_offers(const struct wlr_drag *drag);
+static void refresh_offer(struct wlr_data_offer *offer);
 static struct wlr_scene_tree *drag_tree(const selection *selection);
 
 selection *selection_create(seat *s)
@@ -83,6 +85,19 @@ static void handle_request_set_primary(struct wl_listener *listener, void *data)
     selection *sel = wl_container_of(listener, sel, request_set_primary);
     const struct wlr_seat_request_set_primary_selection_event *event = data;
     wlr_seat_set_primary_selection(sel->seat->wlr_seat, event->source, event->serial);
+}
+
+void selection_modifiers_changed(selection *sel, uint32_t modifiers)
+{
+    struct wlr_drag *drag = sel->seat->wlr_seat->drag;
+    if (drag == NULL || drag->source == NULL) {
+        return;
+    }
+    uint32_t action = drag_action_for_modifiers(drag->source->actions, modifiers);
+    if (drag->source->compositor_action != action) {
+        drag->source->compositor_action = action;
+        refresh_offers(drag);
+    }
 }
 
 static void handle_request_start_drag(struct wl_listener *listener, void *data)
@@ -146,6 +161,8 @@ static void offer_actions(const selection *sel, struct wlr_drag *drag, uint32_t 
         .alt_held = (seat_modifiers(sel->seat) & WM_MOD_ALT) != 0,
     };
     drag->source->actions = drag_actions_offered(&start);
+    drag->source->compositor_action =
+        drag_action_for_modifiers(drag->source->actions, seat_modifiers(sel->seat));
 }
 
 static void keep_target_after_drop(struct wlr_drag *drag)
@@ -158,6 +175,40 @@ static void keep_target_after_drop(struct wlr_drag *drag)
     wl_list_remove(&drag->WLR_PRIVATE.seat_client_destroy.link);
     wl_list_init(&drag->WLR_PRIVATE.seat_client_destroy.link);
     drag->focus_client = NULL;
+}
+
+static void refresh_offers(const struct wlr_drag *drag)
+{
+    struct wlr_data_offer *offer;
+    wl_list_for_each(offer, &drag->seat->drag_offers, link) {
+        if (offer->source == drag->source && offer->type == WLR_DATA_OFFER_DRAG) {
+            refresh_offer(offer);
+        }
+    }
+}
+
+static void refresh_offer(struct wlr_data_offer *offer)
+{
+    bool versioned = wl_resource_get_version(offer->resource) >= WL_DATA_OFFER_ACTION_SINCE_VERSION;
+    drag_choice choice = {
+        .offer_sets_actions = versioned,
+        .offer_actions = offer->actions,
+        .preferred_action = offer->preferred_action,
+        .source_actions = offer->source->actions,
+        .compositor_action = offer->source->compositor_action,
+    };
+    uint32_t action = drag_actions_choose(&choice);
+    if (offer->source->current_dnd_action == action) {
+        return;
+    }
+    offer->source->current_dnd_action = action;
+    if (offer->in_ask) {
+        return;
+    }
+    wlr_data_source_dnd_action(offer->source, action);
+    if (versioned) {
+        wl_data_offer_send_action(offer->resource, action);
+    }
 }
 
 static struct wlr_scene_tree *drag_tree(const selection *sel)

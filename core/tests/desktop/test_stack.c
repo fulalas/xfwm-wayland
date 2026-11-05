@@ -33,6 +33,19 @@ static void test_raise_brings_transients(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_late_parent_keeps_child_above(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *child = fake_map(desktop, 2, small);
+    wm_window *parent = fake_map(desktop, 1, small);
+    wm_window_set_parent(desktop, child, parent);
+    static const int expected[] = {1, 2};
+    check_order(&world, expected, 2);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_layers_order_types(void)
 {
     fake_world world;
@@ -137,6 +150,7 @@ int main(void)
 {
     static const check_case cases[] = {
         {"raise_brings_transients", test_raise_brings_transients},
+        {"late_parent_keeps_child_above", test_late_parent_keeps_child_above},
         {"layers_order_types", test_layers_order_types},
         {"focused_fullscreen_goes_above_docks", test_focused_fullscreen_goes_above_docks},
         {"unfocused_fullscreen_drops_to_normal", test_unfocused_fullscreen_drops_to_normal},

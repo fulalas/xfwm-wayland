@@ -24,6 +24,8 @@ static void request_size(xdg_view *view, wm_size size);
 static bool same_hints(const wm_size_hints *a, const wm_size_hints *b);
 static wm_size committed_size(const xdg_view *view);
 static void unmap_view(xdg_view *view);
+static void stop_waiting(xdg_view *view);
+static void adopt_waiting_children(xdg_view *view);
 static wm_rect popup_constraint(void *root);
 static struct wlr_surface *impl_surface(void *self);
 static void impl_configure(void *self, const wm_rect *client);
@@ -57,6 +59,8 @@ xdg_view *xdg_view_create(compositor *server, struct wlr_xdg_toplevel *toplevel)
     xv->server = server;
     xv->toplevel = toplevel;
     xv->popup_parent = (popup_parent){NULL, xv, popup_constraint};
+    wl_list_init(&xv->waiting_children);
+    wl_list_init(&xv->waiting_link);
     xv->icon = icon_slot_create(server, &(icon_listener){xv, handle_icon_changed});
     struct wlr_surface *surface = toplevel->base->surface;
     wlr_addon_init(&xv->addon, &surface->addons, &xdg_view_addon, &xdg_view_addon);
@@ -67,6 +71,14 @@ xdg_view *xdg_view_create(compositor *server, struct wlr_xdg_toplevel *toplevel)
     xdg_requests_connect(xv);
     xdg_decorations_init(xv);
     return xv;
+}
+
+void xdg_view_parent_requested(xdg_view *xv, xdg_view *parent)
+{
+    stop_waiting(xv);
+    if (parent != NULL && !parent->toplevel->base->surface->mapped) {
+        wl_list_insert(&parent->waiting_children, &xv->waiting_link);
+    }
 }
 
 xdg_view *xdg_view_from_toplevel(struct wlr_xdg_toplevel *toplevel)
@@ -121,6 +133,7 @@ static void handle_map(struct wl_listener *listener, void *data)
     xv->view = view_create(xv->server, &xdg_view_impl, xv);
     if (xv->view == NULL) {
         wlr_log(WLR_ERROR, "cannot create a view for %s", xv->toplevel->app_id);
+        adopt_waiting_children(xv);
         return;
     }
     wlr_scene_xdg_surface_create(view_content_tree(xv->view), xv->toplevel->base);
@@ -131,6 +144,7 @@ static void handle_map(struct wl_listener *listener, void *data)
     xv->size_hints = desc.size_hints;
     view_map(xv->view, &desc);
     icon_slot_lookup_app(xv->icon, xv->toplevel->app_id);
+    adopt_waiting_children(xv);
 }
 
 static void handle_unmap(struct wl_listener *listener, void *data)
@@ -145,6 +159,12 @@ static void handle_destroy(struct wl_listener *listener, void *data)
     (void) data;
     xdg_view *xv = wl_container_of(listener, xv, destroy);
     unmap_view(xv);
+    stop_waiting(xv);
+    xdg_view *child;
+    xdg_view *tmp;
+    wl_list_for_each_safe(child, tmp, &xv->waiting_children, waiting_link) {
+        stop_waiting(child);
+    }
     xdg_decorations_finish(xv);
     xdg_requests_disconnect(xv);
     listener_disconnect(&xv->commit);
@@ -234,6 +254,22 @@ static void unmap_view(xdg_view *xv)
     xv->pending_serial = 0;
     xv->has_deferred_size = false;
     view_destroy(v);
+}
+
+static void stop_waiting(xdg_view *xv)
+{
+    wl_list_remove(&xv->waiting_link);
+    wl_list_init(&xv->waiting_link);
+}
+
+static void adopt_waiting_children(xdg_view *xv)
+{
+    xdg_view *child;
+    xdg_view *tmp;
+    wl_list_for_each_safe(child, tmp, &xv->waiting_children, waiting_link) {
+        stop_waiting(child);
+        wlr_xdg_toplevel_set_parent(child->toplevel, xv->toplevel);
+    }
 }
 
 static wm_rect popup_constraint(void *root)

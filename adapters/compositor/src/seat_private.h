@@ -125,6 +125,7 @@ motion_delta constraints_filter_motion(const constraints *constraints, motion_de
 selection *selection_create(seat *seat);
 void selection_destroy(selection *selection);
 void selection_move_icons(selection *selection);
+void selection_modifiers_changed(selection *selection, uint32_t modifiers);
 virtual_input *virtual_input_create(seat *seat);
 void virtual_input_destroy(virtual_input *virtual_input);
 

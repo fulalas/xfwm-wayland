@@ -3,6 +3,7 @@
 
 #include "check.h"
 #include "drag_actions.h"
+#include "wm/keys.h"
 
 static const int32_t COPY = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
 static const int32_t MOVE = WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE;
@@ -45,6 +46,34 @@ static void test_unset_actions_stay_unset(void)
     CHECK_INT_EQ(-1, offered(-1, BTN_LEFT, false));
 }
 
+static void test_ctrl_copies_and_shift_moves(void)
+{
+    CHECK_INT_EQ(COPY, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_CTRL));
+    CHECK_INT_EQ(MOVE, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_SHIFT));
+    CHECK_INT_EQ(0, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_CTRL | WM_MOD_SHIFT));
+    CHECK_INT_EQ(0, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_ALT));
+}
+
+static void test_modifiers_keep_ask_drags(void)
+{
+    CHECK_INT_EQ(0, (int32_t) drag_action_for_modifiers(COPY | MOVE | ASK, WM_MOD_CTRL));
+}
+
+static uint32_t chosen(uint32_t offer, uint32_t preferred, uint32_t compositor)
+{
+    drag_choice choice = {true, offer, preferred, COPY | MOVE, compositor};
+    return drag_actions_choose(&choice);
+}
+
+static void test_choice_order(void)
+{
+    CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, MOVE, COPY));
+    CHECK_INT_EQ(MOVE, (int32_t) chosen(COPY | MOVE, MOVE, 0));
+    CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, 0, 0));
+    CHECK_INT_EQ(MOVE, (int32_t) chosen(MOVE, 0, COPY));
+    CHECK_INT_EQ(0, (int32_t) chosen(ASK, 0, 0));
+}
+
 int main(void)
 {
     const check_case cases[] = {
@@ -54,6 +83,9 @@ int main(void)
         {"alt_keeps_ask", test_alt_keeps_ask},
         {"ask_only_source_keeps_ask", test_ask_only_source_keeps_ask},
         {"unset_actions_stay_unset", test_unset_actions_stay_unset},
+        {"ctrl_copies_and_shift_moves", test_ctrl_copies_and_shift_moves},
+        {"modifiers_keep_ask_drags", test_modifiers_keep_ask_drags},
+        {"choice_order", test_choice_order},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }
