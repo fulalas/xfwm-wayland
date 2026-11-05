@@ -7,10 +7,12 @@
 enum {
     TABLE_CAPACITY = 128,
     XWAYLAND_WINDOW_SCALE = 1,
+    XWAYLAND_DPI = X11_SETTING_UNSCALED_DPI * X11_SETTING_XFT_DPI_UNIT,
 };
 
 static const char window_scaling_factor[] = "Gdk/WindowScalingFactor";
-static const char *const ignored_names[] = {window_scaling_factor, "Gdk/UnscaledDPI"};
+static const char *const ignored_names[] = {window_scaling_factor, "Gdk/UnscaledDPI",
+                                            X11_SETTING_XFT_DPI};
 
 struct xsettings_table {
     x11_setting items[TABLE_CAPACITY];
@@ -46,7 +48,9 @@ void xsettings_table_reset(xsettings_table *table)
     }
     table->count = 0;
     x11_setting scale = {window_scaling_factor, X11_SETTING_INTEGER, XWAYLAND_WINDOW_SCALE, NULL};
+    x11_setting dpi = {X11_SETTING_XFT_DPI, X11_SETTING_INTEGER, XWAYLAND_DPI, NULL};
     store(table, &scale);
+    store(table, &dpi);
 }
 
 void xsettings_table_add(xsettings_table *table, const x11_setting *setting)

@@ -74,7 +74,6 @@ wm_config xfce_environment_config(xfce_environment *environment,
                                   const xfce_setting_source *theme);
 wm_keymap xfce_environment_keymap(xfce_environment *environment);
 xfce_style xfce_environment_style(xfce_environment *environment);
-int xfce_environment_font_dpi(xfce_environment *environment);
 compositor_services xfce_environment_services(xfce_environment *environment);
 
 void xfce_environment_store_workspace_count(xfce_environment *environment, int count);

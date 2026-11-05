@@ -16,7 +16,6 @@ typedef struct resource_rule {
     const char *setting;
 } resource_rule;
 
-static const char xft_dpi_setting[] = "Xft/DPI";
 static const char theme_core_key[] = "Xcursor.theme_core";
 
 static const resource_rule rules[] = {
@@ -25,7 +24,7 @@ static const resource_rule rules[] = {
     {"Xft.hintstyle", "Xft/HintStyle"},
     {"Xft.rgba", "Xft/RGBA"},
     {"Xft.lcdfilter", "Xft/Lcdfilter"},
-    {"Xft.dpi", xft_dpi_setting},
+    {"Xft.dpi", X11_SETTING_XFT_DPI},
     {"Xcursor.theme", "Gtk/CursorThemeName"},
     {"Xcursor.size", "Gtk/CursorThemeSize"},
 };
@@ -103,7 +102,7 @@ static bool format_value(const x11_setting *setting, char *value, size_t capacit
     if (setting->integer == XFT_DEFAULT) {
         return false;
     }
-    bool is_dpi = strcmp(setting->name, xft_dpi_setting) == 0;
+    bool is_dpi = strcmp(setting->name, X11_SETTING_XFT_DPI) == 0;
     int number = is_dpi ? setting->integer / X11_SETTING_XFT_DPI_UNIT : setting->integer;
     snprintf(value, capacity, "%d", number);
     return true;

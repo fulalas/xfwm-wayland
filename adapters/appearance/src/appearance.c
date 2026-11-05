@@ -39,16 +39,15 @@ static void apply_theme(appearance *appearance, loaded_theme *loaded);
 static void update_title_colors(appearance *appearance);
 static ui_color symbol_color(const appearance *appearance, color_symbol_id id,
                              const ui_color *fallback);
-static void replace_font(const appearance *appearance, text_font *font,
-                         const char *description);
+static void replace_font(text_font *font, const char *description);
 
 appearance *appearance_create(void)
 {
     appearance *appearance = g_new0(struct appearance, 1);
 
     appearance->style = appearance_fallback_style();
-    replace_font(appearance, &appearance->ui_font, appearance->style.font);
-    replace_font(appearance, &appearance->title.font, appearance->style.font);
+    replace_font(&appearance->ui_font, appearance->style.font);
+    replace_font(&appearance->title.font, appearance->style.font);
     appearance_color_symbols_resolve(&appearance->symbols, &appearance->style, NULL);
     update_title_colors(appearance);
     return appearance;
@@ -125,7 +124,7 @@ const title_style *appearance_title_style(const appearance *appearance)
 static void apply_style(appearance *appearance, const theme_request *request)
 {
     appearance->style = request->style != NULL ? *request->style : appearance_fallback_style();
-    replace_font(appearance, &appearance->ui_font, appearance->style.font);
+    replace_font(&appearance->ui_font, appearance->style.font);
 }
 
 static void apply_title_font(appearance *appearance, const char *theme_font,
@@ -136,7 +135,7 @@ static void apply_title_font(appearance *appearance, const char *theme_font,
     if (wanted == NULL || wanted[0] == '\0') {
         wanted = appearance->style.font;
     }
-    replace_font(appearance, &appearance->title.font, wanted);
+    replace_font(&appearance->title.font, wanted);
 }
 
 static bool load_theme(appearance *appearance, const theme_request *request,
@@ -212,10 +211,9 @@ static ui_color symbol_color(const appearance *appearance, color_symbol_id id,
     return color;
 }
 
-static void replace_font(const appearance *appearance, text_font *font,
-                         const char *description)
+static void replace_font(text_font *font, const char *description)
 {
-    text_font_request request = { description, appearance->style.font_dpi };
+    text_font_request request = { description };
 
     appearance_text_font_destroy(font);
     *font = appearance_text_font_create(&request);
