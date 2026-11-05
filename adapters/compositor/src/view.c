@@ -69,6 +69,7 @@ void view_map(view *v, const wm_window_desc *desc)
     compositor *server = v->server;
     wm_window_desc copy = *desc;
     copy.handle = v;
+    copy.has_icon = view_icon(v) != NULL;
     v->handshake.committed = rect_size(&desc->geometry);
     v->handshake.requested = v->handshake.committed;
     v->window = wm_window_map(server->desktop, &copy);

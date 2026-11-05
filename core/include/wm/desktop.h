@@ -79,6 +79,7 @@ typedef struct wm_window_desc {
     const char *app_id;
     double opacity;
     bool activation_allowed;
+    bool has_icon;
     bool has_workspace;
     int workspace;
 } wm_window_desc;

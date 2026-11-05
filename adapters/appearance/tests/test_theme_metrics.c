@@ -162,6 +162,24 @@ static void test_double_scale_halves_metrics(void)
     fixture_dir_remove(dir);
 }
 
+static const char clear_pixel_xpm[] = "/* XPM */\nstatic char *c[] = {\n\"1 1 1 1\",\n"
+                                      "\"  c None\",\n\" \"};\n";
+
+static void test_half_transparent_pixels_are_cut_out(void)
+{
+    enum { HALF_BLACK = 0x00000080 };
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "top-left-active.xpm", clear_pixel_xpm));
+    CHECK(fixture_write_png_pixel(dir, "top-left-active.png", HALF_BLACK));
+    theme_image_source source = { dir, NULL };
+    cairo_surface_t *image = appearance_theme_image_load(&source, "top-left-active");
+
+    CHECK(image != NULL);
+    CHECK_INT_EQ(0, fixture_alpha_at(image, 0, 0));
+    cairo_surface_destroy(image);
+    fixture_dir_remove(dir);
+}
+
 static void test_absolute_name_is_the_theme_dir(void)
 {
     char *dir = make_theme();
@@ -183,6 +201,7 @@ int main(void)
         { "same_request_is_loaded", test_same_request_is_loaded },
         { "themerc_title_font_wins", test_themerc_title_font_wins },
         { "double_scale_halves_metrics", test_double_scale_halves_metrics },
+        { "half_transparent_pixels_are_cut_out", test_half_transparent_pixels_are_cut_out },
         { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
     };
 

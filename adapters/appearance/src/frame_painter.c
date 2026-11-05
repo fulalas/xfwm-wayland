@@ -15,10 +15,13 @@ static bool op_is_in_band(const wm_paint_op *op, const wm_rect *band);
 static bool title_is_in_band(const frame_painter *painter, const frame_paint_request *request);
 static op_source source_for(const frame_painter *painter, const frame_paint_request *request,
                             wm_pixmap_ref ref);
-static void paint_op(cairo_t *cr, const wm_paint_op *op, op_source source);
-static void paint_pixmap(cairo_t *cr, const wm_paint_op *op, op_source source);
+static void paint_op(cairo_t *cr, const wm_paint_op *op, op_source source, const wm_rect *band);
+static void paint_pixmap(cairo_t *cr, const wm_paint_op *op, op_source source,
+                         const wm_rect *band);
 static void paint_icon(cairo_t *cr, const wm_paint_op *op, cairo_surface_t *icon);
 static cairo_pattern_t *create_pattern(const wm_paint_op *op, op_source source);
+static cairo_pattern_t *create_plain_pattern(const wm_paint_op *op, op_source source,
+                                             const wm_rect *area);
 static cairo_matrix_t pattern_matrix(const wm_paint_op *op, op_source source);
 static wm_rect fill_area(const wm_paint_op *op, op_source source);
 
@@ -45,7 +48,7 @@ static void paint_ops(cairo_t *cr, const frame_painter *painter,
     for (size_t i = 0; i < layout->op_count && i < WM_DECOR_OP_MAX; i++) {
         const wm_paint_op *op = &layout->ops[i];
         if (op_is_in_band(op, &request->band)) {
-            paint_op(cr, op, source_for(painter, request, op->pixmap));
+            paint_op(cr, op, source_for(painter, request, op->pixmap), &request->band);
         }
     }
     if (title_is_in_band(painter, request)) {
@@ -83,7 +86,7 @@ static op_source source_for(const frame_painter *painter, const frame_paint_requ
     };
 }
 
-static void paint_op(cairo_t *cr, const wm_paint_op *op, op_source source)
+static void paint_op(cairo_t *cr, const wm_paint_op *op, op_source source, const wm_rect *band)
 {
     if (source.surface == NULL) {
         return;
@@ -91,19 +94,23 @@ static void paint_op(cairo_t *cr, const wm_paint_op *op, op_source source)
     if (op->pixmap.kind == WM_PIXMAP_APP_ICON) {
         paint_icon(cr, op, source.surface);
     } else {
-        paint_pixmap(cr, op, source);
+        paint_pixmap(cr, op, source, band);
     }
 }
 
-static void paint_pixmap(cairo_t *cr, const wm_paint_op *op, op_source source)
+static void paint_pixmap(cairo_t *cr, const wm_paint_op *op, op_source source,
+                         const wm_rect *band)
 {
-    wm_rect area = fill_area(op, source);
+    wm_rect fill = fill_area(op, source);
+    wm_rect area = wm_rect_intersection(&fill, band);
 
     if (wm_rect_is_empty(&area)) {
         return;
     }
-    cairo_pattern_t *pattern = create_pattern(op, source);
+    cairo_pattern_t *pattern = op->mode == WM_FILL_PLAIN ? create_plain_pattern(op, source, &area)
+                                                         : create_pattern(op, source);
     cairo_save(cr);
+    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
     cairo_rectangle(cr, area.x, area.y, area.width, area.height);
     cairo_set_source(cr, pattern);
     cairo_fill(cr);
@@ -136,9 +143,6 @@ static cairo_pattern_t *create_pattern(const wm_paint_op *op, op_source source)
     case WM_FILL_TILE:
         cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
         break;
-    case WM_FILL_PLAIN:
-        cairo_pattern_set_extend(pattern, CAIRO_EXTEND_PAD);
-        break;
     default:
         cairo_pattern_set_extend(pattern, CAIRO_EXTEND_NONE);
         cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
@@ -152,8 +156,6 @@ static cairo_matrix_t pattern_matrix(const wm_paint_op *op, op_source source)
     wm_size pixels = appearance_surface_size(source.surface);
     double scale_x = source.scale;
     double scale_y = source.scale;
-    wm_point origin = op->mode == WM_FILL_PLAIN ? (wm_point) { op->dest.x, op->dest.y }
-                                                 : op->origin;
     cairo_matrix_t matrix;
 
     if (op->mode == WM_FILL_STRETCH_HORIZONTAL && op->dest.width > 0) {
@@ -163,8 +165,26 @@ static cairo_matrix_t pattern_matrix(const wm_paint_op *op, op_source source)
         scale_y = (double) pixels.height / op->dest.height;
     }
     cairo_matrix_init_scale(&matrix, scale_x, scale_y);
-    cairo_matrix_translate(&matrix, -origin.x, -origin.y);
+    cairo_matrix_translate(&matrix, -op->origin.x, -op->origin.y);
     return matrix;
+}
+
+static cairo_pattern_t *create_plain_pattern(const wm_paint_op *op, op_source source,
+                                             const wm_rect *area)
+{
+    double scale = source.scale;
+    cairo_surface_t *part = cairo_surface_create_for_rectangle(
+        source.surface, (area->x - op->dest.x) * scale, (area->y - op->dest.y) * scale,
+        area->width * scale, area->height * scale);
+    cairo_pattern_t *pattern = cairo_pattern_create_for_surface(part);
+    cairo_matrix_t matrix;
+
+    cairo_surface_destroy(part);
+    cairo_matrix_init_scale(&matrix, scale, scale);
+    cairo_matrix_translate(&matrix, -area->x, -area->y);
+    cairo_pattern_set_matrix(pattern, &matrix);
+    cairo_pattern_set_extend(pattern, CAIRO_EXTEND_PAD);
+    return pattern;
 }
 
 static wm_rect fill_area(const wm_paint_op *op, op_source source)

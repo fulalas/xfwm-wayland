@@ -3,6 +3,7 @@
 
 #include "appearance/appearance.h"
 #include "check.h"
+#include "fixture.h"
 
 static wm_cycle_view grid_view(size_t count)
 {
@@ -35,6 +36,37 @@ static void test_frame_surface_uses_scaled_band(void)
     CHECK(cairo_image_surface_get_format(surface) == CAIRO_FORMAT_ARGB32);
     cairo_surface_destroy(surface);
     appearance_destroy(appearance);
+}
+
+static const char half_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
+                                      "\"4 4 2 1\",\n\". c #FF0000\",\n\"  c None\",\n"
+                                      "\"..  \",\"..  \",\"..  \",\"..  \"};\n";
+
+static void test_band_edge_stays_opaque(void)
+{
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "themerc", ""));
+    g_free(fixture_write(dir, "bottom-left-active.xpm", half_corner_xpm));
+    appearance *appearance = appearance_create();
+    ui_style style = appearance_fallback_style();
+    theme_request theme = { dir, "Sans 9", 1.0, &style };
+    CHECK(appearance_load(appearance, &theme));
+    compositor_painter painter = appearance_painter(appearance);
+    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
+    layout.ops[0] = (wm_paint_op) {
+        .pixmap = { WM_PIXMAP_CORNER, WM_CORNER_BOTTOM_LEFT, WM_FRAME_ACTIVE },
+        .dest = { 0, 0, 4, 4 },
+        .mode = WM_FILL_PLAIN,
+        .clip = { 0, 0, 4, 4 },
+    };
+    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL };
+    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+
+    CHECK_INT_EQ(3, cairo_image_surface_get_width(surface));
+    CHECK_INT_EQ(255, fixture_alpha_at(surface, 2, 2));
+    cairo_surface_destroy(surface);
+    appearance_destroy(appearance);
+    fixture_dir_remove(dir);
 }
 
 static void test_title_measure_grows_with_text(void)
@@ -182,6 +214,7 @@ int main(void)
 {
     static const check_case cases[] = {
         { "frame_surface_uses_scaled_band", test_frame_surface_uses_scaled_band },
+        { "band_edge_stays_opaque", test_band_edge_stays_opaque },
         { "title_measure_grows_with_text", test_title_measure_grows_with_text },
         { "cycle_surface_matches_size", test_cycle_surface_matches_size },
         { "cycle_cells_follow_grid", test_cycle_cells_follow_grid },

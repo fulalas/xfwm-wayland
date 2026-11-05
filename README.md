@@ -11,7 +11,9 @@ It supports:
 * Alt+Tab with window previews, the window menu, snapping, tiling, zoom,
   shadows and opacity
 * HDR10, switched on and off without logging out, with a brightness slider
-* 10-bit color, variable refresh rate and tearing for games
+* 10-bit color, variable refresh rate, and tearing (frames shown without
+  waiting for the screen refresh, for lower input lag) in fullscreen
+  applications that ask for it
 * Xfce display profiles, fractional scaling and multiple monitors
 * screenshots and screen sharing (through `xdg-desktop-portal-wlr`),
   touchscreens, drawing tablets and VR headsets
@@ -20,9 +22,10 @@ It supports:
 
 ## Why this exists
 
-The Xfce Wayland session runs on `labwc` by default. It works, but it is not
-`xfwm4`: it has its own themes and configuration files, so the `xfwm4`
-themes, settings dialogs and shortcuts don't apply to it.
+The Xfce Wayland session runs on `labwc` by default. It works, but it doesn't
+read `xfwm4` themes, settings dialogs or shortcuts, and it has no window
+transparency (`xfwm4`'s opacity settings for inactive, moving and resized
+windows and popups).
 
 On the other hand, [xfwl4](https://gitlab.xfce.org/xfce/xfwl4/), the official Xfce Wayland compositor, is still in
 development and not ready for daily use. Compared on the same machine:
@@ -37,9 +40,10 @@ development and not ready for daily use. Compared on the same machine:
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.7 ms                  |
-| Unit tests                           | 49                 | 653                      |
+| Unit tests                           | 49                 | 655                      |
 | HDR                                  | no                 | yes                      |
-| Variable refresh rate, tearing       | no                 | yes                      |
+| Variable refresh rate                | no                 | yes                      |
+| Tearing (optional)                   | no                 | yes                      |
 | xfwm4 compositing settings           | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
 | Sharp X11 programs when scaling      | yes                | no                       |
@@ -81,8 +85,10 @@ Screen
 * **Use the GPU for compositing**: takes effect at the next login. Compositing
   itself can't be turned off; turning it off removes shadows, transparency,
   zoom and Alt+Tab previews.
-* `vblank_mode`: `auto` or `off` (tearing), plus `adaptive` for variable
-  refresh rate. `glx` and `xpresent` act as `auto`.
+* `vblank_mode`: `auto`, `adaptive` for variable refresh rate, or `off` to
+  show every frame right away (lowest input lag, but moving images can tear).
+  Fullscreen applications that ask for tearing get it even with `auto`. `glx`
+  and `xpresent` act as `auto`.
 * `max_render_time` (new): draws as late as possible before each refresh to
   lower input lag. `auto` (default) measures the drawing time (OpenGL renderer
   only), a number keeps that many milliseconds, `off` draws right away.

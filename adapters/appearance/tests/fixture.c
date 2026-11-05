@@ -43,6 +43,18 @@ char *fixture_write(const char *dir, const char *name, const char *content)
     return path;
 }
 
+bool fixture_write_png_pixel(const char *dir, const char *name, uint32_t rgba)
+{
+    char *path = g_build_filename(dir, name, NULL);
+    GdkPixbuf *pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, TRUE, 8, 1, 1);
+
+    gdk_pixbuf_fill(pixbuf, rgba);
+    bool saved = gdk_pixbuf_save(pixbuf, path, "png", NULL, NULL);
+    g_object_unref(pixbuf);
+    g_free(path);
+    return saved;
+}
+
 void fixture_write_png(const char *dir, const char *name, int width, int height)
 {
     char *path = g_build_filename(dir, name, NULL);

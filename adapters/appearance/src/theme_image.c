@@ -23,8 +23,7 @@ static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
 static GdkPixbuf *load_overlay(const char *dir, const char *name);
 static GdkPixbuf *compose(GdkPixbuf *base, GdkPixbuf *overlay);
 static void copy_row(const GdkPixbuf *pixbuf, int y, uint32_t *dest);
-static uint32_t premultiplied_pixel(const guchar *pixel, int channels);
-static uint32_t premultiply(unsigned channel, unsigned alpha);
+static uint32_t cut_out_pixel(const guchar *pixel, int channels);
 
 cairo_surface_t *appearance_theme_image_load(const theme_image_source *source, const char *name)
 {
@@ -108,20 +107,15 @@ static void copy_row(const GdkPixbuf *pixbuf, int y, uint32_t *dest)
     const guchar *source = gdk_pixbuf_read_pixels(pixbuf) + (size_t) y * stride;
 
     for (int x = 0; x < gdk_pixbuf_get_width(pixbuf); x++) {
-        dest[x] = premultiplied_pixel(source + (size_t) x * (size_t) channels, channels);
+        dest[x] = cut_out_pixel(source + (size_t) x * (size_t) channels, channels);
     }
 }
 
-static uint32_t premultiplied_pixel(const guchar *pixel, int channels)
+static uint32_t cut_out_pixel(const guchar *pixel, int channels)
 {
-    unsigned alpha = channels == RGBA_CHANNELS ? pixel[ALPHA_CHANNEL] : OPAQUE;
-
-    return ((uint32_t) alpha << ALPHA_SHIFT) | (premultiply(pixel[RED_CHANNEL], alpha) << RED_SHIFT)
-           | (premultiply(pixel[GREEN_CHANNEL], alpha) << GREEN_SHIFT)
-           | premultiply(pixel[BLUE_CHANNEL], alpha);
-}
-
-static uint32_t premultiply(unsigned channel, unsigned alpha)
-{
-    return (channel * alpha + OPAQUE / 2) / OPAQUE;
+    if (channels == RGBA_CHANNELS && pixel[ALPHA_CHANNEL] != OPAQUE) {
+        return 0;
+    }
+    return ((uint32_t) OPAQUE << ALPHA_SHIFT) | ((uint32_t) pixel[RED_CHANNEL] << RED_SHIFT)
+           | ((uint32_t) pixel[GREEN_CHANNEL] << GREEN_SHIFT) | pixel[BLUE_CHANNEL];
 }
