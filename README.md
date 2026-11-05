@@ -44,7 +44,7 @@ not ready for daily use. Compared on the same machine:
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
 | Sharp X11 programs when scaling      | yes                | no                       |
 
-Power, CPU time and delay come from `wmbench` on an AMD Ryzen 7 7840HS at
+Power, CPU time and delay come from [wmbench](https://github.com/fulalas/wmbench) on an AMD Ryzen 7 7840HS at
 3840x2160, 60 Hz.
 
 ## Build
