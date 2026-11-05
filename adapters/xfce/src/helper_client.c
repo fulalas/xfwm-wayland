@@ -52,11 +52,6 @@ void helper_client_start(helper_client *client)
     spawn(client);
 }
 
-bool helper_client_is_running(const helper_client *client)
-{
-    return client->session != NULL;
-}
-
 void helper_client_send(helper_client *client, const char *line)
 {
     if (client->session) {

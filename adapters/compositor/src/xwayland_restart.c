@@ -10,8 +10,6 @@
 
 enum {
     CHECK_DELAY_MS = 100,
-    MS_PER_SECOND = 1000,
-    NS_PER_MS = 1000000,
 };
 
 static void handle_server_start(struct wl_listener *listener, void *data);

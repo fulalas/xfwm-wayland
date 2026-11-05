@@ -156,6 +156,21 @@ uint32_t seat_modifiers(const seat *s)
     return input_mapping_modifiers(wlr_keyboard_get_modifiers(keyboard));
 }
 
+pointer_hit seat_hit_at_cursor(const seat *s)
+{
+    return pointer_target_at(s->server, (layout_point){s->cursor->x, s->cursor->y});
+}
+
+wm_pointer_event seat_core_event(const seat *s, const pointer_hit *hit, uint32_t time_ms)
+{
+    return (wm_pointer_event){
+        .position = {(int) floor(s->cursor->x), (int) floor(s->cursor->y)},
+        .time_ms = time_ms,
+        .modifiers = seat_modifiers(s),
+        .target = hit->target,
+    };
+}
+
 void seat_notify_activity(seat *s)
 {
     if (s->server->globals.idle_notifier != NULL) {

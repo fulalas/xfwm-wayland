@@ -23,7 +23,6 @@ struct device_list {
 };
 
 static void bind_list(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void handle_manager_gone(struct wl_resource *resource);
 static void handle_new_input(struct wl_listener *listener, void *data);
 static listed_device *find_entry(device_list *list, struct libinput_device *handle);
 static listed_device *add_entry(device_list *list, struct libinput_device *handle);
@@ -69,9 +68,7 @@ void device_list_destroy(device_list *list)
     struct wl_resource *manager;
     struct wl_resource *next;
     wl_resource_for_each_safe(manager, next, &list->managers) {
-        wl_resource_set_user_data(manager, NULL);
-        wl_list_remove(wl_resource_get_link(manager));
-        wl_list_init(wl_resource_get_link(manager));
+        resource_detach(manager);
     }
     wl_global_destroy(list->global);
     free(list);
@@ -96,7 +93,7 @@ static void bind_list(struct wl_client *client, void *data, uint32_t version, ui
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(manager, &list_implementation, list, handle_manager_gone);
+    wl_resource_set_implementation(manager, &list_implementation, list, resource_unlink);
     wl_list_insert(&list->managers, wl_resource_get_link(manager));
     listed_device *entry;
     wl_list_for_each_reverse(entry, &list->entries, link) {
@@ -105,11 +102,6 @@ static void bind_list(struct wl_client *client, void *data, uint32_t version, ui
         }
     }
     xfce_input_device_list_private_v1_send_done(manager);
-}
-
-static void handle_manager_gone(struct wl_resource *resource)
-{
-    wl_list_remove(wl_resource_get_link(resource));
 }
 
 static void handle_new_input(struct wl_listener *listener, void *data)

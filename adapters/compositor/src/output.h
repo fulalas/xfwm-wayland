@@ -15,6 +15,7 @@ outputs *outputs_create(compositor *server);
 void outputs_destroy(outputs *outputs);
 size_t outputs_count(const outputs *outputs);
 output *outputs_at_index(const outputs *outputs, size_t index);
+output *outputs_next_active(const outputs *outputs, const output *after);
 size_t outputs_known_count(const outputs *outputs);
 output *outputs_known_at(const outputs *outputs, size_t index);
 output *outputs_at_point(const outputs *outputs, wm_point point);

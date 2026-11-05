@@ -20,11 +20,12 @@ static void remember_cancel_state(move_session *session, const wm_window *window
 static void finish(wm_desktop *desktop);
 static void finish_resize(wm_desktop *desktop, wm_window *window);
 static void cancel(wm_desktop *desktop);
+static void end_session(wm_desktop *desktop);
+static bool release_pending(const move_session *session);
 static void track_origin(wm_desktop *desktop, wm_point origin, uint32_t button);
 static void handle_arrow(wm_desktop *desktop, uint32_t keysym);
 static void move_arrow(wm_desktop *desktop, wm_point direction);
 static wm_point handle_point(const wm_desktop *desktop, const wm_window *window, wm_part handle);
-static uint32_t handle_edges(wm_part handle);
 static int key_move_step(const wm_desktop *desktop);
 static void run_motion(wm_desktop *desktop, uint32_t time_ms);
 
@@ -133,13 +134,8 @@ void moveresize_window_gone(wm_desktop *desktop, const wm_window *window)
     if (!moveresize_is_active(desktop) || session->window != window) {
         return;
     }
-    if (session->box) {
-        present_hide_outline(desktop);
-    }
-    session->kind = SESSION_NONE;
-    session->window = NULL;
-    session->waiting_release = session->button != ANY_BUTTON && !session->use_keys;
-    present_set_cursor(desktop, WM_CURSOR_DEFAULT);
+    end_session(desktop);
+    session->waiting_release = release_pending(session);
 }
 
 void moveresize_set_handle(wm_desktop *desktop, wm_part handle)
@@ -219,12 +215,7 @@ static void finish(wm_desktop *desktop)
     window->frozen = false;
     window->moving_edges = 0;
     window_mark_dirty(window);
-    if (session->box) {
-        present_hide_outline(desktop);
-    }
-    session->kind = SESSION_NONE;
-    session->window = NULL;
-    present_set_cursor(desktop, WM_CURSOR_DEFAULT);
+    end_session(desktop);
 }
 
 static void finish_resize(wm_desktop *desktop, wm_window *window)
@@ -249,9 +240,24 @@ static void cancel(wm_desktop *desktop)
     } else {
         resize_session_cancel(desktop);
     }
-    bool use_keys = desktop->session.use_keys;
     finish(desktop);
-    desktop->session.waiting_release = !use_keys && desktop->session.button != ANY_BUTTON;
+    desktop->session.waiting_release = release_pending(&desktop->session);
+}
+
+static void end_session(wm_desktop *desktop)
+{
+    move_session *session = &desktop->session;
+    if (session->box) {
+        present_hide_outline(desktop);
+    }
+    session->kind = SESSION_NONE;
+    session->window = NULL;
+    present_set_cursor(desktop, WM_CURSOR_DEFAULT);
+}
+
+static bool release_pending(const move_session *session)
+{
+    return !session->use_keys && session->button != ANY_BUTTON;
 }
 
 static void track_origin(wm_desktop *desktop, wm_point origin, uint32_t button)
@@ -304,7 +310,7 @@ static wm_point handle_point(const wm_desktop *desktop, const wm_window *window,
     wm_rect frame = frame_rect(desktop, window);
     wm_extents extents = frame_extents(desktop, window);
     wm_point point = wm_rect_center(&frame);
-    uint32_t edges = handle_edges(handle);
+    uint32_t edges = resize_handle_edges(handle);
     if (edges & WM_EDGE_LEFT) {
         point.x = frame.x + extents.left / 2;
     } else if (edges & WM_EDGE_RIGHT) {
@@ -316,30 +322,6 @@ static wm_point handle_point(const wm_desktop *desktop, const wm_window *window,
         point.y = wm_rect_bottom(&frame) - extents.bottom / 2;
     }
     return point;
-}
-
-static uint32_t handle_edges(wm_part handle)
-{
-    switch (handle) {
-    case WM_PART_CORNER_BOTTOM_LEFT:
-        return WM_EDGE_BOTTOM | WM_EDGE_LEFT;
-    case WM_PART_CORNER_BOTTOM_RIGHT:
-        return WM_EDGE_BOTTOM | WM_EDGE_RIGHT;
-    case WM_PART_CORNER_TOP_LEFT:
-        return WM_EDGE_TOP | WM_EDGE_LEFT;
-    case WM_PART_CORNER_TOP_RIGHT:
-        return WM_EDGE_TOP | WM_EDGE_RIGHT;
-    case WM_PART_SIDE_LEFT:
-        return WM_EDGE_LEFT;
-    case WM_PART_SIDE_RIGHT:
-        return WM_EDGE_RIGHT;
-    case WM_PART_SIDE_TOP:
-        return WM_EDGE_TOP;
-    case WM_PART_SIDE_BOTTOM:
-        return WM_EDGE_BOTTOM;
-    default:
-        return WM_EDGE_NONE;
-    }
 }
 
 static int key_move_step(const wm_desktop *desktop)

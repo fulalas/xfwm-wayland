@@ -2,8 +2,8 @@
 
 #include <string.h>
 
+#include "compositor/displays.h"
 #include "display_choice.h"
-#include "display_hash.h"
 #include "display_table.h"
 #include "display_transform.h"
 

@@ -206,8 +206,8 @@ static void rebuild_backgrounds(session_lock *lock)
         wlr_scene_node_destroy(child);
     }
     outputs *outs = lock->server->outputs;
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        wm_rect full = output_full(outputs_at_index(outs, i));
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+        wm_rect full = output_full(o);
         struct wlr_scene_rect *rect =
             wlr_scene_rect_create(lock->backgrounds, full.width, full.height, BACKGROUND_COLOR);
         if (rect != NULL) {

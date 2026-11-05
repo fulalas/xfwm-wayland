@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/types/wlr_scene.h>
@@ -7,6 +6,7 @@
 #include "osd_geometry.h"
 #include "osd_parts.h"
 #include "output.h"
+#include "utf8_copy.h"
 
 enum {
     MENU_TEXT_MAX = 128,
@@ -167,8 +167,7 @@ static void panel_store(menu_panel *panel, const wm_menu_level *level)
     size_t count = item_count(level);
     panel->level.count = count;
     for (size_t i = 0; i < count; i++) {
-        const char *text = level->items[i].text;
-        snprintf(panel->texts[i], MENU_TEXT_MAX, "%s", text != NULL ? text : "");
+        utf8_copy(panel->texts[i], MENU_TEXT_MAX, level->items[i].text);
         panel->level.items[i].text = panel->texts[i];
     }
 }

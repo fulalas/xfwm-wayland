@@ -57,6 +57,7 @@ void move_session_motion(wm_desktop *desktop, uint32_t time_ms);
 void move_session_cancel(wm_desktop *desktop);
 void resize_session_motion(wm_desktop *desktop);
 uint32_t resize_moving_edges(wm_part handle);
+uint32_t resize_handle_edges(wm_part handle);
 void resize_session_cancel(wm_desktop *desktop);
 void resize_session_arrow(wm_desktop *desktop, wm_part side, wm_point step);
 

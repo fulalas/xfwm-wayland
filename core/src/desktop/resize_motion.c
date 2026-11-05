@@ -7,17 +7,9 @@
 #include "size_hints.h"
 #include "snap.h"
 
-typedef struct resize_edges {
-    bool top;
-    bool bottom;
-    bool left;
-    bool right;
-} resize_edges;
-
-static resize_edges edges_of(wm_part handle);
-static void resize_horizontally(wm_desktop *desktop, wm_window *window, resize_edges edges);
-static void resize_vertically(wm_desktop *desktop, wm_window *window, resize_edges edges);
-static void apply_constraints(wm_desktop *desktop, wm_window *window, resize_edges edges);
+static void resize_horizontally(wm_desktop *desktop, wm_window *window, uint32_t edges);
+static void resize_vertically(wm_desktop *desktop, wm_window *window, uint32_t edges);
+static void apply_constraints(wm_desktop *desktop, wm_window *window, uint32_t edges);
 static bool is_vertical_side(wm_part part);
 static bool is_horizontal_side(wm_part part);
 
@@ -25,7 +17,7 @@ void resize_session_motion(wm_desktop *desktop)
 {
     move_session *session = &desktop->session;
     wm_window *window = session->window;
-    resize_edges edges = edges_of(session->handle);
+    uint32_t edges = resize_handle_edges(session->handle);
     resize_horizontally(desktop, window, edges);
     if (!window_is_shaded(window)) {
         resize_vertically(desktop, window, edges);
@@ -62,72 +54,74 @@ void resize_session_arrow(wm_desktop *desktop, wm_part side, wm_point step)
 
 uint32_t resize_moving_edges(wm_part handle)
 {
-    resize_edges edges = edges_of(handle);
-    uint32_t moving = 0;
-    if (edges.left) {
-        moving |= WM_EDGE_LEFT;
-    }
-    if (edges.top) {
-        moving |= WM_EDGE_TOP;
-    }
-    return moving;
+    return resize_handle_edges(handle) & (WM_EDGE_LEFT | WM_EDGE_TOP);
 }
 
-static resize_edges edges_of(wm_part handle)
+uint32_t resize_handle_edges(wm_part handle)
 {
-    resize_edges edges = {false, false, false, false};
-    edges.top = handle == WM_PART_CORNER_TOP_LEFT || handle == WM_PART_CORNER_TOP_RIGHT
-                || handle == WM_PART_SIDE_TOP;
-    edges.bottom = handle == WM_PART_CORNER_BOTTOM_LEFT || handle == WM_PART_CORNER_BOTTOM_RIGHT
-                   || handle == WM_PART_SIDE_BOTTOM;
-    edges.right = handle == WM_PART_CORNER_TOP_RIGHT || handle == WM_PART_CORNER_BOTTOM_RIGHT
-                  || handle == WM_PART_SIDE_RIGHT;
-    edges.left = handle == WM_PART_CORNER_TOP_LEFT || handle == WM_PART_CORNER_BOTTOM_LEFT
-                 || handle == WM_PART_SIDE_LEFT;
-    return edges;
+    switch (handle) {
+    case WM_PART_CORNER_BOTTOM_LEFT:
+        return WM_EDGE_BOTTOM | WM_EDGE_LEFT;
+    case WM_PART_CORNER_BOTTOM_RIGHT:
+        return WM_EDGE_BOTTOM | WM_EDGE_RIGHT;
+    case WM_PART_CORNER_TOP_LEFT:
+        return WM_EDGE_TOP | WM_EDGE_LEFT;
+    case WM_PART_CORNER_TOP_RIGHT:
+        return WM_EDGE_TOP | WM_EDGE_RIGHT;
+    case WM_PART_SIDE_LEFT:
+        return WM_EDGE_LEFT;
+    case WM_PART_SIDE_RIGHT:
+        return WM_EDGE_RIGHT;
+    case WM_PART_SIDE_TOP:
+        return WM_EDGE_TOP;
+    case WM_PART_SIDE_BOTTOM:
+        return WM_EDGE_BOTTOM;
+    default:
+        return WM_EDGE_NONE;
+    }
 }
 
-static void resize_horizontally(wm_desktop *desktop, wm_window *window, resize_edges edges)
+static void resize_horizontally(wm_desktop *desktop, wm_window *window, uint32_t edges)
 {
     move_session *session = &desktop->session;
     wm_extents extents = frame_extents(desktop, window);
     wm_rect *client = &window->client;
     int delta = desktop->pointer.x - session->mouse_origin.x;
     int right_edge = client->x + client->width;
-    if (edges.left) {
+    if (edges & WM_EDGE_LEFT) {
         int old_width = client->width;
         client->width = session->origin_size.width - delta;
         client->x -= client->width - old_width;
         client->x = snap_closest_edge_x(desktop, window, client->x - extents.left) + extents.left;
         client->width = right_edge - client->x;
-    } else if (edges.right) {
+    } else if (edges & WM_EDGE_RIGHT) {
         client->width = session->origin_size.width + delta;
         int edge = client->x + client->width + extents.right;
         client->width = snap_closest_edge_x(desktop, window, edge) - client->x - extents.right;
     }
 }
 
-static void resize_vertically(wm_desktop *desktop, wm_window *window, resize_edges edges)
+static void resize_vertically(wm_desktop *desktop, wm_window *window, uint32_t edges)
 {
     move_session *session = &desktop->session;
     wm_extents extents = frame_extents(desktop, window);
     wm_rect *client = &window->client;
     int delta = desktop->pointer.y - session->mouse_origin.y;
     int bottom_edge = client->y + client->height;
-    if (edges.top) {
+    if (edges & WM_EDGE_TOP) {
         int old_height = client->height;
         client->height = session->origin_size.height - delta;
         client->y -= client->height - old_height;
         client->y = snap_closest_edge_y(desktop, window, client->y - extents.top) + extents.top;
         client->height = bottom_edge - client->y;
-    } else if (edges.bottom) {
+    } else if (edges & WM_EDGE_BOTTOM) {
         client->height = session->origin_size.height + delta;
         int edge = client->y + client->height + extents.bottom;
         client->height = snap_closest_edge_y(desktop, window, edge) - client->y - extents.bottom;
     }
 }
 
-static void apply_constraints(wm_desktop *desktop, wm_window *window, resize_edges edges)
+static void apply_constraints(wm_desktop *desktop, wm_window *window, uint32_t edges)
 {
     wm_rect *client = &window->client;
     int right_edge = client->x + client->width;
@@ -138,11 +132,11 @@ static void apply_constraints(wm_desktop *desktop, wm_window *window, resize_edg
     client->height -= client->y - y;
     client->width -= client->x - x;
     client->width = size_hints_check_width(desktop, window, client->width);
-    if (edges.left) {
+    if (edges & WM_EDGE_LEFT) {
         client->x = right_edge - client->width;
     }
     client->height = size_hints_check_height(desktop, window, client->height);
-    if (edges.top && !window_is_shaded(window)) {
+    if ((edges & WM_EDGE_TOP) && !window_is_shaded(window)) {
         client->y = bottom_edge - client->height;
     }
 }

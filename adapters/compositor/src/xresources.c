@@ -1,13 +1,12 @@
 #include "xresources.h"
 
 #include <ctype.h>
+#include <glib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 enum {
-    XFT_DPI_UNIT = 1024,
     XFT_DEFAULT = -1,
     VALUE_MAX = 256,
 };
@@ -16,12 +15,6 @@ typedef struct resource_rule {
     const char *key;
     const char *setting;
 } resource_rule;
-
-typedef struct text {
-    char *data;
-    size_t length;
-    size_t capacity;
-} text;
 
 static const char xft_dpi_setting[] = "Xft/DPI";
 static const char theme_core_key[] = "Xcursor.theme_core";
@@ -37,35 +30,33 @@ static const resource_rule rules[] = {
     {"Xcursor.size", "Gtk/CursorThemeSize"},
 };
 
-static void keep_foreign_lines(text *out, const char *existing);
+static void keep_foreign_lines(GString *out, const char *existing);
 static bool is_managed_line(const char *line, size_t length);
 static bool line_has_key(const char *line, size_t length, const char *key);
-static void append_rule(text *out, const resource_rule *rule, const xsettings_table *settings);
+static void append_rule(GString *out, const resource_rule *rule, const xsettings_table *settings);
 static bool format_value(const x11_setting *setting, char *value, size_t capacity);
-static void append_entry(text *out, const char *key, const char *value);
-static void append(text *out, const char *bytes, size_t length);
+static void append_entry(GString *out, const char *key, const char *value);
 
 char *xresources_merge(const char *existing, const xsettings_table *settings)
 {
-    text out = {NULL, 0, 0};
-    append(&out, "", 0);
-    keep_foreign_lines(&out, existing != NULL ? existing : "");
+    GString *out = g_string_new(NULL);
+    keep_foreign_lines(out, existing != NULL ? existing : "");
     for (size_t i = 0; i < sizeof(rules) / sizeof(rules[0]); i++) {
-        append_rule(&out, &rules[i], settings);
+        append_rule(out, &rules[i], settings);
     }
-    append_entry(&out, theme_core_key, "1");
-    return out.data;
+    append_entry(out, theme_core_key, "1");
+    return g_string_free(out, FALSE);
 }
 
-static void keep_foreign_lines(text *out, const char *existing)
+static void keep_foreign_lines(GString *out, const char *existing)
 {
     const char *line = existing;
     while (*line != '\0') {
         const char *end = strchr(line, '\n');
         size_t length = end != NULL ? (size_t) (end - line) : strlen(line);
         if (length > 0 && !is_managed_line(line, length)) {
-            append(out, line, length);
-            append(out, "\n", 1);
+            g_string_append_len(out, line, (gssize) length);
+            g_string_append_c(out, '\n');
         }
         line += end != NULL ? length + 1 : length;
     }
@@ -94,7 +85,7 @@ static bool line_has_key(const char *line, size_t length, const char *key)
     return i < length && line[i] == ':';
 }
 
-static void append_rule(text *out, const resource_rule *rule, const xsettings_table *settings)
+static void append_rule(GString *out, const resource_rule *rule, const xsettings_table *settings)
 {
     const x11_setting *setting = xsettings_table_find(settings, rule->setting);
     char value[VALUE_MAX];
@@ -113,30 +104,12 @@ static bool format_value(const x11_setting *setting, char *value, size_t capacit
         return false;
     }
     bool is_dpi = strcmp(setting->name, xft_dpi_setting) == 0;
-    snprintf(value, capacity, "%d", is_dpi ? setting->integer / XFT_DPI_UNIT : setting->integer);
+    int number = is_dpi ? setting->integer / X11_SETTING_XFT_DPI_UNIT : setting->integer;
+    snprintf(value, capacity, "%d", number);
     return true;
 }
 
-static void append_entry(text *out, const char *key, const char *value)
+static void append_entry(GString *out, const char *key, const char *value)
 {
-    append(out, key, strlen(key));
-    append(out, ":\t", 2);
-    append(out, value, strlen(value));
-    append(out, "\n", 1);
-}
-
-static void append(text *out, const char *bytes, size_t length)
-{
-    if (out->length + length + 1 > out->capacity) {
-        size_t capacity = (out->length + length + 1) * 2;
-        char *grown = realloc(out->data, capacity);
-        if (grown == NULL) {
-            return;
-        }
-        out->data = grown;
-        out->capacity = capacity;
-    }
-    memcpy(out->data + out->length, bytes, length);
-    out->length += length;
-    out->data[out->length] = '\0';
+    g_string_append_printf(out, "%s:\t%s\n", key, value);
 }

@@ -4,12 +4,9 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/util/log.h>
 
+#include "clock.h"
 #include "listener.h"
 #include "present_sync_private.h"
-
-enum {
-    NSEC_PER_SEC = 1000000000,
-};
 
 static void handle_new_output(struct wl_listener *listener, void *data);
 static void handle_commit(struct wl_listener *listener, void *data);
@@ -125,7 +122,7 @@ static void handle_present(struct wl_listener *listener, void *data)
         return;
     }
     clock->clock = (vblank_clock) {
-        .last_ns = (int64_t) event->when.tv_sec * NSEC_PER_SEC + event->when.tv_nsec,
+        .last_ns = clock_timespec_ns(&event->when),
         .refresh_ns = event->refresh,
         .predictable = clock_is_predictable(event),
     };

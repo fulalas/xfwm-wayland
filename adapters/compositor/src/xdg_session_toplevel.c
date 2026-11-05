@@ -37,17 +37,20 @@ void session_toplevel_add(const toplevel_request *request)
 {
     session_data *session = wl_resource_get_user_data(request->session);
     struct wlr_xdg_toplevel *toplevel = wlr_xdg_toplevel_from_resource(request->toplevel);
-    bool attachable = session != NULL && toplevel != NULL;
-    if (attachable && session_book_find(&session->book, request->name) != NULL) {
+    if (session == NULL || toplevel == NULL) {
+        toplevel_create(request);
+        return;
+    }
+    if (session_book_find(&session->book, request->name) != NULL) {
         wl_resource_post_error(request->session, XDG_SESSION_V1_ERROR_NAME_IN_USE,
                                "toplevel name is already known");
         return;
     }
-    if (attachable && !request_is_valid(session, request, toplevel)) {
+    if (!request_is_valid(session, request, toplevel)) {
         return;
     }
     session_toplevel *tracked = toplevel_create(request);
-    if (tracked != NULL && attachable) {
+    if (tracked != NULL) {
         toplevel_attach(tracked, session, toplevel);
         store_current_state(tracked);
     }
@@ -57,17 +60,20 @@ void session_toplevel_restore(const toplevel_request *request)
 {
     session_data *session = wl_resource_get_user_data(request->session);
     struct wlr_xdg_toplevel *toplevel = wlr_xdg_toplevel_from_resource(request->toplevel);
-    bool attachable = session != NULL && toplevel != NULL;
-    if (attachable && toplevel->base->initialized) {
+    if (session == NULL || toplevel == NULL) {
+        toplevel_create(request);
+        return;
+    }
+    if (toplevel->base->initialized) {
         wl_resource_post_error(request->session, XDG_SESSION_V1_ERROR_ALREADY_MAPPED,
                                "toplevel was already committed");
         return;
     }
-    if (attachable && !request_is_valid(session, request, toplevel)) {
+    if (!request_is_valid(session, request, toplevel)) {
         return;
     }
     session_toplevel *tracked = toplevel_create(request);
-    if (tracked == NULL || !attachable) {
+    if (tracked == NULL) {
         return;
     }
     toplevel_attach(tracked, session, toplevel);

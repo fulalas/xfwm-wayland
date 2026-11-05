@@ -4,6 +4,7 @@
 #include <wayland-server-core.h>
 
 #include "compositor/services.h"
+#include "pointer_target.h"
 #include "seat.h"
 
 struct wlr_keyboard;
@@ -68,6 +69,8 @@ struct seat {
 };
 
 void seat_track_device(seat *seat, struct wlr_input_device *device);
+pointer_hit seat_hit_at_cursor(const seat *seat);
+wm_pointer_event seat_core_event(const seat *seat, const pointer_hit *hit, uint32_t time_ms);
 
 keyboards *keyboards_create(seat *seat);
 void keyboards_destroy(keyboards *keyboards);

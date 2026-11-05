@@ -1,3 +1,4 @@
+#include "clock.h"
 #include "commit-timing-v1-protocol.h"
 #include "timing_surface.h"
 #include "resource.h"
@@ -5,8 +6,6 @@
 enum {
     COMMIT_TIMING_VERSION = 1,
 };
-
-static const int64_t NSEC_PER_SEC = 1000000000;
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
 static void handle_get_timer(struct wl_client *client, struct wl_resource *resource, uint32_t id,
@@ -78,7 +77,7 @@ static void handle_set_timestamp(struct wl_client *client, struct wl_resource *r
     if (ts == NULL) {
         wl_resource_post_error(resource, WP_COMMIT_TIMER_V1_ERROR_SURFACE_DESTROYED,
                                "the surface of this commit timer was destroyed");
-    } else if (tv_nsec >= NSEC_PER_SEC) {
+    } else if (tv_nsec >= CLOCK_NS_PER_SECOND) {
         wl_resource_post_error(resource, WP_COMMIT_TIMER_V1_ERROR_INVALID_TIMESTAMP,
                                "tv_nsec is out of range");
     } else if (ts->has_target) {
@@ -93,10 +92,10 @@ static void handle_set_timestamp(struct wl_client *client, struct wl_resource *r
 static int64_t timestamp_ns(uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec)
 {
     uint64_t seconds = (uint64_t) tv_sec_hi << 32 | tv_sec_lo;
-    if (seconds >= (uint64_t) (INT64_MAX / NSEC_PER_SEC)) {
+    if (seconds >= (uint64_t) (INT64_MAX / CLOCK_NS_PER_SECOND)) {
         return INT64_MAX;
     }
-    return (int64_t) seconds * NSEC_PER_SEC + tv_nsec;
+    return (int64_t) seconds * CLOCK_NS_PER_SECOND + tv_nsec;
 }
 
 static void handle_resource_destroy(struct wl_resource *resource)

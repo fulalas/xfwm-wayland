@@ -176,7 +176,6 @@ typedef struct wm_compositing_config {
     bool show_popup_shadow;
     bool show_dock_shadow;
     bool suspend_fullscreen;
-    bool unredirect_overlays;
     wm_vblank_mode vblank_mode;
     bool ten_bit_color;
     bool hdr;

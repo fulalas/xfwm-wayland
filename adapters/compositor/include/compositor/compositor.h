@@ -34,7 +34,6 @@ wm_presenter compositor_presenter(compositor *compositor);
 wm_environment compositor_environment(compositor *compositor);
 void compositor_configure_window(compositor *compositor, void *window, const wm_rect *client);
 void compositor_close_window(compositor *compositor, void *window);
-void compositor_kill_window(compositor *compositor, void *window);
 void compositor_ask_terminate(compositor *compositor, void *window);
 void compositor_warp_pointer(compositor *compositor, wm_point point);
 void compositor_schedule_timer(compositor *compositor, uint32_t delay_ms);

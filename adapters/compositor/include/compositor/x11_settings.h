@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+enum {
+    X11_SETTING_XFT_DPI_UNIT = 1024,
+};
+
 typedef enum x11_setting_type {
     X11_SETTING_INTEGER,
     X11_SETTING_STRING,

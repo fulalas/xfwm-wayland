@@ -1,4 +1,3 @@
-#include <math.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
@@ -16,9 +15,6 @@ static bool accepts_tablet(const tablet_tool *tool, const pointer_hit *hit,
                            const tool_event *event);
 static void route_to_client(tablet_tool *tool, const pointer_hit *hit, const tool_event *event);
 static void route_to_pointer(tablet_tool *tool, const tool_event *event);
-static pointer_hit hit_at_cursor(const tablet_tool *tool);
-static wm_pointer_event core_event(const tablet_tool *tool, const pointer_hit *hit,
-                                   uint32_t time_ms);
 static void report_motion_to_core(tablet_tool *tool, const pointer_hit *hit, uint32_t time_ms);
 static void handle_grab_node_destroy(struct wl_listener *listener, void *data);
 
@@ -32,7 +28,7 @@ void tablet_route_update(tablet_tool *tool, const tool_event *event)
         route_to_pointer(tool, event);
         return;
     }
-    pointer_hit hit = hit_at_cursor(tool);
+    pointer_hit hit = seat_hit_at_cursor(tool->owner->seat);
     if (accepts_tablet(tool, &hit, event)) {
         route_to_client(tool, &hit, event);
     } else {
@@ -48,7 +44,7 @@ void tablet_route_drop_grab(tablet_tool *tool)
 
 void tablet_route_hold_target(tablet_tool *tool)
 {
-    pointer_hit hit = hit_at_cursor(tool);
+    pointer_hit hit = seat_hit_at_cursor(tool->owner->seat);
     if (hit.node == NULL) {
         return;
     }
@@ -65,9 +61,9 @@ wm_dispatch tablet_route_tip_to_core(tablet_tool *tool, const button_input *inpu
     if (input->pressed && seat_input_route(s) != INPUT_ROUTE_NORMAL) {
         return WM_FORWARD;
     }
-    pointer_hit hit = hit_at_cursor(tool);
+    pointer_hit hit = seat_hit_at_cursor(tool->owner->seat);
     wm_button_event event = {
-        .pointer = core_event(tool, &hit, input->time_ms),
+        .pointer = seat_core_event(tool->owner->seat, &hit, input->time_ms),
         .button = input_mapping_button(input->button),
         .pressed = input->pressed,
     };
@@ -119,29 +115,11 @@ static void route_to_pointer(tablet_tool *tool, const tool_event *event)
     pointer_input_motion(tool->owner->seat->pointer, event->time_ms);
 }
 
-static pointer_hit hit_at_cursor(const tablet_tool *tool)
-{
-    seat *s = tool->owner->seat;
-    return pointer_target_at(s->server, (layout_point){s->cursor->x, s->cursor->y});
-}
-
-static wm_pointer_event core_event(const tablet_tool *tool, const pointer_hit *hit,
-                                   uint32_t time_ms)
-{
-    seat *s = tool->owner->seat;
-    return (wm_pointer_event){
-        .position = {(int) floor(s->cursor->x), (int) floor(s->cursor->y)},
-        .time_ms = time_ms,
-        .modifiers = seat_modifiers(s),
-        .target = hit->target,
-    };
-}
-
 static void report_motion_to_core(tablet_tool *tool, const pointer_hit *hit, uint32_t time_ms)
 {
     seat *s = tool->owner->seat;
     if (seat_input_route(s) == INPUT_ROUTE_NORMAL) {
-        wm_pointer_event event = core_event(tool, hit, time_ms);
+        wm_pointer_event event = seat_core_event(tool->owner->seat, hit, time_ms);
         wm_pointer_motion(s->server->desktop, &event);
     }
 }

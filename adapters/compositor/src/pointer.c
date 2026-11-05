@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_pointer.h>
@@ -56,9 +55,6 @@ static void handle_grab_node_destroy(struct wl_listener *listener, void *data);
 static void move_cursor(pointer_input *pointer, struct wlr_input_device *device,
                         const relative_motion *motion);
 static bool core_receives_pointer(const pointer_input *pointer);
-static pointer_hit hit_at_cursor(const pointer_input *pointer);
-static wm_pointer_event core_event(const pointer_input *pointer, const pointer_hit *hit,
-                                   uint32_t time_ms);
 static void deliver_motion(pointer_input *pointer, const pointer_hit *hit, uint32_t time_ms);
 static void deliver_grab_motion(pointer_input *pointer, uint32_t time_ms);
 static void leave_surfaces(pointer_input *pointer);
@@ -119,10 +115,10 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
         deliver_grab_motion(p, time_ms);
         return;
     }
-    pointer_hit hit = hit_at_cursor(p);
+    pointer_hit hit = seat_hit_at_cursor(p->seat);
     wm_dispatch result = WM_FORWARD;
     if (core_receives_pointer(p)) {
-        wm_pointer_event event = core_event(p, &hit, time_ms);
+        wm_pointer_event event = seat_core_event(p->seat, &hit, time_ms);
         result = wm_pointer_motion(s->server->desktop, &event);
     }
     if (result == WM_FORWARD && hit.surface != NULL) {
@@ -259,25 +255,6 @@ static bool core_receives_pointer(const pointer_input *p)
     return seat_input_route(s) == INPUT_ROUTE_NORMAL;
 }
 
-static pointer_hit hit_at_cursor(const pointer_input *p)
-{
-    struct wlr_cursor *cursor = p->seat->cursor;
-    return pointer_target_at(p->seat->server, (layout_point){cursor->x, cursor->y});
-}
-
-static wm_pointer_event core_event(const pointer_input *p, const pointer_hit *hit,
-                                   uint32_t time_ms)
-{
-    struct wlr_cursor *cursor = p->seat->cursor;
-    wm_pointer_event event = {
-        .position = {(int) floor(cursor->x), (int) floor(cursor->y)},
-        .time_ms = time_ms,
-        .modifiers = seat_modifiers(p->seat),
-        .target = hit->target,
-    };
-    return event;
-}
-
 static void deliver_motion(pointer_input *p, const pointer_hit *hit, uint32_t time_ms)
 {
     struct wlr_seat *wlr_seat = p->seat->wlr_seat;
@@ -304,7 +281,7 @@ static void leave_surfaces(pointer_input *p)
 
 static void press(pointer_input *p, const button_input *input)
 {
-    pointer_hit hit = hit_at_cursor(p);
+    pointer_hit hit = seat_hit_at_cursor(p->seat);
     if (p->grab_surface != NULL) {
         press_grabbed(p, &hit, input);
         return;
@@ -344,7 +321,7 @@ static bool forward_press(pointer_input *p, const button_input *input)
 
 static void release(pointer_input *p, const button_input *input)
 {
-    pointer_hit hit = hit_at_cursor(p);
+    pointer_hit hit = seat_hit_at_cursor(p->seat);
     dispatch_button(p, &hit, input);
     if (!take_forwarded(p, input->button)) {
         return;
@@ -365,7 +342,7 @@ static wm_dispatch dispatch_button(pointer_input *p, const pointer_hit *hit,
         return WM_FORWARD;
     }
     wm_button_event event = {
-        .pointer = core_event(p, hit, input->time_ms),
+        .pointer = seat_core_event(p->seat, hit, input->time_ms),
         .button = button,
         .pressed = input->pressed,
     };
@@ -420,8 +397,8 @@ static wm_dispatch dispatch_axis(pointer_input *p, const struct wlr_pointer_axis
     if (steps.steps == 0) {
         return WM_FORWARD;
     }
-    pointer_hit hit = hit_at_cursor(p);
-    wm_axis_event axis = {.pointer = core_event(p, &hit, event->time_msec)};
+    pointer_hit hit = seat_hit_at_cursor(p->seat);
+    wm_axis_event axis = {.pointer = seat_core_event(p->seat, &hit, event->time_msec)};
     if (index == 0) {
         axis.vertical_steps = steps.steps;
     } else {

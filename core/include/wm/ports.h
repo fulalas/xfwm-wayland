@@ -32,7 +32,6 @@ typedef struct wm_commands {
     void *self;
     void (*configure)(void *self, void *window, const wm_rect *client);
     void (*close)(void *self, void *window);
-    void (*kill)(void *self, void *window);
     void (*ask_terminate)(void *self, void *window);
     void (*warp_pointer)(void *self, wm_point point);
     void (*spawn)(void *self, const char *command);

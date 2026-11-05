@@ -63,7 +63,6 @@ struct wm_window {
     bool was_shown;
     bool workspace_focus;
     bool seen_active;
-    bool urgent_hint;
     int blink_iterations;
     bool moving;
     bool resizing;

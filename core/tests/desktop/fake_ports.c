@@ -19,7 +19,6 @@ static void zoom_changed(void *self, const wm_zoom_view *view);
 static void cursor_changed(void *self, wm_cursor_shape shape);
 static void configure(void *self, void *window, const wm_rect *client);
 static void close_window(void *self, void *window);
-static void kill_window(void *self, void *window);
 static void ask_terminate(void *self, void *window);
 static void warp_pointer(void *self, wm_point point);
 static void spawn(void *self, const char *command);
@@ -42,7 +41,7 @@ void fake_world_init(fake_world *world)
         zoom_changed, cursor_changed,
     };
     world->ports.commands = (wm_commands) {
-        world, configure, close_window, kill_window, ask_terminate, warp_pointer, spawn,
+        world, configure, close_window, ask_terminate, warp_pointer, spawn,
         logout, store_workspace_count, schedule_timer,
     };
     world->ports.environment = (wm_environment) {
@@ -266,12 +265,6 @@ static void configure(void *self, void *window, const wm_rect *client)
 static void close_window(void *self, void *window)
 {
     world_of(self)->closed = window;
-}
-
-static void kill_window(void *self, void *window)
-{
-    (void) self;
-    (void) window;
 }
 
 static void ask_terminate(void *self, void *window)

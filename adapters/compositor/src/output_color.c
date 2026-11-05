@@ -43,8 +43,8 @@ void output_color_describe_basic(output *o, struct wlr_output_state *state)
 bool outputs_apply_color(outputs *outs)
 {
     bool all_ok = true;
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        all_ok = apply_color(outputs_at_index(outs, i)) && all_ok;
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+        all_ok = apply_color(o) && all_ok;
     }
     return all_ok;
 }

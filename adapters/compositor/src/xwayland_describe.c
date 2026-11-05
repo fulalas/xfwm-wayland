@@ -31,6 +31,7 @@ static const type_pair type_pairs[] = {
 
 
 static uint32_t current_states(const struct wlr_xwayland_surface *xsurface);
+static bool surface_is_urgent(const struct wlr_xwayland_surface *xsurface);
 static bool has_position(const struct wlr_xwayland_surface *xsurface);
 static strut_range strut_side(uint32_t size, uint32_t start, uint32_t end);
 static void set_maximized(struct wlr_xwayland_surface *xsurface, bool value);
@@ -103,9 +104,7 @@ wm_window *xwayland_view_parent_window(const xwayland_view *xv)
 
 bool xwayland_view_is_urgent(const xwayland_view *xv)
 {
-    const struct wlr_xwayland_surface *xs = xv->xsurface;
-    bool hinted = xs->hints != NULL && xcb_icccm_wm_hints_get_urgency(xs->hints) != 0;
-    return hinted || xs->demands_attention;
+    return surface_is_urgent(xv->xsurface);
 }
 
 void xwayland_view_fetch_icon(xwayland_view *xv)
@@ -174,10 +173,14 @@ static uint32_t current_states(const struct wlr_xwayland_surface *xs)
     states |= xs->skip_taskbar ? WM_STATE_SKIP_TASKBAR : 0;
     states |= xs->skip_pager ? WM_STATE_SKIP_PAGER : 0;
     states |= xs->modal ? WM_STATE_MODAL : 0;
-    bool urgent = xs->demands_attention ||
-                  (xs->hints != NULL && xcb_icccm_wm_hints_get_urgency(xs->hints) != 0);
-    states |= urgent ? WM_STATE_URGENT : 0;
+    states |= surface_is_urgent(xs) ? WM_STATE_URGENT : 0;
     return states;
+}
+
+static bool surface_is_urgent(const struct wlr_xwayland_surface *xs)
+{
+    bool hinted = xs->hints != NULL && xcb_icccm_wm_hints_get_urgency(xs->hints) != 0;
+    return hinted || xs->demands_attention;
 }
 
 static bool has_position(const struct wlr_xwayland_surface *xs)

@@ -104,5 +104,5 @@ static bool frame_is_drawn_active(const wm_desktop *desktop, const wm_window *wi
     if (desktop->focus.focused == window) {
         return true;
     }
-    return window->urgent_hint && window->seen_active;
+    return window_has_state(window, WM_STATE_URGENT) && window->seen_active;
 }

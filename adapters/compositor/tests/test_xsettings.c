@@ -1,3 +1,4 @@
+#include <glib.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -83,7 +84,7 @@ static void test_xresources_replace_managed_lines(void)
     CHECK(strstr(merged, "Xft.hinting") == NULL);
     CHECK(strstr(merged, "Xft.hintstyle:\thintslight\n") != NULL);
     CHECK(strstr(merged, "Xcursor.theme_core:\t1\n") != NULL);
-    free(merged);
+    g_free(merged);
     xsettings_table_destroy(table);
 }
 

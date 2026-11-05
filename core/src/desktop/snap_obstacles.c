@@ -19,6 +19,10 @@ static void add_rect(snap_obstacles *obstacles, wm_rect rect);
 snap_obstacles snap_obstacles_collect(const wm_desktop *desktop, const wm_window *window)
 {
     snap_obstacles obstacles = {0};
+    const wm_move_config *config = &desktop->config.move;
+    if (!config->snap_to_windows && !config->snap_to_border) {
+        return obstacles;
+    }
     obstacles.rects = malloc((desktop->stack.count + STRUT_COUNT) * sizeof(wm_rect));
     if (obstacles.rects == NULL) {
         return obstacles;
@@ -29,7 +33,7 @@ snap_obstacles snap_obstacles_collect(const wm_desktop *desktop, const wm_window
             add_rect(&obstacles, frame_rect(desktop, other));
         }
     }
-    if (desktop->config.move.snap_to_border) {
+    if (config->snap_to_border) {
         add_struts(desktop, window, &obstacles);
     }
     return obstacles;

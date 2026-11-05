@@ -108,7 +108,7 @@ foreach name, sources : compositor_x11_tests
       'test_compositor_' + name,
       ['test_' + name + '.c'] + sources,
       include_directories: compositor_test_inc + [compositor_api_inc],
-      dependencies: [check_dep, wm_core_dep, xcb_dep],
+      dependencies: [check_dep, wm_core_dep, xcb_dep, glib_dep],
     ),
   )
 endforeach
@@ -119,6 +119,6 @@ test(
     'test_compositor_output_identity',
     ['test_output_identity.c', '../src/output_identity.c'],
     include_directories: compositor_test_inc + [compositor_api_inc],
-    dependencies: [check_dep, glib_dep],
+    dependencies: [check_dep, display_hash_dep],
   ),
 )

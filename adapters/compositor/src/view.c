@@ -2,6 +2,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 
+#include "input_mapping.h"
 #include "osd.h"
 #include "scene_layers.h"
 #include "seat.h"
@@ -124,6 +125,22 @@ void view_request_state(view *v, const wm_state_change *change)
 {
     if (v->window != NULL) {
         wm_request_state(v->server->desktop, v->window, change);
+    }
+}
+
+void view_request_move(view *v)
+{
+    if (v->window != NULL) {
+        seat_release_pointer_grab(v->server->seat);
+        wm_request_move(v->server->desktop, v->window);
+    }
+}
+
+void view_request_resize(view *v, uint32_t wlr_edges)
+{
+    if (v->window != NULL) {
+        seat_release_pointer_grab(v->server->seat);
+        wm_request_resize(v->server->desktop, v->window, input_mapping_edges_from_wlr(wlr_edges));
     }
 }
 

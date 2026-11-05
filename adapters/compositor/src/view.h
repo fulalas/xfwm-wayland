@@ -55,6 +55,8 @@ void view_present(view *view, const wm_window_view *state);
 void view_committed(view *view, wm_size size);
 void view_configure_settled(view *view);
 void view_request_state(view *view, const wm_state_change *change);
+void view_request_move(view *view);
+void view_request_resize(view *view, uint32_t wlr_edges);
 wm_state_change view_state_change(uint32_t states, bool enabled);
 void view_icon_changed(view *view);
 void view_report_not_responding(view *view);

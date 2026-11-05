@@ -127,8 +127,7 @@ static void leave_outputs(toplevel_entry *entry)
 static void enter_outputs(toplevel_entry *entry)
 {
     outputs *outs = entry->owner->server->outputs;
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        output *o = outputs_at_index(outs, i);
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
         if (shown_on(entry, o) && !has_output(entry->wlr, output_wlr(o))) {
             wlr_foreign_toplevel_handle_v1_output_enter(entry->wlr, output_wlr(o));
         }

@@ -1,5 +1,6 @@
 #include "xwayland_xsettings.h"
 
+#include <glib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/util/log.h>
@@ -168,7 +169,7 @@ static void update_resources(const xwayland_xsettings *xsettings, xcb_connection
     }
     xcb_change_property(connection, XCB_PROP_MODE_REPLACE, root, XCB_ATOM_RESOURCE_MANAGER,
                         XCB_ATOM_STRING, BYTE_FORMAT, (uint32_t) strlen(merged), merged);
-    free(merged);
+    g_free(merged);
 }
 
 static char *read_resources(xcb_connection_t *connection, xcb_window_t root)

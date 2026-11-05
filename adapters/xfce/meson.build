@@ -19,7 +19,6 @@ xfce_logic = static_library(
     'src/config_table.c',
     'src/config_values.c',
     'src/display_choice.c',
-    'src/display_hash.c',
     'src/display_plan.c',
     'src/display_read.c',
     'src/display_table.c',
@@ -40,7 +39,7 @@ xfce_logic = static_library(
     '../../helper/protocol_text.c',
   ),
   include_directories: [xfce_inc, include_directories('../../helper')],
-  dependencies: [xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep],
+  dependencies: [xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep, display_hash_dep],
 )
 
 xfce_lib = static_library(

@@ -11,6 +11,19 @@
 #include "wrap.h"
 #include "zoom.h"
 
+typedef struct pointer_grab {
+    wm_dispatch (*motion)(wm_desktop *desktop, const wm_pointer_event *event);
+    wm_dispatch (*button)(wm_desktop *desktop, const wm_button_event *event);
+    wm_dispatch (*axis)(wm_desktop *desktop, const wm_axis_event *event);
+} pointer_grab;
+
+static const pointer_grab menu_grab = {menu_motion, menu_button, NULL};
+static const pointer_grab cycle_grab = {cycle_motion, cycle_button, cycle_axis};
+static const pointer_grab click_grab = {click_motion, click_button, NULL};
+static const pointer_grab moveresize_grab = {moveresize_motion, moveresize_button, NULL};
+static const pointer_grab frame_button_grab = {frame_buttons_motion, frame_buttons_button, NULL};
+
+static const pointer_grab *active_grab(const wm_desktop *desktop);
 static wm_dispatch dispatch_motion(wm_desktop *desktop, const wm_pointer_event *event);
 static wm_dispatch free_motion(wm_desktop *desktop, const wm_pointer_event *event);
 static void update_hover_cursor(wm_desktop *desktop, const wm_pointer_event *event);
@@ -44,24 +57,27 @@ wm_dispatch wm_pointer_axis(wm_desktop *desktop, const wm_axis_event *event)
     return result;
 }
 
-static wm_dispatch dispatch_motion(wm_desktop *desktop, const wm_pointer_event *event)
+static const pointer_grab *active_grab(const wm_desktop *desktop)
 {
     if (menu_is_active(desktop)) {
-        return menu_motion(desktop, event);
+        return &menu_grab;
     }
     if (cycle_is_active(desktop)) {
-        return cycle_motion(desktop, event);
+        return &cycle_grab;
     }
     if (click_is_pending(desktop)) {
-        return click_motion(desktop, event);
+        return &click_grab;
     }
     if (moveresize_grabs_pointer(desktop)) {
-        return moveresize_motion(desktop, event);
+        return &moveresize_grab;
     }
-    if (frame_buttons_is_pressing(desktop)) {
-        return frame_buttons_motion(desktop, event);
-    }
-    return free_motion(desktop, event);
+    return frame_buttons_is_pressing(desktop) ? &frame_button_grab : NULL;
+}
+
+static wm_dispatch dispatch_motion(wm_desktop *desktop, const wm_pointer_event *event)
+{
+    const pointer_grab *grab = active_grab(desktop);
+    return grab != NULL ? grab->motion(desktop, event) : free_motion(desktop, event);
 }
 
 static wm_dispatch free_motion(wm_desktop *desktop, const wm_pointer_event *event)
@@ -99,20 +115,9 @@ static void follow_focus(wm_desktop *desktop, const wm_pointer_event *event)
 
 static wm_dispatch dispatch_button(wm_desktop *desktop, const wm_button_event *event)
 {
-    if (menu_is_active(desktop)) {
-        return menu_button(desktop, event);
-    }
-    if (cycle_is_active(desktop)) {
-        return cycle_button(desktop, event);
-    }
-    if (click_is_pending(desktop)) {
-        return click_button(desktop, event);
-    }
-    if (moveresize_grabs_pointer(desktop)) {
-        return moveresize_button(desktop, event);
-    }
-    if (frame_buttons_is_pressing(desktop)) {
-        return frame_buttons_button(desktop, event);
+    const pointer_grab *grab = active_grab(desktop);
+    if (grab != NULL) {
+        return grab->button(desktop, event);
     }
     if (!event->pressed || !has_window_target(&event->pointer.target)) {
         return event->pointer.target.kind == WM_TARGET_FRAME ? WM_CONSUMED : WM_FORWARD;
@@ -122,17 +127,11 @@ static wm_dispatch dispatch_button(wm_desktop *desktop, const wm_button_event *e
 
 static wm_dispatch dispatch_axis(wm_desktop *desktop, const wm_axis_event *event)
 {
-    if (menu_is_active(desktop)) {
-        return WM_CONSUMED;
+    const pointer_grab *grab = active_grab(desktop);
+    if (grab == NULL) {
+        return frame_input_axis(desktop, event);
     }
-    if (cycle_is_active(desktop)) {
-        return cycle_axis(desktop, event);
-    }
-    if (click_is_pending(desktop) || moveresize_grabs_pointer(desktop)
-        || frame_buttons_is_pressing(desktop)) {
-        return WM_CONSUMED;
-    }
-    return frame_input_axis(desktop, event);
+    return grab->axis != NULL ? grab->axis(desktop, event) : WM_CONSUMED;
 }
 
 static bool has_window_target(const wm_pointer_target *target)

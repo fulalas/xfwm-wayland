@@ -16,6 +16,19 @@ libdrm_dep = dependency('libdrm').partial_dependency(compile_args: true, include
 libdrm_link_dep = dependency('libdrm')
 compositor_m_dep = meson.get_compiler('c').find_library('m', required: false)
 
+display_hash_lib = static_library(
+  'display_hash',
+  'src/display_hash.c',
+  include_directories: compositor_api_inc,
+  dependencies: glib_dep,
+)
+
+display_hash_dep = declare_dependency(
+  link_with: display_hash_lib,
+  include_directories: compositor_api_inc,
+  dependencies: glib_dep,
+)
+
 layer_shell_header = custom_target(
   'wlr-layer-shell-unstable-v1-protocol.h',
   input: 'protocols/wlr-layer-shell-unstable-v1.xml',
@@ -144,7 +157,6 @@ compositor_sources = files(
   'src/device_settings_absolute.c',
   'src/device_settings_touchpad.c',
   'src/display_batch.c',
-  'src/display_modules.c',
   'src/display_policy.c',
   'src/drag_actions.c',
   'src/displays.c',
@@ -311,6 +323,7 @@ compositor_lib = static_library(
   c_args: compositor_c_args,
   dependencies: [
     wm_core_dep,
+    display_hash_dep,
     wlroots_dep,
     wayland_server_dep,
     xkbcommon_dep,

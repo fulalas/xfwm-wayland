@@ -66,4 +66,8 @@ typedef struct display_plan {
     display_saved displays[DISPLAY_MAX];
 } display_plan;
 
+char *display_hash(const display_identity *identity);
+char *display_hash_edid(const display_identity *identity);
+char *display_hash_names(const display_identity *identity);
+
 #endif

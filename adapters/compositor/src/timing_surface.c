@@ -7,10 +7,6 @@
 #include "listener.h"
 #include "timing_surface.h"
 
-enum {
-    NSEC_PER_MSEC = 1000000,
-};
-
 typedef struct timing_waiter {
     uint32_t seq;
     int64_t target_ns;
@@ -19,7 +15,7 @@ typedef struct timing_waiter {
 
 static void timing_surface_destroy(timing_surface *ts);
 static void handle_client_commit(struct wl_listener *listener, void *data);
-static void queue_waiter(timing_surface *ts, int64_t target_ns);
+static void queue_waiter(timing_surface *ts);
 static void release_due(timing_surface *ts);
 static bool target_due(const timing_surface *ts, int64_t target_ns);
 static int64_t earliest_on(const present_sync *sync, struct wlr_output *output, int64_t now_ns);
@@ -104,11 +100,11 @@ static void handle_client_commit(struct wl_listener *listener, void *data)
     }
     ts->has_target = false;
     if (!target_due(ts, ts->target_ns)) {
-        queue_waiter(ts, ts->target_ns);
+        queue_waiter(ts);
     }
 }
 
-static void queue_waiter(timing_surface *ts, int64_t target_ns)
+static void queue_waiter(timing_surface *ts)
 {
     timing_waiter *waiter = calloc(1, sizeof(*waiter));
     if (waiter == NULL) {
@@ -116,7 +112,7 @@ static void queue_waiter(timing_surface *ts, int64_t target_ns)
         return;
     }
     waiter->seq = wlr_surface_lock_pending(ts->surface);
-    waiter->target_ns = target_ns;
+    waiter->target_ns = ts->target_ns;
     wl_list_insert(ts->waiters.prev, &waiter->link);
     rearm_timer(ts);
 }
@@ -171,7 +167,7 @@ static void rearm_timer(timing_surface *ts)
         wl_event_source_timer_update(ts->timer, 0);
         return;
     }
-    int64_t delay_ms = soonest > now ? (soonest - now + NSEC_PER_MSEC - 1) / NSEC_PER_MSEC : 1;
+    int64_t delay_ms = soonest > now ? (soonest - now + CLOCK_NS_PER_MS - 1) / CLOCK_NS_PER_MS : 1;
     wl_event_source_timer_update(ts->timer, delay_ms < INT_MAX ? (int) delay_ms : INT_MAX);
 }
 

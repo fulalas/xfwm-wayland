@@ -118,8 +118,7 @@ bool outputs_renderer_changed(outputs *outs)
 
 bool outputs_rebuild_swapchains(outputs *outs)
 {
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        output *o = outputs_at_index(outs, i);
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
         if (o->wlr_output->enabled && !output_rebuild_swapchain(o)) {
             return false;
         }

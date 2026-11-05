@@ -31,6 +31,18 @@ output *outputs_at_index(const outputs *outs, size_t index)
     return NULL;
 }
 
+output *outputs_next_active(const outputs *outs, const output *after)
+{
+    const struct wl_list *link = after != NULL ? after->link.next : outs->list.next;
+    for (; link != &outs->list; link = link->next) {
+        output *o = wl_container_of(link, o, link);
+        if (output_is_active(o)) {
+            return o;
+        }
+    }
+    return NULL;
+}
+
 size_t outputs_known_count(const outputs *outs)
 {
     return (size_t) wl_list_length(&outs->list);

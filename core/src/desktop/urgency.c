@@ -18,18 +18,16 @@ void urgency_set(wm_desktop *desktop, wm_window *window)
         return;
     }
     window->states |= WM_STATE_URGENT;
-    window->urgent_hint = true;
     window_mark_dirty(window);
     urgency_refresh(desktop, window);
 }
 
 void urgency_clear(wm_desktop *desktop, wm_window *window)
 {
-    if (!window->urgent_hint && !window_has_state(window, WM_STATE_URGENT)) {
+    if (!window_has_state(window, WM_STATE_URGENT)) {
         return;
     }
     window->states &= ~(uint32_t) WM_STATE_URGENT;
-    window->urgent_hint = false;
     window->seen_active = false;
     window->blink_iterations = 0;
     timers_cancel(desktop, TIMER_BLINK, window);
@@ -45,7 +43,8 @@ void urgency_refresh(wm_desktop *desktop, wm_window *window)
         window_mark_dirty(window);
         return;
     }
-    if (window->urgent_hint && !timers_is_running(desktop, TIMER_BLINK, window)) {
+    if (window_has_state(window, WM_STATE_URGENT)
+        && !timers_is_running(desktop, TIMER_BLINK, window)) {
         restart(desktop, window);
     }
 }

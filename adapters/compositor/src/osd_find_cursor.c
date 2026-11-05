@@ -4,17 +4,13 @@
 #include <wlr/types/wlr_scene.h>
 
 #include "cairo_buffer.h"
+#include "clock.h"
 #include "find_cursor_paint.h"
 #include "listener.h"
 #include "osd_parts.h"
 #include "output.h"
 #include "scene_buffers.h"
 #include "seat.h"
-
-enum {
-    MS_PER_SECOND = 1000,
-    NS_PER_MS = 1000000,
-};
 
 static const double DEFAULT_SCALE = 1.0;
 
@@ -105,7 +101,7 @@ static double scale_at(const compositor *server, wm_point point)
 
 static uint32_t elapsed_ms(const struct timespec *from, const struct timespec *to)
 {
-    int64_t ms = ((int64_t) to->tv_sec - from->tv_sec) * MS_PER_SECOND +
-                 ((int64_t) to->tv_nsec - from->tv_nsec) / NS_PER_MS;
+    int64_t ms = ((int64_t) to->tv_sec - from->tv_sec) * CLOCK_MS_PER_SECOND +
+                 ((int64_t) to->tv_nsec - from->tv_nsec) / CLOCK_NS_PER_MS;
     return ms > 0 ? (uint32_t) ms : 0;
 }

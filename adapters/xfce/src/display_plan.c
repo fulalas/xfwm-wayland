@@ -1,7 +1,7 @@
 #include "display_plan.h"
 
+#include "compositor/displays.h"
 #include "display_choice.h"
-#include "display_hash.h"
 #include "display_read.h"
 
 static char **hash_all(const display_set *connected, size_t count);

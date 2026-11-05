@@ -5,7 +5,6 @@
 enum {
     DPI_LOWEST = 50,
     DPI_HIGHEST = 500,
-    XFT_DPI_UNIT = 1024,
 };
 
 static const char *const exported_prefixes[] = {"/Net/", "/Xft/", "/Gtk/", "/Gdk/"};
@@ -56,6 +55,6 @@ static bool integer_from(const char *property, const GValue *value, int32_t *int
         *integer = number;
         return true;
     }
-    *integer = CLAMP(number, DPI_LOWEST, DPI_HIGHEST) * XFT_DPI_UNIT;
+    *integer = CLAMP(number, DPI_LOWEST, DPI_HIGHEST) * X11_SETTING_XFT_DPI_UNIT;
     return number > 0;
 }

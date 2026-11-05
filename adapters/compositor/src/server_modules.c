@@ -1,11 +1,12 @@
 #include "accessibility.h"
 #include "activation.h"
-#include "display_modules.h"
 #include "device_list.h"
+#include "displays.h"
 #include "drm_lease.h"
 #include "foreign_toplevel.h"
 #include "idle.h"
 #include "layer_shell.h"
+#include "lid_switch.h"
 #include "lock.h"
 #include "osd.h"
 #include "output.h"
@@ -18,17 +19,28 @@
 #include "server_modules.h"
 #include "toplevel_capture.h"
 #include "toplevel_icons.h"
+#include "xfce_output_heads.h"
+#include "xfce_outputs.h"
 #include "workspace_protocol.h"
 #include "xdg_session.h"
 #include "xdg_shell.h"
 #include "xwayland.h"
 #include "zoom.h"
 
+#define DESTROY_AND_CLEAR(pointer, destroy) \
+    do {                                    \
+        if ((pointer) != NULL) {            \
+            destroy(pointer);               \
+            (pointer) = NULL;               \
+        }                                   \
+    } while (0)
+
 static bool create_desktop_modules(compositor *server);
+static bool create_display_modules(compositor *server);
 static void destroy_client_shells(compositor *server);
 static void destroy_desktop_modules(compositor *server);
 static void destroy_output_modules(compositor *server);
-static void destroy_input_modules(compositor *server);
+static void destroy_display_modules(compositor *server);
 
 bool server_modules_create(compositor *c)
 {
@@ -63,7 +75,7 @@ static bool create_desktop_modules(compositor *c)
     c->activation = activation_create(c);
     c->output_config = output_config_create(c);
     c->output_power = output_power_create(c);
-    bool displays_created = display_modules_create(c);
+    bool displays_created = create_display_modules(c);
     c->drm_lease = drm_lease_create(c);
     c->xdg_sessions = xdg_sessions_create(c);
     c->present_sync = present_sync_create(c);
@@ -78,107 +90,57 @@ void server_modules_destroy(compositor *c)
 {
     destroy_client_shells(c);
     destroy_desktop_modules(c);
-    if (c->idle != NULL) {
-        idle_destroy(c->idle);
-        c->idle = NULL;
-    }
-    if (c->zoom != NULL) {
-        zoom_destroy(c->zoom);
-        c->zoom = NULL;
-    }
-    if (c->osd != NULL) {
-        osd_destroy(c->osd);
-        c->osd = NULL;
-    }
-    destroy_input_modules(c);
-    if (c->seat != NULL) {
-        seat_destroy(c->seat);
-        c->seat = NULL;
-    }
-    if (c->outputs != NULL) {
-        outputs_destroy(c->outputs);
-        c->outputs = NULL;
-    }
+    DESTROY_AND_CLEAR(c->idle, idle_destroy);
+    DESTROY_AND_CLEAR(c->zoom, zoom_destroy);
+    DESTROY_AND_CLEAR(c->osd, osd_destroy);
+    DESTROY_AND_CLEAR(c->device_list, device_list_destroy);
+    DESTROY_AND_CLEAR(c->seat, seat_destroy);
+    DESTROY_AND_CLEAR(c->outputs, outputs_destroy);
+}
+
+static bool create_display_modules(compositor *c)
+{
+    c->displays = displays_create(c);
+    c->lid_switch = lid_switch_create(c);
+    c->xfce_output_heads = xfce_output_heads_create(c);
+    c->xfce_outputs = xfce_outputs_create(c);
+    return c->displays != NULL && c->lid_switch != NULL && c->xfce_output_heads != NULL &&
+           c->xfce_outputs != NULL;
 }
 
 static void destroy_client_shells(compositor *c)
 {
-    if (c->xwayland != NULL) {
-        xwayland_shell_destroy(c->xwayland);
-        c->xwayland = NULL;
-    }
-    if (c->toplevel_icons != NULL) {
-        toplevel_icons_destroy(c->toplevel_icons);
-        c->toplevel_icons = NULL;
-    }
-    if (c->lock != NULL) {
-        session_lock_destroy(c->lock);
-        c->lock = NULL;
-    }
-    if (c->layer_shell != NULL) {
-        layer_shell_destroy(c->layer_shell);
-        c->layer_shell = NULL;
-    }
-    if (c->xdg != NULL) {
-        xdg_shell_destroy(c->xdg);
-        c->xdg = NULL;
-    }
+    DESTROY_AND_CLEAR(c->xwayland, xwayland_shell_destroy);
+    DESTROY_AND_CLEAR(c->toplevel_icons, toplevel_icons_destroy);
+    DESTROY_AND_CLEAR(c->lock, session_lock_destroy);
+    DESTROY_AND_CLEAR(c->layer_shell, layer_shell_destroy);
+    DESTROY_AND_CLEAR(c->xdg, xdg_shell_destroy);
 }
 
 static void destroy_desktop_modules(compositor *c)
 {
     destroy_output_modules(c);
-    if (c->accessibility != NULL) {
-        accessibility_destroy(c->accessibility);
-        c->accessibility = NULL;
-    }
-    if (c->activation != NULL) {
-        activation_destroy(c->activation);
-        c->activation = NULL;
-    }
-    if (c->workspaces != NULL) {
-        workspace_protocol_destroy(c->workspaces);
-        c->workspaces = NULL;
-    }
-    if (c->toplevel_capture != NULL) {
-        toplevel_capture_destroy(c->toplevel_capture);
-        c->toplevel_capture = NULL;
-    }
-    if (c->foreign_toplevels != NULL) {
-        foreign_toplevels_destroy(c->foreign_toplevels);
-        c->foreign_toplevels = NULL;
-    }
+    DESTROY_AND_CLEAR(c->accessibility, accessibility_destroy);
+    DESTROY_AND_CLEAR(c->activation, activation_destroy);
+    DESTROY_AND_CLEAR(c->workspaces, workspace_protocol_destroy);
+    DESTROY_AND_CLEAR(c->toplevel_capture, toplevel_capture_destroy);
+    DESTROY_AND_CLEAR(c->foreign_toplevels, foreign_toplevels_destroy);
 }
 
 static void destroy_output_modules(compositor *c)
 {
-    display_modules_destroy(c);
-    if (c->present_sync != NULL) {
-        present_sync_destroy(c->present_sync);
-        c->present_sync = NULL;
-    }
-    if (c->drm_lease != NULL) {
-        drm_lease_destroy(c->drm_lease);
-        c->drm_lease = NULL;
-    }
-    if (c->xdg_sessions != NULL) {
-        xdg_sessions_destroy(c->xdg_sessions);
-        c->xdg_sessions = NULL;
-    }
-    if (c->output_power != NULL) {
-        output_power_destroy(c->output_power);
-        c->output_power = NULL;
-    }
-    if (c->output_config != NULL) {
-        output_config_destroy(c->output_config);
-        c->output_config = NULL;
-    }
+    destroy_display_modules(c);
+    DESTROY_AND_CLEAR(c->present_sync, present_sync_destroy);
+    DESTROY_AND_CLEAR(c->drm_lease, drm_lease_destroy);
+    DESTROY_AND_CLEAR(c->xdg_sessions, xdg_sessions_destroy);
+    DESTROY_AND_CLEAR(c->output_power, output_power_destroy);
+    DESTROY_AND_CLEAR(c->output_config, output_config_destroy);
 }
 
-static void destroy_input_modules(compositor *c)
+static void destroy_display_modules(compositor *c)
 {
-    if (c->device_list != NULL) {
-        device_list_destroy(c->device_list);
-        c->device_list = NULL;
-    }
+    DESTROY_AND_CLEAR(c->xfce_outputs, xfce_outputs_destroy);
+    DESTROY_AND_CLEAR(c->xfce_output_heads, xfce_output_heads_destroy);
+    DESTROY_AND_CLEAR(c->lid_switch, lid_switch_destroy);
+    DESTROY_AND_CLEAR(c->displays, displays_destroy);
 }

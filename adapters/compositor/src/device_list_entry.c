@@ -16,8 +16,6 @@ typedef struct device_user {
 
 static void handle_user_destroy(struct wl_listener *listener, void *data);
 static void free_user(device_user *user);
-static void handle_device_gone(struct wl_resource *resource);
-static void detach_resource(struct wl_resource *resource);
 
 static const struct xfce_input_device_v1_interface device_implementation = {
     .release = resource_handle_destroy,
@@ -57,7 +55,7 @@ void listed_device_announce(listed_device *entry, struct wl_resource *manager)
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(resource, &device_implementation, entry, handle_device_gone);
+    wl_resource_set_implementation(resource, &device_implementation, entry, resource_unlink);
     wl_list_insert(&entry->resources, wl_resource_get_link(resource));
     xfce_input_device_list_private_v1_send_device(
         manager, resource, libinput_device_get_name(entry->handle), entry->capabilities);
@@ -80,7 +78,7 @@ void listed_device_remove(listed_device *entry)
     struct wl_resource *next;
     wl_resource_for_each_safe(resource, next, &entry->resources) {
         xfce_input_device_v1_send_removed(resource);
-        detach_resource(resource);
+        resource_detach(resource);
     }
     device_user *user;
     device_user *tmp;
@@ -110,14 +108,3 @@ static void free_user(device_user *user)
     free(user);
 }
 
-static void handle_device_gone(struct wl_resource *resource)
-{
-    wl_list_remove(wl_resource_get_link(resource));
-}
-
-static void detach_resource(struct wl_resource *resource)
-{
-    wl_resource_set_user_data(resource, NULL);
-    wl_list_remove(wl_resource_get_link(resource));
-    wl_list_init(wl_resource_get_link(resource));
-}

@@ -35,7 +35,7 @@ static void update_previews(osd_cycle *cycle);
 static void update_preview(osd_cycle *cycle, size_t index);
 static osd_preview *preview_slot(osd_cycle *cycle, size_t index);
 static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node);
-static void clear_previews(osd_cycle *cycle);
+static void clear_previews_from(osd_cycle *cycle, size_t first);
 static void destroy_previews(osd_cycle *cycle);
 
 osd_cycle *osd_cycle_create(compositor *server, struct wlr_scene_tree *parent)
@@ -71,7 +71,7 @@ void osd_cycle_show(osd_cycle *cycle, const wm_cycle_view *view)
     store_view(cycle, view);
     measure(cycle);
     paint_panel(cycle);
-    clear_previews(cycle);
+    clear_previews_from(cycle, cycle->view.preview ? cycle->view.count : 0);
     if (cycle->view.preview) {
         update_previews(cycle);
     }
@@ -82,7 +82,7 @@ void osd_cycle_show(osd_cycle *cycle, const wm_cycle_view *view)
 void osd_cycle_hide(osd_cycle *cycle)
 {
     cycle->shown = false;
-    clear_previews(cycle);
+    clear_previews_from(cycle, 0);
     wlr_scene_node_set_enabled(&cycle->tree->node, false);
 }
 
@@ -190,7 +190,7 @@ static void update_preview(osd_cycle *cycle, size_t index)
         return;
     }
     struct wlr_scene_buffer *node = osd_preview_node(preview);
-    bool shown = v != NULL && osd_preview_show(preview, view_surface(v));
+    bool shown = osd_preview_show(preview, v != NULL ? view_surface(v) : NULL);
     wlr_scene_node_set_enabled(&node->node, shown);
     if (shown) {
         place_preview(cycle, index, node);
@@ -214,9 +214,9 @@ static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffe
                                 cycle->origin.y + fitted.y);
 }
 
-static void clear_previews(osd_cycle *cycle)
+static void clear_previews_from(osd_cycle *cycle, size_t first)
 {
-    for (size_t i = 0; i < WM_CYCLE_ITEM_MAX; i++) {
+    for (size_t i = first; i < WM_CYCLE_ITEM_MAX; i++) {
         if (cycle->previews[i] != NULL) {
             osd_preview_clear(cycle->previews[i]);
             wlr_scene_node_set_enabled(&osd_preview_node(cycle->previews[i])->node, false);

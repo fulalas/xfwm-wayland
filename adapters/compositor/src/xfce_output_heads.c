@@ -6,6 +6,7 @@
 
 #include "output.h"
 #include "output_head.h"
+#include "resource.h"
 #include "xfce-output-management-private-v1-protocol.h"
 
 enum {
@@ -22,7 +23,6 @@ struct xfce_output_heads {
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
 static void handle_stop(struct wl_client *client, struct wl_resource *manager);
-static void handle_manager_destroy(struct wl_resource *manager);
 static bool drop_missing(xfce_output_heads *heads);
 static bool add_new(xfce_output_heads *heads);
 static bool is_known(const xfce_output_heads *heads, const struct wlr_output *wlr_output);
@@ -64,9 +64,7 @@ void xfce_output_heads_destroy(xfce_output_heads *xh)
     struct wl_resource *next;
     wl_resource_for_each_safe(manager, next, &xh->managers) {
         wl_resource_set_destructor(manager, NULL);
-        wl_resource_set_user_data(manager, NULL);
-        wl_list_remove(wl_resource_get_link(manager));
-        wl_list_init(wl_resource_get_link(manager));
+        resource_detach(manager);
     }
     wl_global_destroy(xh->global);
     free(xh);
@@ -105,7 +103,7 @@ static void bind_manager(struct wl_client *client, void *data, uint32_t version,
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(manager, &manager_implementation, xh, handle_manager_destroy);
+    wl_resource_set_implementation(manager, &manager_implementation, xh, resource_unlink);
     wl_list_insert(&xh->managers, wl_resource_get_link(manager));
     output_head *head;
     wl_list_for_each(head, &xh->heads, link) {
@@ -119,11 +117,6 @@ static void handle_stop(struct wl_client *client, struct wl_resource *manager)
     (void) client;
     xfce_output_management_manager_private_v1_send_finished(manager);
     wl_resource_destroy(manager);
-}
-
-static void handle_manager_destroy(struct wl_resource *manager)
-{
-    wl_list_remove(wl_resource_get_link(manager));
 }
 
 static bool drop_missing(xfce_output_heads *xh)

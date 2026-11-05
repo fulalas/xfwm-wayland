@@ -6,11 +6,10 @@
 #include <wlr/types/wlr_output.h>
 
 #include "listener.h"
-#include "resource.h"
 #include "output_setting.h"
+#include "resource.h"
 #include "xfce-output-management-private-v1-protocol.h"
 
-static void handle_resource_destroy(struct wl_resource *resource);
 static void handle_output_destroy(struct wl_listener *listener, void *data);
 static bool copy_edid(edid_blob *copy, const edid_blob *source);
 static void send_edid(const output_head *head, struct wl_resource *resource);
@@ -48,7 +47,7 @@ void output_head_announce(output_head *head, struct wl_resource *manager)
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(resource, &head_implementation, head, handle_resource_destroy);
+    wl_resource_set_implementation(resource, &head_implementation, head, resource_unlink);
     wl_list_insert(&head->resources, wl_resource_get_link(resource));
     xfce_output_management_manager_private_v1_send_head(manager, resource, head->name);
     send_edid(head, resource);
@@ -60,20 +59,13 @@ void output_head_destroy(output_head *head)
     struct wl_resource *next;
     wl_resource_for_each_safe(resource, next, &head->resources) {
         xfce_output_head_private_v1_send_finished(resource);
-        wl_resource_set_user_data(resource, NULL);
-        wl_list_remove(wl_resource_get_link(resource));
-        wl_list_init(wl_resource_get_link(resource));
+        resource_detach(resource);
     }
     listener_disconnect(&head->output_destroy);
     wl_list_remove(&head->link);
     edid_release(&head->edid);
     free(head->name);
     free(head);
-}
-
-static void handle_resource_destroy(struct wl_resource *resource)
-{
-    wl_list_remove(wl_resource_get_link(resource));
 }
 
 static void handle_output_destroy(struct wl_listener *listener, void *data)

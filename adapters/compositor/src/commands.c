@@ -25,12 +25,6 @@ void compositor_close_window(compositor *c, void *window)
     view_close(window);
 }
 
-void compositor_kill_window(compositor *c, void *window)
-{
-    (void) c;
-    view_kill(window);
-}
-
 void compositor_ask_terminate(compositor *c, void *window)
 {
     const compositor_services *services = c->services;

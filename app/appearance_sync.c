@@ -3,6 +3,7 @@
 #include "app.h"
 
 static bool theme_is_current(app *app);
+static void apply_appearance(app *app);
 static ui_style current_style(app *app);
 static theme_request request_for(app *app, const ui_style *style);
 static wm_config current_config(app *app);
@@ -32,11 +33,9 @@ void app_push_appearance(app *app)
 
 void app_reload_appearance(app *app)
 {
-    if (theme_is_current(app)) {
-        return;
+    if (!theme_is_current(app)) {
+        apply_appearance(app);
     }
-    app_load_appearance(app);
-    app_push_appearance(app);
 }
 
 void app_reload_theme(app *app)
@@ -45,7 +44,7 @@ void app_reload_theme(app *app)
         app_reload_config(app);
         return;
     }
-    app_reload_appearance(app);
+    apply_appearance(app);
 }
 
 void app_reload_config(app *app)
@@ -72,6 +71,12 @@ static bool theme_is_current(app *app)
     theme_request request = request_for(app, &style);
 
     return appearance_is_loaded(app->appearance, &request);
+}
+
+static void apply_appearance(app *app)
+{
+    app_load_appearance(app);
+    app_push_appearance(app);
 }
 
 static ui_style current_style(app *app)

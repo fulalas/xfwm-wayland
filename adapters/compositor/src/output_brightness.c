@@ -64,8 +64,8 @@ void output_brightness_release(output *o)
 
 void outputs_brightness_changed(outputs *outs)
 {
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        request_frame(outputs_at_index(outs, i));
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+        request_frame(o);
     }
 }
 

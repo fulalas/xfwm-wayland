@@ -185,7 +185,6 @@ static wm_compositing_config compositing_defaults(void)
         .show_popup_shadow = false,
         .show_dock_shadow = true,
         .suspend_fullscreen = true,
-        .unredirect_overlays = true,
         .vblank_mode = WM_VBLANK_AUTO,
         .hdr_brightness_percent = DEFAULT_HDR_BRIGHTNESS_PERCENT,
     };

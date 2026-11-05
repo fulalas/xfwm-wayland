@@ -2,11 +2,16 @@
 
 #include "clock.h"
 
+int64_t clock_timespec_ns(const struct timespec *time)
+{
+    return (int64_t) time->tv_sec * CLOCK_NS_PER_SECOND + time->tv_nsec;
+}
+
 int64_t clock_now_ns(void)
 {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
-    return (int64_t) now.tv_sec * CLOCK_NS_PER_SECOND + now.tv_nsec;
+    return clock_timespec_ns(&now);
 }
 
 int64_t clock_now_ms(void)

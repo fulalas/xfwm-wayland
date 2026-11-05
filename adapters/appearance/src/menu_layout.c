@@ -20,7 +20,6 @@ typedef struct menu_rows {
 
 static int item_height(const text_font *font);
 static int menu_width(const text_font *font, const wm_menu_level *level);
-static int menu_height(const menu_rows *rows);
 static int text_width(const text_font *font, const wm_menu_level *level, size_t index);
 static int widest_label(const text_font *font, const wm_menu_level *level);
 static bool any_mark(const wm_menu_level *level);
@@ -31,7 +30,7 @@ menu_layout appearance_menu_layout(const text_font *font, const wm_menu_level *l
 {
     menu_rows rows = { level, item_height(font) };
     menu_layout layout = {
-        .size = { menu_width(font, level), menu_height(&rows) },
+        .size = { menu_width(font, level), 0 },
         .count = appearance_menu_item_count(level),
     };
     int y = MENU_BORDER + MENU_PADDING_Y;
@@ -41,6 +40,7 @@ menu_layout appearance_menu_layout(const text_font *font, const wm_menu_level *l
         layout.items[i] = (wm_rect) { MENU_BORDER, y, layout.size.width - 2 * MENU_BORDER, height };
         y += height;
     }
+    layout.size.height = y + MENU_PADDING_Y + MENU_BORDER;
     return layout;
 }
 
@@ -85,16 +85,6 @@ static int menu_width(const text_font *font, const wm_menu_level *level)
     int item_width = content + 2 * MENU_ITEM_PADDING_X;
 
     return wm_max(item_width, ITEM_MIN_WIDTH) + 2 * MENU_BORDER;
-}
-
-static int menu_height(const menu_rows *rows)
-{
-    int height = 2 * (MENU_BORDER + MENU_PADDING_Y);
-
-    for (size_t i = 0; i < appearance_menu_item_count(rows->level); i++) {
-        height += row_height(rows, i);
-    }
-    return height;
 }
 
 static int text_width(const text_font *font, const wm_menu_level *level, size_t index)

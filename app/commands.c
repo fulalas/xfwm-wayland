@@ -2,7 +2,6 @@
 
 static void configure(void *self, void *window, const wm_rect *client);
 static void close_window(void *self, void *window);
-static void kill_window(void *self, void *window);
 static void ask_terminate(void *self, void *window);
 static void warp_pointer(void *self, wm_point point);
 static void spawn(void *self, const char *command);
@@ -16,7 +15,6 @@ wm_commands app_commands(app *app)
         .self = app,
         .configure = configure,
         .close = close_window,
-        .kill = kill_window,
         .ask_terminate = ask_terminate,
         .warp_pointer = warp_pointer,
         .spawn = spawn,
@@ -38,13 +36,6 @@ static void close_window(void *self, void *window)
     app *app = self;
 
     compositor_close_window(app->compositor, window);
-}
-
-static void kill_window(void *self, void *window)
-{
-    app *app = self;
-
-    compositor_kill_window(app->compositor, window);
 }
 
 static void ask_terminate(void *self, void *window)

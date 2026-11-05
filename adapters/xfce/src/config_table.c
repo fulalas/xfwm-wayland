@@ -135,7 +135,7 @@ static const config_setting config_settings[] = {
     { "title_vertical_offset_inactive", CONFIG_INT, "0", apply_int,
       AT(frame.title.vertical_offset_inactive) },
     { "toggle_workspaces", CONFIG_BOOL, "false", apply_bool, AT(workspaces.toggle) },
-    { "unredirect_overlays", CONFIG_BOOL, "true", apply_bool, AT(compositing.unredirect_overlays) },
+    { "unredirect_overlays", CONFIG_BOOL, "true", NULL, 0 },
     { "urgent_blink", CONFIG_BOOL, "false", apply_bool, AT(focus.urgent_blink) },
     { "use_compositing", CONFIG_BOOL, "true", apply_bool, AT(compositing.enabled) },
     { "use_gl_compositing", CONFIG_BOOL, "true", apply_bool, AT(compositing.use_gl) },

@@ -71,16 +71,15 @@ void zoom_release(output *o)
 static void mark_view_changed(zoom *z)
 {
     outputs *outs = z->server->outputs;
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        outputs_at_index(outs, i)->zoom.view_changed = true;
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+        o->zoom.view_changed = true;
     }
 }
 
 static void zoom_leave(zoom *z)
 {
     outputs *outs = z->server->outputs;
-    for (size_t i = 0; i < outputs_count(outs); i++) {
-        output *o = outputs_at_index(outs, i);
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
         zoom_release(o);
         if (o->scene_output != NULL) {
             wlr_damage_ring_add_whole(&o->scene_output->damage_ring);
