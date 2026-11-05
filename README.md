@@ -7,12 +7,12 @@ through `XWayland`.
 It supports:
 
 * `xfwm4` themes, the Window Manager, Tweaks and Workspaces settings and
-  `Xfce` keyboard shortcuts
+  Xfce keyboard shortcuts
 * Alt+Tab with window previews, the window menu, snapping, tiling, zoom,
   shadows and opacity
 * HDR10, switched on and off without logging out, with a brightness slider
 * 10-bit color, variable refresh rate and tearing for games
-* `Xfce` display profiles, fractional scaling and multiple monitors
+* Xfce display profiles, fractional scaling and multiple monitors
 * screenshots and screen sharing (through `xdg-desktop-portal-wlr`),
   touchscreens, drawing tablets and VR headsets
 * restoring window size and position for programs that support it
@@ -20,7 +20,7 @@ It supports:
 
 ## Why this exists
 
-The `Xfce` Wayland session runs on `labwc` by default. It works, but it is not
+The Xfce Wayland session runs on `labwc` by default. It works, but it is not
 `xfwm4`: it has its own themes and configuration files, so the `xfwm4`
 themes, settings dialogs and shortcuts don't apply to it.
 
@@ -58,7 +58,7 @@ gdk-pixbuf, glib, json-glib, librsvg, `xfconf` and GTK 3.
 
 ## Usage
 
-Pick "Xfce Session (xfwm-wayland)" at login, or start `Xfce` from a text
+Pick "Xfce Session (xfwm-wayland)" at login, or start Xfce from a text
 console:
 
     startxfce4 --wayland xfwm-wayland
