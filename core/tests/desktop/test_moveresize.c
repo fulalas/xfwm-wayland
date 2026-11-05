@@ -201,6 +201,22 @@ static void test_drag_wraps_to_next_workspace(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_closing_last_moved_window_frees_pointer(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *moved = fake_map(desktop, 1, small);
+    wm_window *other = fake_map(desktop, 2, (wm_rect) {1200, 600, 400, 300});
+    fake_click click = drag_title(&world, desktop, moved);
+    drag_to(&world, desktop, &click, (wm_point) {click.point.x + 40, click.point.y});
+    fake_release(&world, desktop, &click);
+    wm_window_unmap(desktop, moved);
+    fake_click hover = {WM_TARGET_CLIENT, other, {1300, 700}, 0, 0};
+    CHECK_INT_EQ(WM_FORWARD, fake_motion(&world, desktop, &hover));
+    wm_desktop_destroy(desktop);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -215,6 +231,8 @@ int main(void)
         {"resize_respects_minimum_size", test_resize_respects_minimum_size},
         {"easy_click_moves_from_content", test_easy_click_moves_from_content},
         {"drag_wraps_to_next_workspace", test_drag_wraps_to_next_workspace},
+        {"closing_last_moved_window_frees_pointer",
+         test_closing_last_moved_window_frees_pointer},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

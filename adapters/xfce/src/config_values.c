@@ -1,6 +1,7 @@
 #include "config_values.h"
 
 #include <glib.h>
+#include <limits.h>
 #include <stdlib.h>
 
 #include "accelerator.h"
@@ -72,7 +73,11 @@ bool config_bool(const char *text)
 
 int config_int(const char *text)
 {
-    return atoi(text);
+    long number = strtol(text, NULL, 10);
+    if (number > INT_MAX) {
+        return INT_MAX;
+    }
+    return number < -INT_MAX ? -INT_MAX : (int) number;
 }
 
 wm_activate_action config_activate_action(const char *text)

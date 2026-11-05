@@ -83,6 +83,8 @@ void xfce_environment_logout(xfce_environment *environment);
 int xfce_environment_session_exit_code(const xfce_environment *environment);
 void xfce_environment_export_session(xfce_environment *environment,
                                      const xfce_session_display *display);
+void xfce_environment_display_changed(xfce_environment *environment,
+                                      const xfce_session_display *display);
 void xfce_environment_start_session(xfce_environment *environment,
                                     const xfce_session_display *display, const char *command);
 

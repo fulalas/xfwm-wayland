@@ -7,6 +7,8 @@ static wm_window_view maximized_view(void)
     view.client = (wm_rect){0, 0, 1920, 1080};
     view.restore_client = (wm_rect){100, 50, 640, 480};
     view.maximized = true;
+    view.maximized_horizontally = true;
+    view.maximized_vertically = true;
     view.minimized = true;
     view.above = true;
     view.workspace = 3;
@@ -66,6 +68,14 @@ static void test_recovery_restores_everything(void)
     CHECK_INT_EQ(3, desc.workspace);
 }
 
+static void test_record_keeps_maximize_in_one_direction(void)
+{
+    wm_window_view view = {0};
+    view.maximized_vertically = true;
+    session_record record = session_record_from_view(&view);
+    CHECK_INT_EQ(WM_STATE_MAXIMIZED_VERT, record.states);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -75,6 +85,7 @@ int main(void)
         {"launch_restores_geometry_and_states_but_not_minimized_or_workspace",
          test_launch_restores_geometry_and_states_but_not_minimized_or_workspace},
         {"recovery_restores_everything", test_recovery_restores_everything},
+        {"record_keeps_maximize_in_one_direction", test_record_keeps_maximize_in_one_direction},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

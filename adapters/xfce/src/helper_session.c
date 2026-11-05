@@ -3,6 +3,11 @@
 #include <gio/gio.h>
 #include <string.h>
 
+typedef struct pending_write {
+    helper_session *session;
+    GBytes *bytes;
+} pending_write;
+
 struct helper_session {
     session_events events;
     GSubprocess *process;
@@ -10,7 +15,7 @@ struct helper_session {
     GOutputStream *output;
     GCancellable *cancellable;
     GQueue outbox;
-    GBytes *writing;
+    pending_write *writing;
 };
 
 static void read_next(helper_session *session);
@@ -49,7 +54,9 @@ void helper_session_destroy(helper_session *session)
     g_cancellable_cancel(session->cancellable);
     g_subprocess_force_exit(session->process);
     g_queue_clear_full(&session->outbox, (GDestroyNotify) g_bytes_unref);
-    g_clear_pointer(&session->writing, g_bytes_unref);
+    if (session->writing) {
+        session->writing->session = NULL;
+    }
     g_object_unref(session->cancellable);
     g_object_unref(session->output);
     g_object_unref(session->input);
@@ -93,23 +100,30 @@ static void write_next(helper_session *session)
     if (session->writing || g_queue_is_empty(&session->outbox)) {
         return;
     }
-    session->writing = g_queue_pop_head(&session->outbox);
-    bytes = g_bytes_get_data(session->writing, &size);
+    session->writing = g_new0(pending_write, 1);
+    session->writing->session = session;
+    session->writing->bytes = g_queue_pop_head(&session->outbox);
+    bytes = g_bytes_get_data(session->writing->bytes, &size);
     g_output_stream_write_all_async(session->output, bytes, size, G_PRIORITY_DEFAULT,
-                                    session->cancellable, on_written, session);
+                                    session->cancellable, on_written, session->writing);
 }
 
 static void on_written(GObject *source, GAsyncResult *result, void *data)
 {
     GError *error = NULL;
     bool written = g_output_stream_write_all_finish(G_OUTPUT_STREAM(source), result, NULL, &error);
-    helper_session *session = data;
+    pending_write *pending = data;
+    helper_session *session = pending->session;
 
-    if (is_cancelled(error)) {
-        g_error_free(error);
+    g_bytes_unref(pending->bytes);
+    g_free(pending);
+    if (session) {
+        session->writing = NULL;
+    }
+    if (!session || is_cancelled(error)) {
+        g_clear_error(&error);
         return;
     }
-    g_clear_pointer(&session->writing, g_bytes_unref);
     if (!written) {
         g_warning("Cannot write to the GTK helper: %s", error->message);
         g_error_free(error);

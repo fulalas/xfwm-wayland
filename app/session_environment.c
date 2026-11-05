@@ -21,5 +21,5 @@ void app_export_x11_display(app *app)
         .x11_display = compositor_x11_display(app->compositor),
     };
 
-    xfce_environment_export_session(app->xfce, &display);
+    xfce_environment_display_changed(app->xfce, &display);
 }

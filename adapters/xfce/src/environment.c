@@ -156,6 +156,15 @@ void xfce_environment_export_session(xfce_environment *environment,
     session_export(display);
 }
 
+void xfce_environment_display_changed(xfce_environment *environment,
+                                      const xfce_session_display *display)
+{
+    session_export(display);
+    if (environment->session) {
+        session_export_update_activation();
+    }
+}
+
 void xfce_environment_start_session(xfce_environment *environment,
                                     const xfce_session_display *display, const char *command)
 {

@@ -84,6 +84,8 @@ static void measure_title(wm_desktop *desktop, wm_window *window)
 static void fill_states(const wm_window *window, wm_window_view *view)
 {
     view->maximized = window_is_maximized(window);
+    view->maximized_horizontally = window_has_state(window, WM_STATE_MAXIMIZED_HORZ);
+    view->maximized_vertically = window_has_state(window, WM_STATE_MAXIMIZED_VERT);
     view->fullscreen = window_is_fullscreen(window);
     view->minimized = window_is_minimized(window);
     view->shaded = window_is_shaded(window);

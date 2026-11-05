@@ -31,6 +31,18 @@ char **session_export_activation_argv(void)
     return argv;
 }
 
+void session_export_update_activation(void)
+{
+    char **argv = session_export_activation_argv();
+    GError *error = NULL;
+
+    if (argv && !g_spawn_async(NULL, argv, NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, &error)) {
+        g_warning("Cannot update the D-Bus environment: %s", error->message);
+        g_error_free(error);
+    }
+    g_strfreev(argv);
+}
+
 static void set_display_variables(const xfce_session_display *display)
 {
     g_setenv("WAYLAND_DISPLAY", display->wayland_display, TRUE);

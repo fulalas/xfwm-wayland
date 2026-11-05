@@ -51,6 +51,8 @@ typedef struct wm_window_view {
     bool visible;
     bool activated;
     bool maximized;
+    bool maximized_horizontally;
+    bool maximized_vertically;
     bool fullscreen;
     bool minimized;
     bool shaded;

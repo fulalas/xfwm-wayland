@@ -5,5 +5,6 @@
 
 void session_export(const xfce_session_display *display);
 char **session_export_activation_argv(void);
+void session_export_update_activation(void);
 
 #endif

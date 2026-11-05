@@ -130,7 +130,7 @@ wm_dispatch moveresize_key(wm_desktop *desktop, const wm_key_event *event)
 void moveresize_window_gone(wm_desktop *desktop, const wm_window *window)
 {
     move_session *session = &desktop->session;
-    if (session->window != window) {
+    if (!moveresize_is_active(desktop) || session->window != window) {
         return;
     }
     if (session->box) {
@@ -223,6 +223,7 @@ static void finish(wm_desktop *desktop)
         present_hide_outline(desktop);
     }
     session->kind = SESSION_NONE;
+    session->window = NULL;
     present_set_cursor(desktop, WM_CURSOR_DEFAULT);
 }
 

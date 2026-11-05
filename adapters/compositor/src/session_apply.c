@@ -37,7 +37,8 @@ void session_apply_recovery(const session_record *record, wm_window_desc *desc)
 static uint32_t states_of(const wm_window_view *view)
 {
     uint32_t states = 0;
-    states |= view->maximized ? WM_STATE_MAXIMIZED : 0;
+    states |= view->maximized_horizontally ? WM_STATE_MAXIMIZED_HORZ : 0;
+    states |= view->maximized_vertically ? WM_STATE_MAXIMIZED_VERT : 0;
     states |= view->fullscreen ? WM_STATE_FULLSCREEN : 0;
     states |= view->minimized ? WM_STATE_MINIMIZED : 0;
     states |= view->shaded ? WM_STATE_SHADED : 0;

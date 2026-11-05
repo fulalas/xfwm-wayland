@@ -11,6 +11,12 @@
 #include "scale_guess.h"
 
 static const display_setting automatic_setting = {.enabled = true, .scale = 1.0};
+static const double min_scale = 0.25;
+static const double max_scale = 10.0;
+
+enum {
+    MAX_POSITION = 100000,
+};
 
 static bool commit_setting(output *output, const display_setting *setting);
 static bool commit_with_fallback(output *output, const display_setting *setting);
@@ -26,6 +32,8 @@ static int pick_mode(struct wlr_output *wlr_output, const display_mode *wanted);
 static struct wlr_output_mode *mode_at(struct wlr_output *wlr_output, int index);
 static display_setting output_current_setting(const output *output);
 static double guessed_scale(const output *output);
+static float usable_scale(double scale);
+static int usable_coordinate(int value);
 
 output_display *output_display_of(output *o)
 {
@@ -76,7 +84,8 @@ bool output_apply_at(output *o, const display_setting *setting)
     if (!commit_with_fallback(o, setting)) {
         return false;
     }
-    return output_place(o, (wm_point){setting->x, setting->y});
+    wm_point position = {usable_coordinate(setting->x), usable_coordinate(setting->y)};
+    return output_place(o, position);
 }
 
 bool output_apply_auto(output *o)
@@ -171,7 +180,7 @@ static void describe(struct wlr_output *wlr_output, const display_setting *setti
 {
     wlr_output_state_set_enabled(state, true);
     describe_mode(wlr_output, &setting->mode, state);
-    wlr_output_state_set_scale(state, setting->scale > 0.0 ? (float) setting->scale : 1.0f);
+    wlr_output_state_set_scale(state, usable_scale(setting->scale));
     wlr_output_state_set_transform(state, (enum wl_output_transform) setting->transform);
 }
 
@@ -231,4 +240,14 @@ static struct wlr_output_mode *mode_at(struct wlr_output *wlr_output, int index)
         }
     }
     return NULL;
+}
+
+static float usable_scale(double scale)
+{
+    return scale >= min_scale && scale <= max_scale ? (float) scale : 1.0f;
+}
+
+static int usable_coordinate(int value)
+{
+    return value >= -MAX_POSITION && value <= MAX_POSITION ? value : 0;
 }

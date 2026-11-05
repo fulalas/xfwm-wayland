@@ -1,5 +1,8 @@
 #include "display_table.h"
 
+#include <errno.h>
+#include <math.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -44,8 +47,12 @@ int display_table_int(GHashTable *table, const display_key *key, int fallback)
     if (!value) {
         return fallback;
     }
+    errno = 0;
     number = strtol(value, &end, 10);
-    return end != value && *end == '\0' ? (int) number : fallback;
+    if (end == value || *end != '\0' || errno == ERANGE || number < INT_MIN || number > INT_MAX) {
+        return fallback;
+    }
+    return (int) number;
 }
 
 double display_table_double(GHashTable *table, const display_key *key, double fallback)
@@ -58,7 +65,7 @@ double display_table_double(GHashTable *table, const display_key *key, double fa
         return fallback;
     }
     number = g_ascii_strtod(value, &end);
-    return end != value && *end == '\0' ? number : fallback;
+    return end != value && *end == '\0' && isfinite(number) ? number : fallback;
 }
 
 char *display_double_text(double value)

@@ -1,6 +1,7 @@
 #include "input_text.h"
 
 #include <glib.h>
+#include <math.h>
 #include <stdbool.h>
 
 char *input_device_property_prefix(const char *device_name)
@@ -58,7 +59,7 @@ optional_double input_double_from_text(const char *text)
         return (optional_double) { .is_set = false };
     }
     value = g_ascii_strtod(text, &end);
-    if (*end != '\0') {
+    if (*end != '\0' || !isfinite(value)) {
         return (optional_double) { .is_set = false };
     }
     return (optional_double) { .is_set = true, .value = value };

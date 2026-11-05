@@ -9,6 +9,7 @@
 
 enum {
     MILLIHERTZ_PER_HERTZ = 1000,
+    MAX_REFRESH_HZ = 1000,
 };
 
 static const char edid_suffix[] = "/EDID";
@@ -133,5 +134,8 @@ static display_transform read_transform(GHashTable *table, display_key *key)
 
 static int millihertz(double hertz)
 {
-    return hertz > 0.0 ? (int) (hertz * MILLIHERTZ_PER_HERTZ + 0.5) : 0;
+    if (hertz <= 0.0 || hertz > MAX_REFRESH_HZ) {
+        return 0;
+    }
+    return (int) (hertz * MILLIHERTZ_PER_HERTZ + 0.5);
 }
