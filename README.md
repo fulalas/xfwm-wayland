@@ -1,6 +1,6 @@
 # xfwm-wayland
 
-A Wayland compositor for `Xfce` built on `wlroots` that behaves like `xfwm4`:
+A Wayland compositor for Xfce built on `wlroots` that behaves like [xfwm4](https://gitlab.xfce.org/xfce/xfwm4):
 same themes, settings, shortcuts and window management. X11 programs run
 through `XWayland`.
 
