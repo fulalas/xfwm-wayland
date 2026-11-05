@@ -50,6 +50,7 @@ static wm_dispatch dispatch_key(keyboard *keyboard, const struct wlr_keyboard_ke
 static bool core_receives_keys(const seat *seat);
 static uint32_t base_keysym(struct wlr_keyboard *keyboard, uint32_t keycode);
 static bool take_consumed(keyboard *keyboard, uint32_t keycode);
+static bool is_consumed(const keyboard *keyboard, uint32_t keycode);
 static void remember_consumed(keyboard *keyboard, uint32_t keycode);
 static void forward_key(keyboard *keyboard, const struct wlr_keyboard_key_event *event);
 
@@ -120,6 +121,26 @@ void keyboards_reload(keyboards *kbs)
         }
     }
     kbs->numlock_pref = prefs.numlock;
+}
+
+size_t keyboards_forwarded_keys(const keyboards *kbs, const struct wlr_keyboard *wlr_keyboard,
+                                uint32_t *keys)
+{
+    const keyboard *owner = NULL;
+    const keyboard *kb;
+    wl_list_for_each(kb, &kbs->list, link) {
+        if (kb->wlr_keyboard == wlr_keyboard) {
+            owner = kb;
+        }
+    }
+    size_t count = 0;
+    for (size_t i = 0; i < wlr_keyboard->num_keycodes; i++) {
+        uint32_t keycode = wlr_keyboard->keycodes[i];
+        if (owner == NULL || !is_consumed(owner, keycode)) {
+            keys[count++] = keycode;
+        }
+    }
+    return count;
 }
 
 static keyboard *keyboard_create(keyboards *owner, struct wlr_keyboard *wlr_keyboard)
@@ -284,6 +305,16 @@ static bool take_consumed(keyboard *kb, uint32_t keycode)
     for (size_t i = 0; i < kb->consumed_count; i++) {
         if (kb->consumed[i] == keycode) {
             kb->consumed[i] = kb->consumed[--kb->consumed_count];
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_consumed(const keyboard *kb, uint32_t keycode)
+{
+    for (size_t i = 0; i < kb->consumed_count; i++) {
+        if (kb->consumed[i] == keycode) {
             return true;
         }
     }

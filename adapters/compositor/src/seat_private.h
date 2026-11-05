@@ -77,6 +77,8 @@ void keyboards_destroy(keyboards *keyboards);
 void keyboards_add(keyboards *keyboards, struct wlr_keyboard *keyboard);
 void keyboards_add_virtual(keyboards *keyboards, struct wlr_keyboard *keyboard);
 void keyboards_reload(keyboards *keyboards);
+size_t keyboards_forwarded_keys(const keyboards *keyboards, const struct wlr_keyboard *keyboard,
+                                uint32_t *keys);
 shortcuts *shortcuts_create(seat *seat);
 void shortcuts_destroy(shortcuts *shortcuts);
 void shortcuts_focus_changed(shortcuts *shortcuts, struct wlr_surface *surface);

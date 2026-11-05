@@ -21,7 +21,17 @@ void seat_focus_view(seat *s, view *v)
         }
     }
     s->focus.layer = NULL;
+    s->focus.unmanaged = NULL;
     seat_focus_refresh(s);
+}
+
+void seat_focus_clicked_view(seat *s)
+{
+    if (s->focus.layer != NULL || s->focus.unmanaged != NULL) {
+        s->focus.layer = NULL;
+        s->focus.unmanaged = NULL;
+        seat_focus_refresh(s);
+    }
 }
 
 view *seat_focused_view(const seat *s)
@@ -116,6 +126,7 @@ static void keyboard_enter(seat *s, struct wlr_surface *surface)
         wlr_seat_keyboard_notify_enter(s->wlr_seat, surface, NULL, 0, NULL);
         return;
     }
-    wlr_seat_keyboard_notify_enter(s->wlr_seat, surface, keyboard->keycodes,
-                                   keyboard->num_keycodes, &keyboard->modifiers);
+    uint32_t keys[WLR_KEYBOARD_KEYS_CAP];
+    size_t count = keyboards_forwarded_keys(s->keyboards, keyboard, keys);
+    wlr_seat_keyboard_notify_enter(s->wlr_seat, surface, keys, count, &keyboard->modifiers);
 }

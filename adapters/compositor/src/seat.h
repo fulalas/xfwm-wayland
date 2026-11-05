@@ -29,6 +29,7 @@ void seat_focus_view(seat *seat, view *view);
 view *seat_focused_view(const seat *seat);
 void seat_focus_layer(seat *seat, struct wlr_surface *surface);
 void seat_focus_unmanaged(seat *seat, struct wlr_surface *surface);
+void seat_focus_clicked_view(seat *seat);
 void seat_surface_gone(seat *seat, struct wlr_surface *surface);
 void seat_view_destroyed(seat *seat, view *view);
 void seat_focus_refresh(seat *seat);

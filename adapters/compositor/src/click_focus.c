@@ -14,7 +14,7 @@ void click_focus(seat *s, const pointer_hit *hit)
         }
         return;
     }
-    if ((role == NODE_VIEW_CLIENT || role == NODE_VIEW_FRAME) && s->focus.layer != NULL) {
-        seat_focus_layer(s, NULL);
+    if (role == NODE_VIEW_CLIENT || role == NODE_VIEW_FRAME) {
+        seat_focus_clicked_view(s);
     }
 }
