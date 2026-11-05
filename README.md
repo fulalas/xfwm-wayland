@@ -40,7 +40,7 @@ development and not ready for daily use. Compared on the same machine:
 | Unit tests                           | 49                 | 643                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate, tearing       | no                 | yes                      |
-| `xfwm4` compositing settings         | some ignored       | all                      |
+| xfwm4 compositing settings           | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
 | Sharp X11 programs when scaling      | yes                | no                       |
 
