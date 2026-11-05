@@ -6,7 +6,7 @@ through [XWayland].
 
 It supports:
 
-* [xfwm4] themes, the Window Manager, Tweaks and Workspaces settings, and
+* [xfwm4] themes, the Window Manager, Tweaks and Workspaces settings and
   [Xfce] keyboard shortcuts
 * Alt+Tab with window previews, the window menu, snapping, tiling, zoom,
   shadows and opacity
@@ -25,7 +25,7 @@ The [Xfce] Wayland session runs on [labwc] by default. It works, but it is not
 themes, settings dialogs and shortcuts don't apply to it.
 
 [xfwl4], [Xfce]'s official Wayland compositor, is still in development and
-not ready for daily use. Compared from source:
+not ready for daily use. Compared on the same machine:
 
 |                                      | [xfwl4]            | xfwm-wayland             |
 |--------------------------------------|--------------------|--------------------------|
@@ -33,12 +33,19 @@ not ready for daily use. Compared from source:
 | Dependencies built                   | 286                | 21                       |
 | Build time (release)                 | 138 s              | 7 s                      |
 | Program size                         | 26.4 MB            | 2.0 MB                   |
+| Average power                        | 9.6 W              | 8.6 W                    |
+| Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
+| Compositor CPU time                  | 10.9 s             | 7.0 s                    |
+| Frame to screen delay                | 19.5 ms            | 16.7 ms                  |
 | Unit tests                           | 49                 | 643                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate, tearing       | no                 | yes                      |
 | [xfwm4] compositing settings         | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
 | Sharp X11 programs when scaling      | yes                | no                       |
+
+Power, CPU time and delay come from [wmbench] on an AMD Ryzen 7 7840HS at
+3840x2160, 60 Hz.
 
 ## Build
 
