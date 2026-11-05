@@ -9,7 +9,7 @@ typedef struct display_lookup {
     GHashTable *table;
     const char *profile;
     const char *connector;
-    const char *hash;
+    char *const *hashes;
 } display_lookup;
 
 display_saved display_profile_read(const display_lookup *lookup);

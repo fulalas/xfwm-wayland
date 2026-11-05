@@ -67,7 +67,7 @@ typedef struct display_plan {
 } display_plan;
 
 char *display_hash(const display_identity *identity);
-char *display_hash_edid(const display_identity *identity);
-char *display_hash_names(const display_identity *identity);
+char **display_hash_candidates(const display_identity *identity);
+bool display_hash_matches(const display_identity *identity, const char *saved);
 
 #endif

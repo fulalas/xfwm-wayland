@@ -34,6 +34,21 @@ static void test_matches_hash_of_edid(void)
     g_free(names);
 }
 
+static void test_matches_x11_base_block_hash(void)
+{
+    enum { TV_EDID_SIZE = 256, BASE_BLOCK = 128 };
+    uint8_t edid[TV_EDID_SIZE] = { 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00 };
+    edid[BASE_BLOCK] = 0x02;
+    display_identity identity = { .edid = edid, .edid_size = sizeof(edid) };
+    char *x11 = g_compute_checksum_for_data(G_CHECKSUM_SHA1, edid, BASE_BLOCK);
+    char *full = g_compute_checksum_for_data(G_CHECKSUM_SHA1, edid, sizeof(edid));
+
+    CHECK(output_identity_matches(&identity, x11));
+    CHECK(output_identity_matches(&identity, full));
+    g_free(x11);
+    g_free(full);
+}
+
 static void test_rejects_other_and_empty_ids(void)
 {
     display_identity identity = { .make = "Acme", .model = "Panel", .serial = "42" };
@@ -49,6 +64,7 @@ int main(void)
         { "matches_hash_of_names", test_matches_hash_of_names },
         { "missing_names_hash_like_xfce_settings", test_missing_names_hash_like_xfce_settings },
         { "matches_hash_of_edid", test_matches_hash_of_edid },
+        { "matches_x11_base_block_hash", test_matches_x11_base_block_hash },
         { "rejects_other_and_empty_ids", test_rejects_other_and_empty_ids },
     };
 

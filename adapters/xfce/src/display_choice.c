@@ -20,7 +20,7 @@ typedef struct output_census {
 
 typedef struct profile_match {
     GHashTable *table;
-    char *const *hashes;
+    char **const *displays;
     char *found;
     int count;
 } profile_match;
@@ -36,10 +36,12 @@ static bool is_matching_user_profile(const profile_match *match, const char *pro
 static output_census take_census(const profile_match *match, const char *profile);
 static void count_output(output_census *census, const profile_match *match,
                          const display_key *output);
+static guint display_count(const profile_match *match);
+static bool is_connected(const profile_match *match, const char *edid);
 
-char *display_profile_choose(GHashTable *table, char *const *hashes)
+char *display_profile_choose(GHashTable *table, char **const *displays)
 {
-    profile_match match = { .table = table, .hashes = hashes };
+    profile_match match = { .table = table, .displays = displays };
 
     if (allows_auto_enable(table)) {
         g_hash_table_foreach(table, match_profile, &match);
@@ -95,7 +97,7 @@ static bool is_matching_user_profile(const profile_match *match, const char *pro
     output_census census = take_census(match, profile);
 
     return census.with_edid > 0 && census.outputs == census.matching &&
-           census.outputs == g_strv_length((char **) match->hashes);
+           census.outputs == display_count(match);
 }
 
 static output_census take_census(const profile_match *match, const char *profile)
@@ -127,7 +129,27 @@ static void count_output(output_census *census, const profile_match *match,
         return;
     }
     census->with_edid++;
-    if (g_strv_contains((const char *const *) match->hashes, edid)) {
+    if (is_connected(match, edid)) {
         census->matching++;
     }
+}
+
+static guint display_count(const profile_match *match)
+{
+    guint count = 0;
+
+    while (match->displays[count] != NULL) {
+        count++;
+    }
+    return count;
+}
+
+static bool is_connected(const profile_match *match, const char *edid)
+{
+    for (guint i = 0; match->displays[i] != NULL; i++) {
+        if (g_strv_contains((const char *const *) match->displays[i], edid)) {
+            return true;
+        }
+    }
+    return false;
 }

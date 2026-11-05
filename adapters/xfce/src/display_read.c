@@ -60,9 +60,8 @@ static char *entry_with_edid(const display_lookup *lookup)
 
     g_hash_table_iter_init(&iter, lookup->table);
     while (g_hash_table_iter_next(&iter, &key, &value)) {
-        char *name = strcmp(value, lookup->hash) == 0
-                         ? output_of_edid_key(key, lookup->profile)
-                         : NULL;
+        bool known = g_strv_contains((const char *const *) lookup->hashes, value);
+        char *name = known ? output_of_edid_key(key, lookup->profile) : NULL;
         if (name) {
             return name;
         }

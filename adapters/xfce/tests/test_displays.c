@@ -31,8 +31,9 @@ static GHashTable *table_of(const entry *entries)
 
 static display_saved read_entry(GHashTable *table, const char *connector, const char *hash)
 {
+    char *hashes[] = { (char *) hash, NULL };
     display_lookup lookup = {
-        .table = table, .profile = "Default", .connector = connector, .hash = hash,
+        .table = table, .profile = "Default", .connector = connector, .hashes = hashes,
     };
 
     return display_profile_read(&lookup);
@@ -41,8 +42,10 @@ static display_saved read_entry(GHashTable *table, const char *connector, const 
 static char *choose(const entry *entries, const char *first, const char *second)
 {
     GHashTable *table = table_of(entries);
-    char *hashes[] = { (char *) first, (char *) second, NULL };
-    char *profile = display_profile_choose(table, hashes);
+    char *one[] = { (char *) first, NULL };
+    char *two[] = { (char *) second, NULL };
+    char **displays[] = { one, second != NULL ? two : NULL, NULL };
+    char *profile = display_profile_choose(table, displays);
 
     g_hash_table_destroy(table);
     return profile;
@@ -221,6 +224,42 @@ static void test_plan_keeps_one_primary(void)
     g_hash_table_destroy(table);
 }
 
+static void fill_edid(uint8_t *edid, size_t size)
+{
+    for (size_t i = 0; i < size; i++) {
+        edid[i] = (uint8_t) i;
+    }
+}
+
+static void test_plan_finds_x11_and_wayland_fingerprints(void)
+{
+    enum { TV_EDID_SIZE = 256, BASE_BLOCK = 128 };
+    uint8_t edid[TV_EDID_SIZE];
+    fill_edid(edid, sizeof(edid));
+    char *x11 = g_compute_checksum_for_data(G_CHECKSUM_SHA1, edid, BASE_BLOCK);
+    char *wayland = g_compute_checksum_for_data(G_CHECKSUM_SHA1, edid, sizeof(edid));
+    const char *saved[] = { x11, wayland };
+    display_state displays[] = {
+        { .identity = { .connector = "DP-1", .edid = edid, .edid_size = sizeof(edid) } },
+    };
+    display_set connected = { displays, 1 };
+
+    for (size_t i = 0; i < G_N_ELEMENTS(saved); i++) {
+        entry entries[] = {
+            { "/Default/DP-1", "TV" }, { "/Default/DP-1/EDID", saved[i] },
+            { "/Default/DP-1/Active", "true" }, { NULL, NULL },
+        };
+        GHashTable *table = table_of(entries);
+        CHECK(display_profile_plan(table, &connected).displays[0].is_known);
+        g_hash_table_destroy(table);
+    }
+    char *written_hash = display_hash(&displays[0].identity);
+    CHECK(strcmp(written_hash, x11) == 0);
+    g_free(written_hash);
+    g_free(x11);
+    g_free(wayland);
+}
+
 static const char *written(const GPtrArray *writes, const char *key)
 {
     for (guint i = 0; i < writes->len; i++) {
@@ -322,6 +361,7 @@ int main(void)
         { "read_duplicate_edid_matches_by_name", test_read_duplicate_edid_matches_by_name },
         { "read_unknown_output", test_read_unknown_output },
         { "plan_keeps_one_primary", test_plan_keeps_one_primary },
+        { "plan_finds_x11_and_wayland_fingerprints", test_plan_finds_x11_and_wayland_fingerprints },
         { "writes_follow_settings_dialog_layout", test_writes_follow_settings_dialog_layout },
         { "writes_mark_duplicate_edids", test_writes_mark_duplicate_edids },
         { "written_profile_reads_back", test_written_profile_reads_back },
