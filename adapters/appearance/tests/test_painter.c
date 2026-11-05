@@ -69,6 +69,91 @@ static void test_band_edge_stays_opaque(void)
     fixture_dir_remove(dir);
 }
 
+static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
+{
+    const unsigned char *data = cairo_image_surface_get_data(surface);
+    int stride = cairo_image_surface_get_stride(surface);
+
+    return ((const uint32_t *) (const void *) (data + y * stride))[x];
+}
+
+static const char dark_light_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
+                                          "\"2 2 2 1\",\n\". c #000000\",\n\"# c #FFFFFF\",\n"
+                                          "\".#\",\".#\"};\n";
+
+static void test_tiled_edge_does_not_wrap(void)
+{
+    enum { OPAQUE_WHITE = 0xFFFFFFFFu };
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "themerc", ""));
+    g_free(fixture_write(dir, "left-active.xpm", dark_light_side_xpm));
+    appearance *appearance = appearance_create();
+    ui_style style = appearance_fallback_style();
+    theme_request theme = { dir, "Sans 9", 1.0, &style };
+    CHECK(appearance_load(appearance, &theme));
+    compositor_painter painter = appearance_painter(appearance);
+    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
+    layout.ops[0] = (wm_paint_op) {
+        .pixmap = { WM_PIXMAP_SIDE, WM_SIDE_LEFT, WM_FRAME_ACTIVE },
+        .dest = { 0, 0, 2, 4 },
+        .mode = WM_FILL_TILE,
+        .clip = { 0, 0, 2, 4 },
+    };
+    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL };
+    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+
+    CHECK_INT_EQ(OPAQUE_WHITE, pixel_at(surface, 2, 2));
+    cairo_surface_destroy(surface);
+    appearance_destroy(appearance);
+    fixture_dir_remove(dir);
+}
+
+static const char three_color_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
+                                           "\"3 1 3 1\",\n\"a c #000000\",\n"
+                                           "\"b c #FF0000\",\n\"c c #00FF00\",\n"
+                                           "\"abc\"};\n";
+
+static cairo_surface_t *paint_tile(const char *xpm, wm_rect band)
+{
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "themerc", ""));
+    g_free(fixture_write(dir, "left-active.xpm", xpm));
+    appearance *appearance = appearance_create();
+    ui_style style = appearance_fallback_style();
+    theme_request theme = { dir, "Sans 9", 1.0, &style };
+    CHECK(appearance_load(appearance, &theme));
+    compositor_painter painter = appearance_painter(appearance);
+    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
+    layout.ops[0] = (wm_paint_op) {
+        .pixmap = { WM_PIXMAP_SIDE, WM_SIDE_LEFT, WM_FRAME_ACTIVE },
+        .dest = { 0, 0, 6, 1 },
+        .origin = { 1, 0 },
+        .mode = WM_FILL_TILE,
+        .clip = { 0, 0, 6, 1 },
+    };
+    frame_paint_request request = { &layout, band, 1.0, NULL, NULL };
+    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+
+    appearance_destroy(appearance);
+    fixture_dir_remove(dir);
+    return surface;
+}
+
+static void test_tile_starts_at_its_origin(void)
+{
+    enum { BLACK = 0xFF000000u, RED = 0xFFFF0000u, GREEN = 0xFF00FF00u };
+    cairo_surface_t *whole = paint_tile(three_color_side_xpm, (wm_rect) { 0, 0, 6, 1 });
+    cairo_surface_t *part = paint_tile(three_color_side_xpm, (wm_rect) { 2, 0, 4, 1 });
+
+    CHECK_INT_EQ(GREEN, pixel_at(whole, 0, 0));
+    CHECK_INT_EQ(BLACK, pixel_at(whole, 1, 0));
+    CHECK_INT_EQ(RED, pixel_at(whole, 2, 0));
+    CHECK_INT_EQ(RED, pixel_at(part, 0, 0));
+    CHECK_INT_EQ(GREEN, pixel_at(part, 1, 0));
+    cairo_surface_destroy(whole);
+    cairo_surface_destroy(part);
+}
+
 static void test_title_measure_grows_with_text(void)
 {
     appearance *appearance = appearance_create();
@@ -80,14 +165,6 @@ static void test_title_measure_grows_with_text(void)
     CHECK(long_title.width > short_title.width);
     CHECK_INT_EQ(short_title.height, long_title.height);
     appearance_destroy(appearance);
-}
-
-static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
-{
-    const unsigned char *data = cairo_image_surface_get_data(surface);
-    int stride = cairo_image_surface_get_stride(surface);
-
-    return ((const uint32_t *) (const void *) (data + y * stride))[x];
 }
 
 static void test_cycle_surface_matches_size(void)
@@ -215,6 +292,8 @@ int main(void)
     static const check_case cases[] = {
         { "frame_surface_uses_scaled_band", test_frame_surface_uses_scaled_band },
         { "band_edge_stays_opaque", test_band_edge_stays_opaque },
+        { "tiled_edge_does_not_wrap", test_tiled_edge_does_not_wrap },
+        { "tile_starts_at_its_origin", test_tile_starts_at_its_origin },
         { "title_measure_grows_with_text", test_title_measure_grows_with_text },
         { "cycle_surface_matches_size", test_cycle_surface_matches_size },
         { "cycle_cells_follow_grid", test_cycle_cells_follow_grid },
