@@ -24,8 +24,8 @@ The `Xfce` Wayland session runs on `labwc` by default. It works, but it is not
 `xfwm4`: it has its own themes and configuration files, so the `xfwm4`
 themes, settings dialogs and shortcuts don't apply to it.
 
-`xfwl4`, `Xfce`'s official Wayland compositor, is still in development and
-not ready for daily use. Compared on the same machine:
+On the other hand, `xfwl4`, the official Xfce Wayland compositor, is still in
+development and not ready for daily use. Compared on the same machine:
 
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
