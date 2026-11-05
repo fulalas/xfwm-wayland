@@ -18,6 +18,7 @@ struct selection {
     struct wl_listener start_drag;
     struct wl_listener drag_drop;
     struct wl_listener drag_destroy;
+    int32_t offered_actions;
 };
 
 static void handle_request_set_selection(struct wl_listener *listener, void *data);
@@ -26,7 +27,7 @@ static void handle_request_start_drag(struct wl_listener *listener, void *data);
 static void handle_start_drag(struct wl_listener *listener, void *data);
 static void handle_drag_drop(struct wl_listener *listener, void *data);
 static void handle_drag_destroy(struct wl_listener *listener, void *data);
-static void offer_actions(const selection *selection, struct wlr_drag *drag, uint32_t button);
+static void offer_actions(selection *selection, struct wlr_drag *drag, uint32_t button);
 static void keep_target_after_drop(struct wlr_drag *drag);
 static void refresh_offers(const struct wlr_drag *drag);
 static void refresh_offer(struct wlr_data_offer *offer);
@@ -93,9 +94,9 @@ void selection_modifiers_changed(selection *sel, uint32_t modifiers)
     if (drag == NULL || drag->source == NULL) {
         return;
     }
-    uint32_t action = drag_action_for_modifiers(drag->source->actions, modifiers);
-    if (drag->source->compositor_action != action) {
-        drag->source->compositor_action = action;
+    int32_t actions = drag_actions_for_modifiers(sel->offered_actions, modifiers);
+    if (drag->source->actions != actions) {
+        drag->source->actions = actions;
         refresh_offers(drag);
     }
 }
@@ -150,7 +151,7 @@ static void handle_drag_destroy(struct wl_listener *listener, void *data)
     listener_disconnect(&sel->drag_destroy);
 }
 
-static void offer_actions(const selection *sel, struct wlr_drag *drag, uint32_t button)
+static void offer_actions(selection *sel, struct wlr_drag *drag, uint32_t button)
 {
     if (drag->source == NULL) {
         return;
@@ -160,9 +161,9 @@ static void offer_actions(const selection *sel, struct wlr_drag *drag, uint32_t 
         .button = button,
         .alt_held = (seat_modifiers(sel->seat) & WM_MOD_ALT) != 0,
     };
-    drag->source->actions = drag_actions_offered(&start);
-    drag->source->compositor_action =
-        drag_action_for_modifiers(drag->source->actions, seat_modifiers(sel->seat));
+    sel->offered_actions = drag_actions_offered(&start);
+    drag->source->actions =
+        drag_actions_for_modifiers(sel->offered_actions, seat_modifiers(sel->seat));
 }
 
 static void keep_target_after_drop(struct wlr_drag *drag)
@@ -189,13 +190,16 @@ static void refresh_offers(const struct wlr_drag *drag)
 
 static void refresh_offer(struct wlr_data_offer *offer)
 {
-    bool versioned = wl_resource_get_version(offer->resource) >= WL_DATA_OFFER_ACTION_SINCE_VERSION;
+    int version = wl_resource_get_version(offer->resource);
+    bool versioned = version >= WL_DATA_OFFER_ACTION_SINCE_VERSION;
+    if (version >= WL_DATA_OFFER_SOURCE_ACTIONS_SINCE_VERSION && offer->source->actions >= 0) {
+        wl_data_offer_send_source_actions(offer->resource, (uint32_t) offer->source->actions);
+    }
     drag_choice choice = {
         .offer_sets_actions = versioned,
         .offer_actions = offer->actions,
         .preferred_action = offer->preferred_action,
         .source_actions = offer->source->actions,
-        .compositor_action = offer->source->compositor_action,
     };
     uint32_t action = drag_actions_choose(&choice);
     if (offer->source->current_dnd_action == action) {

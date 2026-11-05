@@ -21,20 +21,20 @@ int32_t drag_actions_offered(const drag_start *start)
     return without_ask != 0 ? without_ask : start->source_actions;
 }
 
-uint32_t drag_action_for_modifiers(int32_t source_actions, uint32_t modifiers)
+int32_t drag_actions_for_modifiers(int32_t offered, uint32_t modifiers)
 {
-    if (source_actions != ACTIONS_UNSET
-        && (source_actions & (int32_t) WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK) != 0) {
-        return WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+    if (offered == ACTIONS_UNSET
+        || (offered & (int32_t) WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK) != 0) {
+        return offered;
     }
     uint32_t held = modifiers & (WM_MOD_CTRL | WM_MOD_SHIFT);
+    int32_t wanted = WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
     if (held == WM_MOD_CTRL) {
-        return WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+        wanted = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;
+    } else if (held == WM_MOD_SHIFT) {
+        wanted = WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE;
     }
-    if (held == WM_MOD_SHIFT) {
-        return WL_DATA_DEVICE_MANAGER_DND_ACTION_MOVE;
-    }
-    return WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+    return (offered & wanted) != 0 ? wanted : offered;
 }
 
 uint32_t drag_actions_choose(const drag_choice *choice)
@@ -48,9 +48,6 @@ uint32_t drag_actions_choose(const drag_choice *choice)
     uint32_t available = offer_actions & source_actions;
     if (available == 0) {
         return WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
-    }
-    if ((choice->compositor_action & available) != 0) {
-        return choice->compositor_action;
     }
     if ((preferred & available) != 0) {
         return preferred;

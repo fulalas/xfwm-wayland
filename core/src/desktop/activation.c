@@ -11,6 +11,7 @@ static bool is_refused(const wm_desktop *desktop, wm_activation_source source);
 static bool may_activate(const wm_desktop *desktop, const wm_window *window,
                          wm_activation_source source);
 static void activate(wm_desktop *desktop, wm_window *window, wm_activation_source source);
+static bool focus_is_on_child(const wm_desktop *desktop, const wm_window *window);
 static void reach_workspace(wm_desktop *desktop, wm_window *window, wm_activation_source source);
 
 void wm_request_activate(wm_desktop *desktop, wm_window *window, wm_activation_source source)
@@ -49,6 +50,9 @@ static void activate(wm_desktop *desktop, wm_window *window, wm_activation_sourc
     visibility_unminimize(desktop, transient_root(window));
     stack_raise(desktop, window);
     bool application = source != WM_ACTIVATION_PAGER;
+    if (application && focus_is_on_child(desktop, window)) {
+        return;
+    }
     if (!application || desktop->config.focus.click_to_focus || window_is_dont_focus(window)) {
         focus_set(desktop, window);
     }
@@ -66,4 +70,10 @@ static void reach_workspace(wm_desktop *desktop, wm_window *window, wm_activatio
     } else {
         workspaces_switch_without_focus(desktop, window->workspace, NULL);
     }
+}
+
+static bool focus_is_on_child(const wm_desktop *desktop, const wm_window *window)
+{
+    const wm_window *focused = desktop->focus.focused;
+    return focused != NULL && transient_is_descendant_of(focused, window);
 }

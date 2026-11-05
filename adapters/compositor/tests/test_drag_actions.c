@@ -46,32 +46,38 @@ static void test_unset_actions_stay_unset(void)
     CHECK_INT_EQ(-1, offered(-1, BTN_LEFT, false));
 }
 
+static int32_t narrowed(int32_t offered, uint32_t modifiers)
+{
+    return drag_actions_for_modifiers(offered, modifiers);
+}
+
 static void test_ctrl_copies_and_shift_moves(void)
 {
-    CHECK_INT_EQ(COPY, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_CTRL));
-    CHECK_INT_EQ(MOVE, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_SHIFT));
-    CHECK_INT_EQ(0, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_CTRL | WM_MOD_SHIFT));
-    CHECK_INT_EQ(0, (int32_t) drag_action_for_modifiers(COPY | MOVE, WM_MOD_ALT));
+    CHECK_INT_EQ(COPY, narrowed(COPY | MOVE, WM_MOD_CTRL));
+    CHECK_INT_EQ(MOVE, narrowed(COPY | MOVE, WM_MOD_SHIFT));
+    CHECK_INT_EQ(COPY | MOVE, narrowed(COPY | MOVE, WM_MOD_CTRL | WM_MOD_SHIFT));
+    CHECK_INT_EQ(COPY | MOVE, narrowed(COPY | MOVE, WM_MOD_ALT));
+    CHECK_INT_EQ(MOVE, narrowed(MOVE, WM_MOD_CTRL));
 }
 
 static void test_modifiers_keep_ask_drags(void)
 {
-    CHECK_INT_EQ(0, (int32_t) drag_action_for_modifiers(COPY | MOVE | ASK, WM_MOD_CTRL));
+    CHECK_INT_EQ(COPY | MOVE | ASK, narrowed(COPY | MOVE | ASK, WM_MOD_CTRL));
+    CHECK_INT_EQ(-1, narrowed(-1, WM_MOD_CTRL));
 }
 
-static uint32_t chosen(uint32_t offer, uint32_t preferred, uint32_t compositor)
+static uint32_t chosen(uint32_t offer, uint32_t preferred, int32_t source)
 {
-    drag_choice choice = {true, offer, preferred, COPY | MOVE, compositor};
+    drag_choice choice = {true, offer, preferred, source};
     return drag_actions_choose(&choice);
 }
 
 static void test_choice_order(void)
 {
     CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, MOVE, COPY));
-    CHECK_INT_EQ(MOVE, (int32_t) chosen(COPY | MOVE, MOVE, 0));
-    CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, 0, 0));
-    CHECK_INT_EQ(MOVE, (int32_t) chosen(MOVE, 0, COPY));
-    CHECK_INT_EQ(0, (int32_t) chosen(ASK, 0, 0));
+    CHECK_INT_EQ(MOVE, (int32_t) chosen(COPY | MOVE, MOVE, COPY | MOVE));
+    CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, 0, COPY | MOVE));
+    CHECK_INT_EQ(0, (int32_t) chosen(ASK, 0, COPY | MOVE));
 }
 
 int main(void)

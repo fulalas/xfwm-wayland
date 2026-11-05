@@ -158,10 +158,24 @@ static void test_bring_activation_moves_window(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_activating_parent_keeps_dialog_focused(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *parent = fake_map(desktop, 1, small);
+    fake_map_dialog(desktop, 2, parent);
+    wm_request_activate(desktop, parent, WM_ACTIVATION_APPLICATION);
+    CHECK(world.focused == fake_handle(2));
+    CHECK(fake_stack_index(&world, fake_handle(2)) > fake_stack_index(&world, fake_handle(1)));
+    wm_desktop_destroy(desktop);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
         {"new_window_gets_focus", test_new_window_gets_focus},
+        {"activating_parent_keeps_dialog_focused", test_activating_parent_keeps_dialog_focused},
         {"click_on_client_focuses_and_raises", test_click_on_client_focuses_and_raises},
         {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},
         {"unmap_passes_focus_to_top_most", test_unmap_passes_focus_to_top_most},
