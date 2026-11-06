@@ -20,6 +20,7 @@ xfce_logic = static_library(
     'src/config_table.c',
     'src/config_values.c',
     'src/display_choice.c',
+    'src/display_off.c',
     'src/display_plan.c',
     'src/display_read.c',
     'src/display_table.c',
@@ -60,6 +61,8 @@ xfce_lib = static_library(
     'src/icon_surface.c',
     'src/input_prefs.c',
     'src/logout.c',
+    'src/power_source.c',
+    'src/screensaver_service.c',
     'src/session_export.c',
     'src/session_launch.c',
     'src/settings.c',
@@ -100,7 +103,7 @@ xfce_dep = declare_dependency(
   ],
 )
 
-xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts']
+xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'display_off', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts']
 
 foreach name : xfce_tests
   test(

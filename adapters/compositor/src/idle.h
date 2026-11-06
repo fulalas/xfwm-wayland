@@ -6,5 +6,7 @@
 idle *idle_create(compositor *server);
 void idle_destroy(idle *idle);
 void idle_schedule_refresh(idle *idle);
+void idle_activity(idle *idle);
+void idle_reload_display_off(idle *idle);
 
 #endif

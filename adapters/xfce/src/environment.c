@@ -6,10 +6,13 @@
 #include "accessibility.h"
 #include "channels.h"
 #include "dispatcher.h"
+#include "display_off.h"
 #include "display_store.h"
 #include "gtk_bridge.h"
 #include "input_prefs.h"
 #include "logout.h"
+#include "power_source.h"
+#include "screensaver_service.h"
 #include "session_export.h"
 #include "session_launch.h"
 #include "settings.h"
@@ -17,6 +20,7 @@
 #include "shortcuts_portal.h"
 #include "spawn.h"
 #include "x11_settings.h"
+#include "xfconf_source.h"
 
 struct xfce_environment {
     xfce_listener listener;
@@ -24,6 +28,8 @@ struct xfce_environment {
     dispatcher *dispatcher;
     keymap_store *keymap;
     shortcuts_portal *portal;
+    power_source *power;
+    screensaver_service *screensaver;
     gtk_bridge *bridge;
     session_launch *session;
     char *theme_name;
@@ -38,6 +44,10 @@ static void notify_settings(xfce_environment *environment, unsigned flags);
 static void on_style_changed(void *self);
 static void on_session_ended(void *self);
 static void on_app_shortcuts_changed(void *self);
+static void on_power_source_changed(void *self);
+static uint32_t display_off_ms_of(void *self);
+static bool idle_inhibited_of(void *self);
+static void on_screensaver_activity(void *self);
 static void notify(xfce_environment *environment, void (*callback)(void *self));
 static keyboard_prefs keyboard_prefs_of(void *self);
 static pointer_prefs pointer_prefs_of(void *self, const char *device_name);
@@ -57,12 +67,17 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
     dispatch_target target = { .self = environment, .run = on_dispatch };
     bridge_listener bridge_listener = { .self = environment, .style_changed = on_style_changed };
     shortcuts_portal_listener portal_listener = { environment, on_app_shortcuts_changed };
+    power_source_listener power_listener = { environment, on_power_source_changed };
+    screensaver_listener screensaver_listener = { environment, on_power_source_changed,
+                                                  on_screensaver_activity };
 
     environment->listener = *listener;
     environment->channels = channels_create(&watch);
     environment->dispatcher = dispatcher_create(&target);
     environment->bridge = gtk_bridge_create(&bridge_listener);
     environment->portal = shortcuts_portal_create(&portal_listener);
+    environment->power = power_source_create(&power_listener);
+    environment->screensaver = screensaver_service_create(&screensaver_listener);
     settings_store_missing_defaults(channels_get(environment->channels, CHANNEL_XFWM4));
     refresh_settings(environment);
     reload_keymap(environment);
@@ -73,6 +88,8 @@ void xfce_environment_destroy(xfce_environment *environment)
 {
     session_launch_destroy(environment->session);
     shortcuts_portal_destroy(environment->portal);
+    power_source_destroy(environment->power);
+    screensaver_service_destroy(environment->screensaver);
     gtk_bridge_destroy(environment->bridge);
     dispatcher_destroy(environment->dispatcher);
     channels_destroy(environment->channels);
@@ -145,6 +162,8 @@ compositor_services xfce_environment_services(xfce_environment *environment)
         .load_displays = load_displays,
         .save_displays = save_displays,
         .x11_settings = x11_settings_of,
+        .display_off_ms = display_off_ms_of,
+        .idle_inhibited = idle_inhibited_of,
     };
 }
 
@@ -239,6 +258,9 @@ static void on_dispatch(void *self, unsigned flags)
     if (flags & CHANGE_DISPLAYS) {
         notify(environment, environment->listener.displays_changed);
     }
+    if (flags & CHANGE_POWER) {
+        notify(environment, environment->listener.power_changed);
+    }
 }
 
 static void notify_settings(xfce_environment *environment, unsigned flags)
@@ -262,6 +284,43 @@ static void on_session_ended(void *self)
     xfce_environment *environment = self;
 
     notify(environment, environment->listener.session_ended);
+}
+
+static void on_power_source_changed(void *self)
+{
+    xfce_environment *environment = self;
+
+    dispatcher_post(environment->dispatcher, CHANGE_POWER);
+}
+
+static uint32_t display_off_ms_of(void *self)
+{
+    xfce_environment *environment = self;
+
+    if (power_source_manager_running(environment->power)) {
+        return 0;
+    }
+    xfconf_source *source = xfconf_source_create(
+        channels_get(environment->channels, CHANNEL_POWER_MANAGER), "/xfce4-power-manager/");
+    setting_source view = xfconf_source_view(source);
+    uint32_t ms = display_off_ms_from(&view, power_source_on_battery(environment->power));
+
+    xfconf_source_destroy(source);
+    return ms;
+}
+
+static bool idle_inhibited_of(void *self)
+{
+    xfce_environment *environment = self;
+
+    return screensaver_service_inhibited(environment->screensaver);
+}
+
+static void on_screensaver_activity(void *self)
+{
+    xfce_environment *environment = self;
+
+    notify(environment, environment->listener.user_activity);
 }
 
 static void on_app_shortcuts_changed(void *self)

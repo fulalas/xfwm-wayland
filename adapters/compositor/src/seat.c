@@ -11,6 +11,7 @@
 
 #include "absolute_input.h"
 #include "clock.h"
+#include "idle.h"
 #include "input_mapping.h"
 #include "listener.h"
 #include "lock.h"
@@ -173,6 +174,7 @@ wm_pointer_event seat_core_event(const seat *s, const pointer_hit *hit, uint32_t
 
 void seat_notify_activity(seat *s)
 {
+    idle_activity(s->server->idle);
     if (s->server->globals.idle_notifier != NULL) {
         wlr_idle_notifier_v1_notify_activity(s->server->globals.idle_notifier, s->wlr_seat);
     }

@@ -10,6 +10,7 @@ typedef enum channel_id {
     CHANNEL_POINTERS,
     CHANNEL_DISPLAYS,
     CHANNEL_ACCESSIBILITY,
+    CHANNEL_POWER_MANAGER,
     CHANNEL_COUNT,
 } channel_id;
 
@@ -20,6 +21,7 @@ enum change_flag {
     CHANGE_THEME = 1 << 3,
     CHANGE_DISPLAYS = 1 << 4,
     CHANGE_X11_SETTINGS = 1 << 5,
+    CHANGE_POWER = 1 << 6,
 };
 
 const char *channel_name(channel_id id);

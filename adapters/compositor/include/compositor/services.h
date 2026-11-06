@@ -127,6 +127,8 @@ typedef struct compositor_services {
     display_plan (*load_displays)(void *self, const display_set *connected);
     void (*save_displays)(void *self, const display_set *current);
     void (*x11_settings)(void *self, const x11_setting_sink *sink);
+    uint32_t (*display_off_ms)(void *self);
+    bool (*idle_inhibited)(void *self);
 } compositor_services;
 
 #endif

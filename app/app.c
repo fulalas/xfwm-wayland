@@ -17,6 +17,8 @@ static void on_shortcuts_changed(void *self);
 static void on_input_changed(void *self);
 static void on_displays_changed(void *self);
 static void on_x11_settings_changed(void *self);
+static void on_power_changed(void *self);
+static void on_user_activity(void *self);
 static void on_x11_display_changed(void *self);
 static void on_style_changed(void *self);
 static gboolean on_terminate_signal(gpointer data);
@@ -79,6 +81,8 @@ static bool create_adapters(app *app)
         .input_changed = on_input_changed,
         .displays_changed = on_displays_changed,
         .x11_settings_changed = on_x11_settings_changed,
+        .power_changed = on_power_changed,
+        .user_activity = on_user_activity,
         .style_changed = on_style_changed,
         .session_ended = on_quit_requested,
     };
@@ -190,6 +194,20 @@ static void on_displays_changed(void *self)
     app *app = self;
 
     compositor_display_prefs_changed(app->compositor);
+}
+
+static void on_power_changed(void *self)
+{
+    app *app = self;
+
+    compositor_power_prefs_changed(app->compositor);
+}
+
+static void on_user_activity(void *self)
+{
+    app *app = self;
+
+    compositor_user_activity(app->compositor);
 }
 
 static void on_x11_settings_changed(void *self)

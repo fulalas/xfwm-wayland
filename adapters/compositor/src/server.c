@@ -8,6 +8,7 @@
 
 #include "device_list.h"
 #include "displays.h"
+#include "idle.h"
 #include "listener.h"
 #include "osd.h"
 #include "output.h"
@@ -77,6 +78,7 @@ bool compositor_start(compositor *c, wm_desktop *desktop)
         return false;
     }
     displays_start(c->displays);
+    idle_reload_display_off(c->idle);
     outputs_schedule_arrange(c->outputs);
     if (c->listener != NULL && c->listener->started != NULL) {
         c->listener->started(c->listener->self);
@@ -100,6 +102,16 @@ void compositor_appearance_changed(compositor *c)
 {
     views_invalidate_decorations(c);
     osd_repaint(c->osd);
+}
+
+void compositor_power_prefs_changed(compositor *c)
+{
+    idle_reload_display_off(c->idle);
+}
+
+void compositor_user_activity(compositor *c)
+{
+    idle_activity(c->idle);
 }
 
 void compositor_display_prefs_changed(compositor *c)

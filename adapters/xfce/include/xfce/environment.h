@@ -60,6 +60,8 @@ typedef struct xfce_listener {
     void (*session_ended)(void *self);
     void (*displays_changed)(void *self);
     void (*x11_settings_changed)(void *self);
+    void (*power_changed)(void *self);
+    void (*user_activity)(void *self);
 } xfce_listener;
 
 typedef struct xfce_environment xfce_environment;

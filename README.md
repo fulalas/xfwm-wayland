@@ -40,7 +40,7 @@ development and not ready for daily use. Compared on the same machine:
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.7 ms                  |
-| Unit tests                           | 49                 | 686                      |
+| Unit tests                           | 49                 | 690                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
@@ -113,6 +113,13 @@ Input
   (`xdg-desktop-portal`), since Wayland has no global key grabs. Only function,
   media and other special keys, or keys pressed with Ctrl, Alt or Super, can be
   global. Your own Xfce shortcuts win over them.
+* When xfce4-power-manager is not running, displays still switch off after the
+  display sleep or switch-off time from its settings (10 minutes by default),
+  like X11's built-in timer. Battery times apply when UPower reports battery.
+* Video players and browsers keep the screen on through Wayland's idle inhibit
+  or `org.freedesktop.ScreenSaver`, which xfwm-wayland provides when no
+  screensaver program does. X11 programs can't use X11's own screensaver calls,
+  because Xwayland doesn't support them.
 * X11 programs that grab keys globally (for example Audacious's hotkeys) still
   get those same keys when a Wayland window has focus. Typed text is not
   shared.

@@ -5,6 +5,7 @@
 
 #include "display_batch.h"
 #include "display_policy.h"
+#include "idle.h"
 #include "output_config.h"
 #include "output_private.h"
 #include "output_setting.h"
@@ -55,6 +56,7 @@ void displays_destroy(displays *d)
 
 void displays_output_added(displays *d, output *o)
 {
+    idle_activity(d->server->idle);
     output_display *display = output_display_of(o);
     display->edid = edid_read(output_wlr(o));
     display->is_internal = display_is_internal(output_wlr(o)->name);

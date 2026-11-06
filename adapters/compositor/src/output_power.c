@@ -3,6 +3,7 @@
 #include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/util/log.h>
 
+#include "idle.h"
 #include "listener.h"
 #include "output.h"
 #include "output_config.h"
@@ -41,17 +42,29 @@ static void handle_set_mode(struct wl_listener *listener, void *data)
     output_power *p = wl_container_of(listener, p, set_mode);
     const struct wlr_output_power_v1_set_mode_event *event = data;
     output *o = output_from_wlr(event->output);
-    if (o == NULL || !output_is_active(o)) {
+    if (o == NULL) {
+        return;
+    }
+    output_power_set(p->server, o, event->mode == ZWLR_OUTPUT_POWER_V1_MODE_ON);
+    if (event->mode == ZWLR_OUTPUT_POWER_V1_MODE_ON) {
+        idle_activity(p->server->idle);
+    }
+}
+
+void output_power_set(compositor *server, output *o, bool on)
+{
+    struct wlr_output *wlr_output = output_wlr(o);
+    if (!output_is_active(o) || wlr_output->enabled == on) {
         return;
     }
     struct wlr_output_state state;
     wlr_output_state_init(&state);
-    wlr_output_state_set_enabled(&state, event->mode == ZWLR_OUTPUT_POWER_V1_MODE_ON);
-    if (!wlr_output_commit_state(event->output, &state)) {
-        wlr_log(WLR_ERROR, "cannot change the power mode of output %s", event->output->name);
+    wlr_output_state_set_enabled(&state, on);
+    if (!wlr_output_commit_state(wlr_output, &state)) {
+        wlr_log(WLR_ERROR, "cannot change the power mode of output %s", wlr_output->name);
     }
     wlr_output_state_finish(&state);
-    outputs_mark_changed(p->server->outputs);
-    outputs_schedule_frames(p->server->outputs);
-    output_config_schedule_publish(p->server->output_config);
+    outputs_mark_changed(server->outputs);
+    outputs_schedule_frames(server->outputs);
+    output_config_schedule_publish(server->output_config);
 }

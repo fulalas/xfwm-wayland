@@ -13,6 +13,7 @@ static const char *const channel_names[CHANNEL_COUNT] = {
     [CHANNEL_POINTERS] = "pointers",
     [CHANNEL_DISPLAYS] = "displays-wl",
     [CHANNEL_ACCESSIBILITY] = "accessibility",
+    [CHANNEL_POWER_MANAGER] = "xfce4-power-manager",
 };
 
 static const char *const theme_properties[] = { "/general/theme", "/general/title_font" };
@@ -42,6 +43,11 @@ unsigned change_flags_for(channel_id id, const char *property)
         return CHANGE_INPUT;
     case CHANNEL_DISPLAYS:
         return CHANGE_DISPLAYS;
+    case CHANNEL_POWER_MANAGER:
+        return g_str_has_prefix(property, "/xfce4-power-manager/dpms")
+                       || strcmp(property, "/xfce4-power-manager/presentation-mode") == 0
+                   ? CHANGE_POWER
+                   : 0;
     default:
         return 0;
     }
