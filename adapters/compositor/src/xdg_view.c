@@ -13,6 +13,10 @@ static const uint32_t WM_CAPABILITIES =
     WLR_XDG_TOPLEVEL_WM_CAPABILITIES_WINDOW_MENU | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE |
     WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN | WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE;
 
+enum {
+    BOUNDS_SINCE_VERSION = 4,
+};
+
 static void handle_commit(struct wl_listener *listener, void *data);
 static void handle_map(struct wl_listener *listener, void *data);
 static void handle_unmap(struct wl_listener *listener, void *data);
@@ -201,6 +205,15 @@ static void send_initial_configure(xdg_view *xv)
     xdg_decorations_send_mode(xv);
     wm_size size = xdg_sessions_initial_size(xv->server->xdg_sessions, xv->toplevel);
     wlr_xdg_toplevel_set_size(xv->toplevel, size.width, size.height);
+}
+
+void xdg_view_send_bounds(xdg_view *xv)
+{
+    wm_size bounds = wm_desktop_client_bounds(xv->server->desktop, xdg_view_capabilities(xv));
+    bool supported = wl_resource_get_version(xv->toplevel->resource) >= BOUNDS_SINCE_VERSION;
+    if (supported && bounds.width > 0 && bounds.height > 0) {
+        wlr_xdg_toplevel_set_bounds(xv->toplevel, bounds.width, bounds.height);
+    }
 }
 
 static void acknowledge_configure(xdg_view *xv)

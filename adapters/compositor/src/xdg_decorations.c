@@ -54,7 +54,13 @@ void xdg_view_attach_kde_decoration(xdg_view *xv, struct wlr_server_decoration *
 void xdg_decorations_send_mode(xdg_view *xv)
 {
     xdg_decorations *d = &xv->decorations;
-    if (d->xdg == NULL || !xv->toplevel->base->initialized) {
+    if (!xv->toplevel->base->initialized) {
+        return;
+    }
+    if (xv->view == NULL) {
+        xdg_view_send_bounds(xv);
+    }
+    if (d->xdg == NULL) {
         return;
     }
     enum wlr_xdg_toplevel_decoration_v1_mode mode =

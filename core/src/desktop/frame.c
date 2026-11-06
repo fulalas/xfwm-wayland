@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "desktop_state.h"
+#include "monitors.h"
 
 static void fill_capabilities(const wm_window *window, wm_decor_window *decor);
 static void fill_states(const wm_window *window, wm_decor_window *decor);
@@ -38,6 +39,14 @@ wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabili
     decor.has_border = (capabilities & WM_CAP_DECORATED) != 0;
     wm_decor_input input = {&desktop->theme, &desktop->config.frame, &decor};
     return wm_decor_extents(&input);
+}
+
+wm_size wm_desktop_client_bounds(const wm_desktop *desktop, uint32_t capabilities)
+{
+    wm_rect area = monitors_work_area_at(desktop, monitors_pointer(desktop));
+    wm_extents frame = wm_desktop_frame_extents(desktop, capabilities);
+    wm_rect client = wm_rect_shrink(&area, &frame);
+    return (wm_size) {client.width, client.height};
 }
 
 wm_rect frame_rect(const wm_desktop *desktop, const wm_window *window)

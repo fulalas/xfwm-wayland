@@ -62,6 +62,7 @@ void xdg_requests_disconnect(xdg_view *view);
 void xdg_decorations_init(xdg_view *view);
 void xdg_decorations_finish(xdg_view *view);
 void xdg_decorations_send_mode(xdg_view *view);
+void xdg_view_send_bounds(xdg_view *view);
 wm_window_desc xdg_view_describe(const xdg_view *view);
 uint32_t xdg_view_capabilities(const xdg_view *view);
 wm_size_hints xdg_view_size_hints(const xdg_view *view);
