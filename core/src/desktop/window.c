@@ -35,6 +35,7 @@ wm_window *window_create(const wm_window_desc *desc, unsigned long serial)
     window->opacity = window_opacity_from_double(desc->opacity);
     window->layer = WM_LAYER_NORMAL;
     window->activation_allowed = desc->activation_allowed;
+    window->opacity_locked = desc->opacity_locked;
     window->has_position = desc->has_position;
     window->has_icon = desc->has_icon;
     window->dirty = true;

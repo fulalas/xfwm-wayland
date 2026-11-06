@@ -1,6 +1,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "listener.h"
+#include "output.h"
 #include "xdg_view_private.h"
 
 static void handle_maximize(struct wl_listener *listener, void *data);
@@ -61,6 +62,13 @@ static void handle_fullscreen(struct wl_listener *listener, void *data)
     (void) data;
     xdg_view *xv = wl_container_of(listener, xv, requests.fullscreen);
     bool wanted = xv->toplevel->requested.fullscreen;
+    struct wlr_output *chosen = xv->toplevel->requested.fullscreen_output;
+    output *o = wanted && chosen != NULL ? output_from_wlr(chosen) : NULL;
+    wm_window *window = xv->view != NULL ? view_window(xv->view) : NULL;
+    if (window != NULL) {
+        wm_rect area = o != NULL ? output_full(o) : (wm_rect){0, 0, 0, 0};
+        wm_window_set_fullscreen_area(xv->server->desktop, window, &area);
+    }
     request_state(xv, view_state_change(WM_STATE_FULLSCREEN, wanted));
 }
 

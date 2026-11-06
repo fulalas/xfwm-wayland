@@ -27,6 +27,11 @@ typedef struct xwayland_requests {
     struct wl_listener demands_attention;
 } xwayland_requests;
 
+enum {
+    OLD_STRUT_SIDES = 4,
+    REMOTE_HOST_MAX = 256,
+};
+
 typedef struct xwayland_properties {
     struct wl_listener title;
     struct wl_listener class;
@@ -59,6 +64,15 @@ struct xwayland_view {
     struct wl_listener unmap;
     struct wl_listener commit;
     x11_window_props published;
+    uint32_t motif_capabilities;
+    bool shaped;
+    bool has_user_time;
+    uint32_t user_time;
+    bool opacity_locked;
+    bool transient_for_group;
+    bool has_old_strut;
+    xcb_ewmh_wm_strut_partial_t old_strut;
+    char remote_host[REMOTE_HOST_MAX];
 };
 
 void xwayland_requests_connect(xwayland_view *view);
@@ -68,6 +82,10 @@ void xwayland_properties_disconnect(xwayland_view *view);
 wm_window *xwayland_view_window(const xwayland_view *view);
 wm_window_desc xwayland_view_describe(const xwayland_view *view);
 uint32_t xwayland_view_capabilities(const xwayland_view *view);
+void xwayland_view_read_properties(xwayland_view *view);
+void xwayland_view_read_motif(xwayland_view *view);
+char *xwayland_view_remote_title(const xwayland_view *view);
+bool xwayland_view_has_strut(const xwayland_view *view);
 wm_window_type xwayland_view_type(const xwayland_view *view);
 wm_size_hints xwayland_view_size_hints(const xwayland_view *view);
 wm_window *xwayland_view_parent_window(const xwayland_view *view);

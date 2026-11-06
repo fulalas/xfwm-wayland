@@ -24,6 +24,7 @@ static void handle_destroy(struct wl_listener *listener, void *data);
 static void handle_icon_changed(void *self);
 static void addon_destroy(struct wlr_addon *addon);
 static void send_initial_configure(xdg_view *view);
+static void apply_fullscreen_output(xdg_view *view);
 static void acknowledge_configure(xdg_view *view);
 static void sync_size_hints(xdg_view *view);
 static void request_size(xdg_view *view, wm_size size);
@@ -153,6 +154,7 @@ static void handle_map(struct wl_listener *listener, void *data)
     xdg_sessions_apply_restore(xv->server->xdg_sessions, xv->toplevel, &desc);
     xv->size_hints = desc.size_hints;
     view_map(xv->view, &desc);
+    apply_fullscreen_output(xv);
     icon_slot_lookup_app(xv->icon, xv->toplevel->app_id);
     adopt_waiting_children(xv);
 }
@@ -214,6 +216,18 @@ void xdg_view_send_bounds(xdg_view *xv)
     if (supported && bounds.width > 0 && bounds.height > 0) {
         wlr_xdg_toplevel_set_bounds(xv->toplevel, bounds.width, bounds.height);
     }
+}
+
+static void apply_fullscreen_output(xdg_view *xv)
+{
+    struct wlr_output *chosen = xv->toplevel->requested.fullscreen_output;
+    wm_window *window = view_window(xv->view);
+    if (window == NULL || !xv->toplevel->requested.fullscreen || chosen == NULL ||
+        output_from_wlr(chosen) == NULL) {
+        return;
+    }
+    wm_rect area = output_full(output_from_wlr(chosen));
+    wm_window_set_fullscreen_area(xv->server->desktop, window, &area);
 }
 
 static void acknowledge_configure(xdg_view *xv)

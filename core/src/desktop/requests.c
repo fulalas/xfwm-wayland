@@ -25,6 +25,15 @@ void wm_request_resize(wm_desktop *desktop, wm_window *window, uint32_t edges)
     present_flush(desktop);
 }
 
+void wm_window_set_fullscreen_area(wm_desktop *desktop, wm_window *window, const wm_rect *area)
+{
+    window->fullscreen_area = area != NULL ? *area : (wm_rect){0, 0, 0, 0};
+    if (window_is_fullscreen(window)) {
+        states_update_fullscreen_size(desktop, window);
+    }
+    present_flush(desktop);
+}
+
 void wm_request_window_menu(wm_desktop *desktop, wm_window *window, wm_point client_point)
 {
     wm_point point = {window->client.x + client_point.x, window->client.y + client_point.y};

@@ -6,6 +6,7 @@
 #include "view.h"
 
 typedef struct terminate_ticket {
+    compositor *server;
     view *view;
     struct wl_listener unmapped;
 } terminate_ticket;
@@ -32,6 +33,7 @@ void compositor_ask_terminate(compositor *c, void *window)
     if (ticket == NULL) {
         return;
     }
+    ticket->server = c;
     ticket->view = window;
     listener_connect(&ticket->unmapped, &c->view_events.unmapped, handle_ticket_unmapped);
     terminate_request request = {
@@ -57,7 +59,7 @@ void compositor_schedule_timer(compositor *c, uint32_t delay_ms)
 static void handle_terminate_answer(void *context, bool terminate)
 {
     terminate_ticket *ticket = context;
-    if (terminate && ticket->view != NULL) {
+    if (terminate) {
         view_kill(ticket->view);
     }
     listener_disconnect(&ticket->unmapped);
@@ -67,8 +69,11 @@ static void handle_terminate_answer(void *context, bool terminate)
 static void handle_ticket_unmapped(struct wl_listener *listener, void *data)
 {
     terminate_ticket *ticket = wl_container_of(listener, ticket, unmapped);
-    if (ticket->view == data) {
-        ticket->view = NULL;
-        listener_disconnect(&ticket->unmapped);
+    if (ticket->view != data) {
+        return;
     }
+    const compositor_services *services = ticket->server->services;
+    listener_disconnect(&ticket->unmapped);
+    services->cancel_terminate(services->self, ticket);
+    free(ticket);
 }

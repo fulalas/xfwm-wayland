@@ -6,32 +6,36 @@
 #include "helper_protocol.h"
 
 struct terminate_dialogs {
-    GCancellable *cancellable;
+    GList *jobs;
 };
 
 typedef struct terminate_job {
+    terminate_dialogs *owner;
     void (*done)(void *context, bool terminate);
     void *context;
     GCancellable *cancellable;
+    GSubprocess *process;
 } terminate_job;
 
 static GSubprocess *spawn_dialog(const char *title);
 static void on_answer(GObject *source, GAsyncResult *result, void *data);
 static gboolean on_spawn_failed(void *data);
 static void finish_job(terminate_job *job, bool terminate);
+static void cancel_job(terminate_job *job);
 
 terminate_dialogs *terminate_dialogs_create(void)
 {
-    terminate_dialogs *dialogs = g_new0(terminate_dialogs, 1);
-
-    dialogs->cancellable = g_cancellable_new();
-    return dialogs;
+    return g_new0(terminate_dialogs, 1);
 }
 
 void terminate_dialogs_destroy(terminate_dialogs *dialogs)
 {
-    g_cancellable_cancel(dialogs->cancellable);
-    g_object_unref(dialogs->cancellable);
+    for (GList *link = dialogs->jobs; link; link = link->next) {
+        terminate_job *job = link->data;
+        job->owner = NULL;
+        cancel_job(job);
+    }
+    g_list_free(dialogs->jobs);
     g_free(dialogs);
 }
 
@@ -41,16 +45,28 @@ void terminate_dialogs_ask(terminate_dialogs *dialogs, const terminate_request *
     GSubprocess *process = spawn_dialog(request->title ? request->title : "");
 
     *job = (terminate_job) {
+        .owner = dialogs,
         .done = request->done,
         .context = request->context,
-        .cancellable = g_object_ref(dialogs->cancellable),
+        .cancellable = g_cancellable_new(),
+        .process = process,
     };
+    dialogs->jobs = g_list_prepend(dialogs->jobs, job);
     if (!process) {
         g_idle_add(on_spawn_failed, job);
         return;
     }
     g_subprocess_communicate_utf8_async(process, NULL, job->cancellable, on_answer, job);
-    g_object_unref(process);
+}
+
+void terminate_dialogs_cancel(terminate_dialogs *dialogs, void *context)
+{
+    for (GList *link = dialogs->jobs; link; link = link->next) {
+        terminate_job *job = link->data;
+        if (job->context == context) {
+            cancel_job(job);
+        }
+    }
 }
 
 static GSubprocess *spawn_dialog(const char *title)
@@ -95,9 +111,21 @@ static gboolean on_spawn_failed(void *data)
 
 static void finish_job(terminate_job *job, bool terminate)
 {
+    if (job->owner) {
+        job->owner->jobs = g_list_remove(job->owner->jobs, job);
+    }
     if (!g_cancellable_is_cancelled(job->cancellable)) {
         job->done(job->context, terminate);
     }
+    g_clear_object(&job->process);
     g_object_unref(job->cancellable);
     g_free(job);
+}
+
+static void cancel_job(terminate_job *job)
+{
+    g_cancellable_cancel(job->cancellable);
+    if (job->process) {
+        g_subprocess_force_exit(job->process);
+    }
 }

@@ -87,6 +87,9 @@ typedef struct wm_window_desc {
     bool has_workspace;
     int workspace;
     const char *launch_id;
+    bool has_user_time;
+    uint32_t user_time;
+    bool opacity_locked;
 } wm_window_desc;
 
 typedef enum wm_activation_source {
@@ -191,6 +194,7 @@ void wm_window_icon_changed(wm_desktop *desktop, wm_window *window);
 
 void wm_request_move(wm_desktop *desktop, wm_window *window);
 void wm_request_resize(wm_desktop *desktop, wm_window *window, uint32_t edges);
+void wm_window_set_fullscreen_area(wm_desktop *desktop, wm_window *window, const wm_rect *area);
 void wm_request_window_menu(wm_desktop *desktop, wm_window *window, wm_point client_point);
 void wm_request_configure(wm_desktop *desktop, wm_window *window, const wm_rect *client);
 void wm_request_activate(wm_desktop *desktop, wm_window *window, wm_activation_source source);

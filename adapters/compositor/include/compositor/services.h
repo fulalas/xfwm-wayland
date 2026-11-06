@@ -124,6 +124,7 @@ typedef struct compositor_services {
     void (*lookup_icon)(void *self, const icon_request *request);
     void (*cancel_icon_lookups)(void *self, void *context);
     void (*ask_terminate)(void *self, const terminate_request *request);
+    void (*cancel_terminate)(void *self, void *context);
     display_plan (*load_displays)(void *self, const display_set *connected);
     void (*save_displays)(void *self, const display_set *current);
     void (*x11_settings)(void *self, const x11_setting_sink *sink);

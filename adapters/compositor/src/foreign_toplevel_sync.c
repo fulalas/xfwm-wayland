@@ -33,7 +33,8 @@ static bool same_text(const char *current, const char *wanted);
 
 void toplevel_entry_sync(toplevel_entry *entry)
 {
-    if (view_state(entry->view)->skip_taskbar) {
+    const wm_window_view *state = view_state(entry->view);
+    if (state->skip_taskbar && state->parent == NULL) {
         toplevel_entry_hide(entry);
         return;
     }

@@ -43,6 +43,7 @@ struct wm_window {
     wm_rect client;
     wm_rect saved;
     wm_rect pre_fullscreen;
+    wm_rect fullscreen_area;
     wm_rect configured;
     bool configure_pending;
     bool frozen;
@@ -69,6 +70,8 @@ struct wm_window {
     bool resizing;
     bool has_icon;
     bool activation_allowed;
+    bool skip_initial_focus;
+    bool opacity_locked;
     bool has_position;
     bool close_requested;
     bool title_measured;

@@ -131,6 +131,39 @@ static void test_inactive_opacity_and_shadow(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_fullscreen_uses_requested_area(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    wm_rect area = {0, 0, 3840, 1080};
+    wm_window_set_fullscreen_area(desktop, window, &area);
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_FULLSCREEN, 0});
+    CHECK_RECT_EQ(area, fake_client_of(window));
+    wm_window_set_fullscreen_area(desktop, window, NULL);
+    CHECK_RECT_EQ(((wm_rect) {0, 0, 1920, 1080}), fake_client_of(window));
+    wm_rect gone = {5000, 0, 1920, 1080};
+    wm_window_set_fullscreen_area(desktop, window, &gone);
+    CHECK_RECT_EQ(((wm_rect) {0, 0, 1920, 1080}), fake_client_of(window));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_locked_opacity_ignores_settings(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.compositing.inactive_opacity_percent = 50;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc desc = fake_desc(1, small);
+    desc.opacity = 0.8;
+    desc.opacity_locked = true;
+    wm_window *first = wm_window_map(desktop, &desc);
+    fake_map(desktop, 2, small);
+    CHECK_DOUBLE_NEAR(0.8, view_of(first).opacity.content, 1e-3);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_compositing_disabled_is_opaque(void)
 {
     fake_world world;
@@ -171,6 +204,8 @@ int main(void)
         {"minimize_hides_transients", test_minimize_hides_transients},
         {"sticky_window_visible_everywhere", test_sticky_window_visible_everywhere},
         {"inactive_opacity_and_shadow", test_inactive_opacity_and_shadow},
+        {"locked_opacity_ignores_settings", test_locked_opacity_ignores_settings},
+        {"fullscreen_uses_requested_area", test_fullscreen_uses_requested_area},
         {"compositing_disabled_is_opaque", test_compositing_disabled_is_opaque},
         {"decor_serial_changes_only_with_inputs", test_decor_serial_changes_only_with_inputs},
     };

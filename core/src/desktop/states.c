@@ -125,7 +125,11 @@ void states_update_fullscreen_size(wm_desktop *desktop, wm_window *window)
 {
     if (window_is_fullscreen(window)) {
         wm_rect frame = frame_rect_for_client(desktop, window, &window->pre_fullscreen);
-        window->client = monitors_full_at(desktop, wm_rect_center(&frame));
+        wm_rect screen = monitors_screen_bounds(desktop);
+        bool has_area = window->fullscreen_area.width > 0 && window->fullscreen_area.height > 0
+                        && wm_rect_intersects(&window->fullscreen_area, &screen);
+        window->client = has_area ? window->fullscreen_area
+                                  : monitors_full_at(desktop, wm_rect_center(&frame));
     } else {
         window->client = window->pre_fullscreen;
     }

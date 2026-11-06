@@ -56,7 +56,7 @@ wm_rect effects_shadow_rect(const wm_desktop *desktop, const wm_window *window)
 
 void effects_increase_opacity(wm_desktop *desktop, wm_window *window)
 {
-    if (!effects_enabled(desktop) || window->opacity >= OPACITY_OPAQUE) {
+    if (!effects_enabled(desktop) || window->opacity_locked || window->opacity >= OPACITY_OPAQUE) {
         return;
     }
     uint32_t opacity = window->opacity + OPACITY_SET_STEP;
@@ -66,7 +66,7 @@ void effects_increase_opacity(wm_desktop *desktop, wm_window *window)
 
 void effects_decrease_opacity(wm_desktop *desktop, wm_window *window)
 {
-    if (!effects_enabled(desktop) || window->opacity <= OPACITY_SET_MIN) {
+    if (!effects_enabled(desktop) || window->opacity_locked || window->opacity <= OPACITY_SET_MIN) {
         return;
     }
     window->opacity -= OPACITY_SET_STEP;
@@ -82,6 +82,9 @@ static double applied_opacity(const wm_desktop *desktop, const wm_window *window
 {
     const wm_compositing_config *config = &desktop->config.compositing;
     double opacity = (double) window->opacity / (double) OPACITY_OPAQUE;
+    if (window->opacity_locked) {
+        return opacity;
+    }
     if (uses_move_opacity(desktop, window)) {
         opacity *= percent_factor(config->move_opacity_percent);
     }

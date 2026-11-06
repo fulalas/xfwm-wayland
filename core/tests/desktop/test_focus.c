@@ -88,6 +88,63 @@ static void test_prevented_focus_stealing_marks_urgent(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_zero_user_time_is_not_focused(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    wm_window_desc desc = fake_desc(2, small);
+    desc.has_user_time = true;
+    desc.user_time = 0;
+    wm_window *second = wm_window_map(desktop, &desc);
+    CHECK(wm_window_current_view(second).visible);
+    CHECK(world.focused == fake_handle(1));
+    CHECK_INT_EQ(1, fake_stack_index(&world, fake_handle(2)));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_old_user_time_cannot_steal_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.focus.prevent_focus_stealing = true;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    wm_key_event key = {FAKE_KEY_D, 0, 5000};
+    wm_key_pressed(desktop, &key);
+    wm_window_desc old = fake_desc(2, small);
+    old.has_user_time = true;
+    old.user_time = 4000;
+    wm_window_map(desktop, &old);
+    CHECK(world.focused == fake_handle(1));
+    wm_window_desc recent = fake_desc(3, small);
+    recent.has_user_time = true;
+    recent.user_time = 6000;
+    wm_window_map(desktop, &recent);
+    CHECK(world.focused == fake_handle(3));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_launched_window_ignores_old_user_time(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.focus.prevent_focus_stealing = true;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    wm_launch_started(desktop, "token-a");
+    wm_key_event key = {FAKE_KEY_D, 0, 5000};
+    wm_key_pressed(desktop, &key);
+    wm_window_desc desc = fake_desc(2, small);
+    desc.has_user_time = true;
+    desc.user_time = 4000;
+    desc.launch_id = "token-a";
+    wm_window_map(desktop, &desc);
+    CHECK(world.focused == fake_handle(2));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_modal_dialog_takes_focus_from_parent(void)
 {
     fake_world world;
@@ -175,6 +232,9 @@ int main(void)
 {
     static const check_case cases[] = {
         {"new_window_gets_focus", test_new_window_gets_focus},
+        {"zero_user_time_is_not_focused", test_zero_user_time_is_not_focused},
+        {"old_user_time_cannot_steal_focus", test_old_user_time_cannot_steal_focus},
+        {"launched_window_ignores_old_user_time", test_launched_window_ignores_old_user_time},
         {"activating_parent_keeps_dialog_focused", test_activating_parent_keeps_dialog_focused},
         {"click_on_client_focuses_and_raises", test_click_on_client_focuses_and_raises},
         {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},

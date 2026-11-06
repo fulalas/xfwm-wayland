@@ -92,7 +92,7 @@ void xwayland_shell_stop(xwayland_shell *shell)
     listener_disconnect(&shell->ready);
     listener_disconnect(&shell->new_surface);
     listener_disconnect(&shell->startup_done);
-    shell->link = (x11_link){.wlr = NULL, .ready = false};
+    x11_link_detach(&shell->link);
     if (shell->wlr != NULL) {
         wlr_xwayland_destroy(shell->wlr);
         shell->wlr = NULL;

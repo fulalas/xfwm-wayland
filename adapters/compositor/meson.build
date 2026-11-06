@@ -12,6 +12,7 @@ rsvg_dep = dependency('librsvg-2.0', version: '>= 2.52')
 xcb_dep = dependency('xcb')
 xcb_ewmh_dep = dependency('xcb-ewmh')
 xcb_icccm_dep = dependency('xcb-icccm')
+xcb_shape_dep = dependency('xcb-shape')
 libdrm_dep = dependency('libdrm').partial_dependency(compile_args: true, includes: true)
 libdrm_link_dep = dependency('libdrm')
 compositor_m_dep = meson.get_compiler('c').find_library('m', required: false)
@@ -280,6 +281,8 @@ compositor_sources = files(
   'src/x11_atoms.c',
   'src/x11_gravity.c',
   'src/x11_link.c',
+  'src/x11_motif.c',
+  'src/x11_pixmap_icon.c',
   'src/xcursor_resize.c',
   'src/xdg_decorations.c',
   'src/xdg_session.c',
@@ -306,6 +309,7 @@ compositor_sources = files(
   'src/xwayland_keys.c',
   'src/xwayland_messages.c',
   'src/xwayland_properties.c',
+  'src/xwayland_props.c',
   'src/xwayland_requests.c',
   'src/xwayland_restart.c',
   'src/xwayland_view.c',
@@ -345,6 +349,7 @@ compositor_lib = static_library(
     xcb_dep,
     xcb_ewmh_dep,
     xcb_icccm_dep,
+    xcb_shape_dep,
     libdrm_dep,
     libdrm_link_dep,
     compositor_m_dep,
@@ -367,6 +372,7 @@ compositor_dep = declare_dependency(
     xcb_dep,
     xcb_ewmh_dep,
     xcb_icccm_dep,
+    xcb_shape_dep,
     libdrm_link_dep,
     compositor_m_dep,
   ],

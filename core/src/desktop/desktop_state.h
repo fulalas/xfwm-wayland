@@ -40,6 +40,8 @@ struct wm_desktop {
     wm_window *highlighted;
     wm_point pointer;
     uint32_t modifiers;
+    bool has_user_input;
+    uint32_t last_user_input_ms;
     uint32_t held_app_shortcut;
     uint32_t held_app_shortcut_keysym;
     bool has_scrolled;

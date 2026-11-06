@@ -18,6 +18,8 @@ static int initial_workspace(const wm_desktop *desktop, wm_window *window,
                              const wm_window_desc *desc);
 static int requested_workspace(const wm_desktop *desktop, const wm_window_desc *desc);
 static void forget(wm_desktop *desktop, wm_window *window);
+static void apply_user_time(const wm_desktop *desktop, wm_window *window,
+                            const wm_window_desc *desc, bool launched);
 static bool is_managed(const wm_desktop *desktop, const wm_window *window);
 
 wm_window *wm_window_map(wm_desktop *desktop, const wm_window_desc *desc)
@@ -34,6 +36,7 @@ wm_window *wm_window_map(wm_desktop *desktop, const wm_window_desc *desc)
         return NULL;
     }
     window->mapped_ms = timers_now(desktop);
+    apply_user_time(desktop, window, desc, launched);
     placement_init_position(desktop, window);
     window->saved = window->client;
     window->pre_fullscreen = window->client;
@@ -105,6 +108,23 @@ static int requested_workspace(const wm_desktop *desktop, const wm_window_desc *
 {
     bool known = desc->workspace >= 0 && desc->workspace < desktop->workspaces.count;
     return desc->has_workspace && known ? desc->workspace : desktop->workspaces.current;
+}
+
+static void apply_user_time(const wm_desktop *desktop, wm_window *window,
+                            const wm_window_desc *desc, bool launched)
+{
+    if (!desc->has_user_time) {
+        return;
+    }
+    if (desc->user_time == 0) {
+        window->skip_initial_focus = true;
+        return;
+    }
+    bool older = !launched && desktop->has_user_input &&
+                 (int32_t) (desc->user_time - desktop->last_user_input_ms) < 0;
+    if (older) {
+        window->activation_allowed = false;
+    }
 }
 
 static void forget(wm_desktop *desktop, wm_window *window)

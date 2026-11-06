@@ -56,6 +56,7 @@ static accessibility_prefs accessibility_prefs_of(void *self);
 static void lookup_icon(void *self, const icon_request *request);
 static void cancel_icon_lookups(void *self, void *context);
 static void ask_terminate(void *self, const terminate_request *request);
+static void cancel_terminate(void *self, void *context);
 static void x11_settings_of(void *self, const x11_setting_sink *sink);
 static display_plan load_displays(void *self, const display_set *connected);
 static void save_displays(void *self, const display_set *current);
@@ -159,6 +160,7 @@ compositor_services xfce_environment_services(xfce_environment *environment)
         .lookup_icon = lookup_icon,
         .cancel_icon_lookups = cancel_icon_lookups,
         .ask_terminate = ask_terminate,
+        .cancel_terminate = cancel_terminate,
         .load_displays = load_displays,
         .save_displays = save_displays,
         .x11_settings = x11_settings_of,
@@ -384,6 +386,13 @@ static void ask_terminate(void *self, const terminate_request *request)
     xfce_environment *environment = self;
 
     gtk_bridge_ask_terminate(environment->bridge, request);
+}
+
+static void cancel_terminate(void *self, void *context)
+{
+    xfce_environment *environment = self;
+
+    gtk_bridge_cancel_terminate(environment->bridge, context);
 }
 
 static display_plan load_displays(void *self, const display_set *connected)

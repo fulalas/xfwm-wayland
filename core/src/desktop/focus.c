@@ -72,6 +72,12 @@ void focus_top(wm_desktop *desktop, wm_layer layer)
     focus_set(desktop, focus_top_most(desktop, layer, NULL));
 }
 
+void focus_note_user_input(wm_desktop *desktop, uint32_t time_ms)
+{
+    desktop->has_user_input = true;
+    desktop->last_user_input_ms = time_ms;
+}
+
 void focus_new_window(wm_desktop *desktop, wm_window *window)
 {
     if (!new_window_gets_focus(desktop, window)) {
@@ -244,7 +250,7 @@ static bool new_window_gets_focus(const wm_desktop *desktop, const wm_window *wi
         return true;
     }
     if (!focus_accepts(desktop, window) || window_is_dont_focus(window)
-        || is_focus_stealing_prevented(desktop, window)) {
+        || window->skip_initial_focus || is_focus_stealing_prevented(desktop, window)) {
         return false;
     }
     if (focused != NULL && desktop->config.focus.prevent_focus_stealing

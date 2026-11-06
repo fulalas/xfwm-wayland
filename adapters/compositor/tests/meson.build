@@ -96,6 +96,8 @@ test(
 
 compositor_x11_tests = {
   'x11_gravity': ['../src/x11_gravity.c'],
+  'x11_motif': ['../src/x11_motif.c'],
+  'x11_pixmap_icon': ['../src/x11_pixmap_icon.c'],
   'ewmh_payload': ['../src/ewmh_payload.c'],
   'xsettings': ['../src/xsettings_table.c', '../src/xsettings_wire.c', '../src/xresources.c'],
   'restart_policy': ['../src/restart_policy.c'],
@@ -109,7 +111,7 @@ foreach name, sources : compositor_x11_tests
       'test_compositor_' + name,
       ['test_' + name + '.c'] + sources,
       include_directories: compositor_test_inc + [compositor_api_inc],
-      dependencies: [check_dep, wm_core_dep, xcb_dep, glib_dep],
+      dependencies: [check_dep, wm_core_dep, xcb_dep, glib_dep, cairo_dep],
     ),
   )
 endforeach

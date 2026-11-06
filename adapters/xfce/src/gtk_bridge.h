@@ -18,5 +18,6 @@ xfce_style gtk_bridge_style(const gtk_bridge *bridge);
 void gtk_bridge_lookup_icon(gtk_bridge *bridge, const icon_request *request);
 void gtk_bridge_cancel_icons(gtk_bridge *bridge, void *context);
 void gtk_bridge_ask_terminate(gtk_bridge *bridge, const terminate_request *request);
+void gtk_bridge_cancel_terminate(gtk_bridge *bridge, void *context);
 
 #endif

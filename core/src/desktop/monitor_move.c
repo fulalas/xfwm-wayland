@@ -133,6 +133,7 @@ static void move_remembered_geometry(wm_window *window, const wm_rect *from, con
         window->saved.x = saved.x;
         window->saved.y = saved.y;
     }
+    window->fullscreen_area = (wm_rect) {0, 0, 0, 0};
     if (window_is_fullscreen(window)) {
         wm_point origin = {window->pre_fullscreen.x, window->pre_fullscreen.y};
         wm_point moved = transform(origin, from, to);

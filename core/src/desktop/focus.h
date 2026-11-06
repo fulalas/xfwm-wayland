@@ -26,5 +26,6 @@ void focus_on_delay_elapsed(wm_desktop *desktop, wm_window *window);
 void focus_on_raise_delay_elapsed(wm_desktop *desktop);
 void focus_forget(wm_desktop *desktop, wm_window *window);
 wm_window *focus_window_at(const wm_desktop *desktop, wm_point point, const window_list *exclude);
+void focus_note_user_input(wm_desktop *desktop, uint32_t time_ms);
 
 #endif

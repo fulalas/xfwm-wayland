@@ -44,6 +44,9 @@ wm_dispatch wm_pointer_motion(wm_desktop *desktop, const wm_pointer_event *event
 wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event)
 {
     desktop->pointer = event->pointer.position;
+    if (event->pressed) {
+        focus_note_user_input(desktop, event->pointer.time_ms);
+    }
     wm_dispatch result = dispatch_button(desktop, event);
     present_flush(desktop);
     return result;

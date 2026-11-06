@@ -1,7 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <xcb/xcb_icccm.h>
 #include <wlr/xwayland/xwayland.h>
 
 #include "icon_convert.h"
+#include "x11_motif.h"
+#include "x11_pixmap_icon.h"
 #include "xwayland.h"
 #include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
@@ -30,9 +35,10 @@ static const type_pair type_pairs[] = {
     {WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL, WM_TYPE_NORMAL},
 };
 
-
 static uint32_t current_states(const struct wlr_xwayland_surface *xsurface);
 static const char *startup_id_of(const xwayland_view *xv);
+static cairo_surface_t *old_style_icon(const xwayland_view *xv);
+static wm_window *group_window(const xwayland_view *xv);
 static bool surface_is_urgent(const struct wlr_xwayland_surface *xsurface);
 static bool has_position(const struct wlr_xwayland_surface *xsurface);
 static strut_range strut_side(uint32_t size, uint32_t start, uint32_t end);
@@ -58,16 +64,15 @@ wm_window_desc xwayland_view_describe(const xwayland_view *xv)
         .activation_allowed = true,
         .launch_id = startup_id_of(xv),
     };
+    desc.has_user_time = xv->has_user_time;
+    desc.user_time = xv->user_time;
+    desc.opacity_locked = xv->opacity_locked;
     return desc;
 }
 
 uint32_t xwayland_view_capabilities(const xwayland_view *xv)
 {
-    uint32_t capabilities = WM_CAP_ALL;
-    if (xv->xsurface->decorations != WLR_XWAYLAND_SURFACE_DECORATIONS_ALL) {
-        capabilities &= ~(uint32_t) WM_CAP_DECORATED;
-    }
-    return capabilities;
+    return xv->motif_capabilities;
 }
 
 wm_window_type xwayland_view_type(const xwayland_view *xv)
@@ -122,10 +127,32 @@ static const char *startup_id_of(const xwayland_view *xv)
 wm_window *xwayland_view_parent_window(const xwayland_view *xv)
 {
     struct wlr_xwayland_surface *parent = xv->xsurface->parent;
-    if (parent == NULL || parent->data == NULL) {
-        return NULL;
+    if (parent == NULL) {
+        return xv->transient_for_group ? group_window(xv) : NULL;
     }
-    return xwayland_view_window(parent->data);
+    return parent->data != NULL ? xwayland_view_window(parent->data) : NULL;
+}
+
+static wm_window *group_window(const xwayland_view *xv)
+{
+    xcb_window_t group = xv->xsurface->hints->window_group;
+    wm_window *found = NULL;
+    const xwayland_view *other;
+    wl_list_for_each(other, &xv->server->xwayland->views, link) {
+        const struct wlr_xwayland_surface *xs = other->xsurface;
+        wm_window *window = other != xv ? xwayland_view_window(other) : NULL;
+        if (window == NULL || xs->parent != NULL) {
+            continue;
+        }
+        if (xs->window_id == group) {
+            return window;
+        }
+        bool grouped = xs->hints != NULL && (xs->hints->flags & XCB_ICCCM_WM_HINT_WINDOW_GROUP);
+        if (found == NULL && grouped && xs->hints->window_group == group) {
+            found = window;
+        }
+    }
+    return found;
 }
 
 bool xwayland_view_is_urgent(const xwayland_view *xv)
@@ -142,6 +169,9 @@ void xwayland_view_fetch_icon(xwayland_view *xv)
         xcb_ewmh_get_wm_icon_reply_wipe(&reply);
     }
     if (icon == NULL) {
+        icon = old_style_icon(xv);
+    }
+    if (icon == NULL) {
         icon_slot_lookup_app(xv->icon, xv->xsurface->class);
         return;
     }
@@ -149,10 +179,31 @@ void xwayland_view_fetch_icon(xwayland_view *xv)
     cairo_surface_destroy(icon);
 }
 
+bool xwayland_view_has_strut(const xwayland_view *xv)
+{
+    return xv->xsurface->strut_partial != NULL || xv->has_old_strut;
+}
+
+static cairo_surface_t *old_style_icon(const xwayland_view *xv)
+{
+    const xcb_icccm_wm_hints_t *hints = xv->xsurface->hints;
+    xwayland_shell *shell = xv->server->xwayland;
+    xcb_connection_t *connection = shell != NULL ? x11_link_query_connection(&shell->link) : NULL;
+    if (connection == NULL || hints == NULL ||
+        (hints->flags & XCB_ICCCM_WM_HINT_ICON_PIXMAP) == 0) {
+        return NULL;
+    }
+    bool masked = (hints->flags & XCB_ICCCM_WM_HINT_ICON_MASK) != 0;
+    return x11_pixmap_icon(connection, hints->icon_pixmap, masked ? hints->icon_mask : XCB_NONE);
+}
+
 strut xwayland_view_strut(const xwayland_view *xv)
 {
     strut s = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}};
     const xcb_ewmh_wm_strut_partial_t *p = xv->xsurface->strut_partial;
+    if (p == NULL && xv->has_old_strut) {
+        p = &xv->old_strut;
+    }
     if (xv->view == NULL || p == NULL) {
         return s;
     }

@@ -6,6 +6,7 @@
 
 #include "listener.h"
 #include "output.h"
+#include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
 
 static void handle_destroy(struct wl_listener *listener, void *data);
@@ -18,6 +19,7 @@ static void handle_icon_changed(void *self);
 static void detach_surface(xwayland_view *view);
 static void map_managed(xwayland_view *view);
 static void unmap_any(xwayland_view *view);
+static void release_queries_when_idle(const xwayland_view *view);
 static struct wlr_surface *impl_surface(void *self);
 static void impl_configure(void *self, const wm_rect *client);
 static void impl_close(void *self);
@@ -46,6 +48,7 @@ xwayland_view *xwayland_view_create(compositor *server, struct wlr_xwayland_surf
     }
     xv->server = server;
     xv->xsurface = xsurface;
+    xv->motif_capabilities = WM_CAP_ALL;
     xv->icon = icon_slot_create(server, &(icon_listener){xv, handle_icon_changed});
     xsurface->data = xv;
     wl_list_init(&xv->map.link);
@@ -176,10 +179,16 @@ static void map_managed(xwayland_view *xv)
         return;
     }
     wlr_scene_subsurface_tree_create(view_content_tree(xv->view), xv->xsurface->surface);
+    xwayland_view_read_properties(xv);
     wm_window_desc desc = xwayland_view_describe(xv);
+    char *remote_title = xwayland_view_remote_title(xv);
+    if (remote_title != NULL) {
+        desc.title = remote_title;
+    }
     view_map(xv->view, &desc);
+    free(remote_title);
     xwayland_view_fetch_icon(xv);
-    if (xv->xsurface->strut_partial != NULL) {
+    if (xwayland_view_has_strut(xv)) {
         outputs_schedule_arrange(xv->server->outputs);
     }
 }
@@ -196,9 +205,25 @@ static void unmap_any(xwayland_view *xv)
     view *v = xv->view;
     xv->view = NULL;
     view_destroy(v);
-    if (xv->xsurface->strut_partial != NULL) {
+    release_queries_when_idle(xv);
+    if (xwayland_view_has_strut(xv)) {
         outputs_schedule_arrange(xv->server->outputs);
     }
+}
+
+static void release_queries_when_idle(const xwayland_view *xv)
+{
+    xwayland_shell *shell = xv->server->xwayland;
+    if (shell == NULL) {
+        return;
+    }
+    const xwayland_view *other;
+    wl_list_for_each(other, &shell->views, link) {
+        if (other->view != NULL) {
+            return;
+        }
+    }
+    x11_link_release_queries(&shell->link);
 }
 
 static struct wlr_surface *impl_surface(void *self)

@@ -80,6 +80,11 @@ void gtk_bridge_ask_terminate(gtk_bridge *bridge, const terminate_request *reque
     terminate_dialogs_ask(bridge->dialogs, request);
 }
 
+void gtk_bridge_cancel_terminate(gtk_bridge *bridge, void *context)
+{
+    terminate_dialogs_cancel(bridge->dialogs, context);
+}
+
 static void on_line(void *self, const char *line)
 {
     gtk_bridge *bridge = self;

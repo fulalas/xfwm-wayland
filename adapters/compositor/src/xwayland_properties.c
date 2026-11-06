@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <wlr/xwayland/xwayland.h>
 
 #include "listener.h"
@@ -57,9 +58,13 @@ static void handle_title(struct wl_listener *listener, void *data)
     (void) data;
     xwayland_view *xv = wl_container_of(listener, xv, properties.title);
     wm_window *window = xwayland_view_window(xv);
-    if (window != NULL) {
-        wm_window_set_title(xv->server->desktop, window, xv->xsurface->title);
+    if (window == NULL) {
+        return;
     }
+    char *remote_title = xwayland_view_remote_title(xv);
+    wm_window_set_title(xv->server->desktop, window,
+                        remote_title != NULL ? remote_title : xv->xsurface->title);
+    free(remote_title);
 }
 
 static void handle_class(struct wl_listener *listener, void *data)
@@ -129,6 +134,7 @@ static void handle_decorations(struct wl_listener *listener, void *data)
 {
     (void) data;
     xwayland_view *xv = wl_container_of(listener, xv, properties.decorations);
+    xwayland_view_read_motif(xv);
     wm_window *window = xwayland_view_window(xv);
     if (window != NULL) {
         wm_window_set_capabilities(xv->server->desktop, window, xwayland_view_capabilities(xv));

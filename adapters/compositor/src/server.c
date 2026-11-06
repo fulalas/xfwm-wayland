@@ -179,6 +179,7 @@ static bool services_are_complete(const compositor_services *s)
     return s->keyboard_prefs != NULL && s->pointer_prefs != NULL && s->cursor_prefs != NULL &&
            s->accessibility_prefs != NULL &&
            s->lookup_icon != NULL && s->cancel_icon_lookups != NULL && s->ask_terminate != NULL &&
+           s->cancel_terminate != NULL &&
            s->load_displays != NULL && s->save_displays != NULL &&
            s->x11_settings != NULL;
 }
