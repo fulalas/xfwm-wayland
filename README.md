@@ -22,28 +22,28 @@ It supports:
 
 ## Why this exists
 
-The Xfce Wayland session runs on `labwc` by default. It works, but it doesn't
-read `xfwm4` themes, settings dialogs or shortcuts, and it has no window
-transparency (`xfwm4`'s opacity settings for inactive, moving and resized
-windows and popups).
+[Xfwl4](https://gitlab.xfce.org/xfce/xfwl4/), the official Xfce Wayland compositor, only started
+development in January 2026 and is still not ready for daily use. Also,
+some differences seem to be intrinsic to the project so it doesn't seem
+it's going to change.
 
-On the other hand, [xfwl4](https://gitlab.xfce.org/xfce/xfwl4/), the official Xfce Wayland compositor, is still in
-development and not ready for daily use. Compared on the same machine:
+Here's a quick comparison:
 
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
 | Written in                           | Rust, on `Smithay` | C, on `wlroots`          |
-| Dependencies built                   | 286                | 22                       |
+| Dependencies built                   | 286                | 23                       |
 | Build time (release)                 | 138 s              | 4 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
 | Average power                        | 9.6 W              | 8.6 W                    |
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.7 ms                  |
-| Unit tests                           | 49                 | 690                      |
+| Unit tests                           | 49                 | 733                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
+| Busy cursor while apps start         | no                 | yes                      |
 | xfwm4 compositing settings           | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
 | Sharp X11 programs when scaling      | yes                | no                       |
@@ -62,10 +62,15 @@ gdk-pixbuf, glib, json-glib, librsvg, `xfconf` and GTK 3.
 
 ## Usage
 
-Pick "Xfce Session (xfwm-wayland)" at login, or start Xfce from a text
-console:
+Pick "Xfce Session (xfwm-wayland)" at login, or start Xfce manually:
 
     startxfce4 --wayland xfwm-wayland
+
+Login managers remember the last session picked. To make it the default
+using, for example, LightDM, set it in `/etc/lightdm/lightdm.conf`:
+
+    [Seat:*]
+    user-session=xfwm-wayland
 
 Settings are read from the same `xfconf` channels as `xfwm4`. Keyboard, mouse
 and cursor settings are applied by the compositor instead of `xfsettingsd`.
@@ -77,6 +82,7 @@ Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) 
 * its Tweaks dialog has the HDR and HDR brightness options
 * it hides the options that do nothing on Wayland and renames the ones that
   work differently
+* its bundled themes are SVG, so window borders stay sharp at any scale
 
 ## Differences from X11
 
@@ -142,6 +148,9 @@ Other
   keeps up under load. It needs `cap_sys_nice`: the package sets it; after
   installing from source, run
   `sudo setcap cap_sys_nice+ep /usr/local/libexec/xfwm-wayland-realtime`.
+* `--compositor on|off|auto` and `--vblank` work like in `xfwm4`: they override
+  the settings until those are changed or the next login. `--replace` is
+  accepted and ignored.
 
 ## License
 
