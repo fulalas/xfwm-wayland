@@ -13,7 +13,6 @@ static const char themerc_name[] = "themerc";
 
 enum {
     HDPI_SCALE = 2,
-    NORMAL_SCALE = 1,
 };
 
 static const char *scaled_name(const char *name, double max_output_scale);
@@ -24,14 +23,8 @@ static char *system_default_dir(void);
 
 theme_location appearance_theme_locate(const char *name, double max_output_scale)
 {
-    const char *resolved = scaled_name(name, max_output_scale);
-    char *hdpi_dir = strcmp(resolved, default_hdpi_theme) == 0 ? lookup_relative(resolved) : NULL;
-
-    if (hdpi_dir != NULL && max_output_scale >= HDPI_SCALE) {
-        return (theme_location) { hdpi_dir, HDPI_SCALE };
-    }
-    g_free(hdpi_dir);
-    return (theme_location) { find_dir(resolved), NORMAL_SCALE };
+    double scale = max_output_scale > 0.0 ? max_output_scale : 1.0;
+    return (theme_location) { find_dir(scaled_name(name, scale)), scale };
 }
 
 void appearance_theme_location_clear(theme_location *location)
@@ -41,11 +34,8 @@ void appearance_theme_location_clear(theme_location *location)
 
 static const char *scaled_name(const char *name, double max_output_scale)
 {
-    if (name == NULL || name[0] == '\0') {
+    if (name == NULL || name[0] == '\0' || strcmp(name, default_theme) == 0) {
         return max_output_scale >= HDPI_SCALE ? default_hdpi_theme : default_theme;
-    }
-    if (max_output_scale >= HDPI_SCALE && strcmp(name, default_theme) == 0) {
-        return default_hdpi_theme;
     }
     return name;
 }

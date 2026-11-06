@@ -1,5 +1,7 @@
 #include "frame_painter.h"
 
+#include <math.h>
+
 #include "canvas.h"
 
 static const double opaque_alpha = 1.0;
@@ -191,7 +193,7 @@ static cairo_pattern_t *create_tile_pattern(const wm_paint_op *op, op_source sou
 {
     double scale = source.scale;
     cairo_surface_t *tiled = cairo_image_surface_create(
-        CAIRO_FORMAT_ARGB32, (int) (area->width * scale), (int) (area->height * scale));
+        CAIRO_FORMAT_ARGB32, (int) ceil(area->width * scale), (int) ceil(area->height * scale));
     if (cairo_surface_status(tiled) != CAIRO_STATUS_SUCCESS) {
         cairo_surface_destroy(tiled);
         return repeat_pattern(op, source);
@@ -223,6 +225,7 @@ static cairo_pattern_t *repeat_pattern(const wm_paint_op *op, op_source source)
     cairo_matrix_translate(&matrix, -op->origin.x, -op->origin.y);
     cairo_pattern_set_matrix(pattern, &matrix);
     cairo_pattern_set_extend(pattern, CAIRO_EXTEND_REPEAT);
+    cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
     return pattern;
 }
 
@@ -236,6 +239,7 @@ static cairo_pattern_t *padded_pattern(cairo_surface_t *surface, double scale,
     cairo_matrix_translate(&matrix, -area->x, -area->y);
     cairo_pattern_set_matrix(pattern, &matrix);
     cairo_pattern_set_extend(pattern, CAIRO_EXTEND_PAD);
+    cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
     return pattern;
 }
 
@@ -246,10 +250,7 @@ static wm_rect fill_area(const wm_paint_op *op, op_source source)
     if (op->mode != WM_FILL_PLAIN) {
         return area;
     }
-    wm_size pixels = appearance_surface_size(source.surface);
-    wm_rect image = {
-        op->dest.x, op->dest.y, (int) (pixels.width / source.scale),
-        (int) (pixels.height / source.scale),
-    };
+    wm_size size = appearance_surface_logical_size(source.surface, source.scale);
+    wm_rect image = { op->dest.x, op->dest.y, size.width, size.height };
     return wm_rect_intersection(&area, &image);
 }

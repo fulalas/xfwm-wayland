@@ -33,6 +33,7 @@ static wm_size list_cell(const wm_cycle_view *view, int columns, int label_heigh
 static wm_size grid_extent(const tabwin_grid *grid);
 static wm_rect centered_square(const wm_rect *cell, int size, int top);
 static int preview_icon_size(int item_size);
+static wm_rect icon_rect(const wm_cycle_view *view, const wm_rect *cell);
 
 cycle_layout appearance_tabwin_layout(const wm_cycle_view *view, int label_height)
 {
@@ -45,11 +46,12 @@ cycle_layout appearance_tabwin_layout(const wm_cycle_view *view, int label_heigh
     for (size_t i = 0; i < layout.count; i++) {
         layout.items[i] = cell_rect(&grid, i);
         layout.previews[i] = preview_rect(view, &layout.items[i]);
+        layout.icons[i] = icon_rect(view, &layout.items[i]);
     }
     return layout;
 }
 
-wm_rect appearance_tabwin_icon_rect(const wm_cycle_view *view, const wm_rect *cell)
+static wm_rect icon_rect(const wm_cycle_view *view, const wm_rect *cell)
 {
     int item = view->item_size;
 

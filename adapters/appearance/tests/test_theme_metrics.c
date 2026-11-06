@@ -186,13 +186,55 @@ static void test_absolute_name_is_the_theme_dir(void)
     theme_location location = appearance_theme_locate(dir, 2.0);
 
     CHECK(strcmp(location.dir, dir) == 0);
-    CHECK_INT_EQ(1, location.pixmap_scale);
+    CHECK(location.pixmap_scale == 2.0);
     appearance_theme_location_clear(&location);
     fixture_dir_remove(dir);
 }
 
+static const char variant_theme[] = "XfwmTestVariantTheme";
+
+static char *data_home;
+
+static char *variant_dir(const char *suffix)
+{
+    char *name = g_strconcat(variant_theme, suffix, NULL);
+    char *dir = g_build_filename(data_home, "themes", name, "xfwm4", NULL);
+    g_free(name);
+    return dir;
+}
+
+static void add_variant(const char *suffix)
+{
+    char *dir = variant_dir(suffix);
+    g_mkdir_with_parents(dir, 0700);
+    g_free(fixture_write(dir, "themerc", themerc_content));
+    g_free(dir);
+}
+
+static void check_variant(double output_scale, const char *suffix, double pixmap_scale)
+{
+    theme_location location = appearance_theme_locate(variant_theme, output_scale);
+    char *expected = variant_dir(suffix);
+
+    CHECK(location.dir != NULL && strcmp(location.dir, expected) == 0);
+    CHECK(location.pixmap_scale == pixmap_scale);
+    appearance_theme_location_clear(&location);
+    g_free(expected);
+}
+
+static void test_theme_pixels_map_to_screen_pixels(void)
+{
+    add_variant("");
+    add_variant("-hdpi");
+    check_variant(1.0, "", 1.0);
+    check_variant(1.5, "", 1.5);
+    check_variant(2.0, "", 2.0);
+}
+
 int main(void)
 {
+    data_home = fixture_dir_create();
+    g_setenv("XDG_DATA_HOME", data_home, TRUE);
     static const check_case cases[] = {
         { "metrics_from_pixmaps", test_metrics_from_pixmaps },
         { "missing_pixmaps_are_empty", test_missing_pixmaps_are_empty },
@@ -203,7 +245,10 @@ int main(void)
         { "double_scale_halves_metrics", test_double_scale_halves_metrics },
         { "half_transparent_pixels_are_cut_out", test_half_transparent_pixels_are_cut_out },
         { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
+        { "theme_pixels_map_to_screen_pixels", test_theme_pixels_map_to_screen_pixels },
     };
 
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    int result = check_run(cases, sizeof cases / sizeof cases[0]);
+    fixture_dir_remove(data_home);
+    return result;
 }

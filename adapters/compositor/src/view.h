@@ -36,6 +36,7 @@ wm_rect view_shown_frame(const view *view);
 wm_window *view_window(const view *view);
 struct wlr_surface *view_surface(const view *view);
 cairo_surface_t *view_icon(const view *view);
+cairo_surface_t *view_icon_for(view *view, const wm_rect *box, double scale);
 const icon_slot *view_icon_slot(const view *view);
 const char *view_title(const view *view);
 wm_rect view_client_rect(const view *view);

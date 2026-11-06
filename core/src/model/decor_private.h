@@ -78,7 +78,7 @@ decor_title decor_title_compute(const decor_frame *frame, const decor_buttons *b
 wm_title_shadow decor_title_shadow(const decor_frame *frame);
 wm_text_op decor_title_text(const decor_plan *plan);
 
-void decor_add_op(wm_decor_layout *layout, const wm_theme_metrics *theme, wm_paint_op op);
+bool decor_add_op(wm_decor_layout *layout, const wm_theme_metrics *theme, wm_paint_op op);
 void decor_paint_sides(const decor_plan *plan, wm_decor_layout *layout);
 void decor_paint_corners(const decor_plan *plan, wm_decor_layout *layout);
 void decor_paint_title(const decor_plan *plan, wm_decor_layout *layout);

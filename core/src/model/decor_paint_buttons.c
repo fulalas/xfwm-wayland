@@ -85,7 +85,9 @@ static void add_app_icon(const decor_plan *plan, wm_decor_layout *layout)
         .mode = WM_FILL_PLAIN,
         .clip = menu_pixmap_clip(plan, pixmap),
     };
-    decor_add_op(layout, frame->theme, op);
+    if (decor_add_op(layout, frame->theme, op)) {
+        layout->app_icon = wm_rect_intersection(&op.dest, &op.clip);
+    }
 }
 
 static wm_rect app_icon_rect(const decor_plan *plan, wm_size pixmap)

@@ -20,6 +20,7 @@ void osd_show_find_cursor(osd *osd);
 bool osd_is_modal(const osd *osd);
 wm_pointer_target osd_target_at(const osd *osd, node_role role, wm_point point);
 void osd_view_committed(osd *osd, view *view);
+void osd_view_icon_changed(osd *osd, view *view);
 void osd_view_destroyed(osd *osd, view *view);
 void osd_repaint(osd *osd);
 

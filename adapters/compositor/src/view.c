@@ -155,6 +155,7 @@ void view_icon_changed(view *v)
     if (v->window != NULL) {
         wm_window_icon_changed(v->server->desktop, v->window);
     }
+    osd_view_icon_changed(v->server->osd, v);
 }
 
 void view_report_not_responding(view *v)

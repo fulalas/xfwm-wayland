@@ -6,15 +6,13 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/xcursor.h>
 
-static const float XCURSOR_TRUNCATION_MARGIN = 0.5f;
-
 struct cursor_sprite {
     struct wlr_cursor *cursor;
     struct wl_event_source *timer;
     cursor_animation *animation;
     struct wlr_xcursor *xcursor;
     size_t frame;
-    int size;
+    float scale;
 };
 
 static int handle_timer(void *data);
@@ -102,7 +100,7 @@ static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, 
     }
     sprite->animation = NULL;
     sprite->xcursor = xcursor;
-    sprite->size = theme->size;
+    sprite->scale = theme->scale > 0.0f ? theme->scale : 1.0f;
     show_frame(sprite, 0);
     return true;
 }
@@ -132,10 +130,10 @@ static void show_animation_frame(cursor_sprite *sprite, size_t frame)
 static void show_xcursor_frame(cursor_sprite *sprite, size_t frame)
 {
     struct wlr_xcursor_image *image = sprite->xcursor->images[frame];
-    float scale = (float) image->width / ((float) sprite->size + XCURSOR_TRUNCATION_MARGIN);
     wlr_cursor_set_buffer(sprite->cursor, wlr_xcursor_image_get_buffer(image),
-                          (int32_t) lroundf((float) image->hotspot_x / scale),
-                          (int32_t) lroundf((float) image->hotspot_y / scale), scale);
+                          (int32_t) lroundf((float) image->hotspot_x / sprite->scale),
+                          (int32_t) lroundf((float) image->hotspot_y / sprite->scale),
+                          sprite->scale);
     schedule_next(sprite, image->delay);
 }
 

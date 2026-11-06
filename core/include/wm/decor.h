@@ -167,6 +167,7 @@ typedef struct wm_decor_layout {
     wm_paint_op ops[WM_DECOR_OP_MAX];
     size_t op_count;
     wm_text_op title_text;
+    wm_rect app_icon;
     wm_part_rect parts[WM_DECOR_OP_MAX];
     size_t part_count;
 } wm_decor_layout;

@@ -150,13 +150,7 @@ static bool band_needs_paint(const decorations *d, const decor_paint *paint, con
 
 static bool shows_icon(const wm_decor_layout *layout, const wm_rect *band)
 {
-    for (size_t i = 0; i < op_limit(layout); i++) {
-        const wm_paint_op *op = &layout->ops[i];
-        if (op->pixmap.kind == WM_PIXMAP_APP_ICON && op_touches(op, band)) {
-            return true;
-        }
-    }
-    return false;
+    return wm_rect_intersects(&layout->app_icon, band);
 }
 
 static bool shows_title(const wm_decor_layout *layout, const wm_rect *band)

@@ -3,7 +3,7 @@
 
 typedef struct theme_location {
     char *dir;
-    int pixmap_scale;
+    double pixmap_scale;
 } theme_location;
 
 theme_location appearance_theme_locate(const char *name, double max_output_scale);

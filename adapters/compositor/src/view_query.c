@@ -31,6 +31,12 @@ cairo_surface_t *view_icon(const view *v)
     return icon_slot_surface(v->impl->icon(v->self));
 }
 
+cairo_surface_t *view_icon_for(view *v, const wm_rect *box, double scale)
+{
+    int pixels = (int) lround(wm_max(box->width, box->height) * scale);
+    return icon_slot_surface_at(v->impl->icon(v->self), pixels);
+}
+
 const icon_slot *view_icon_slot(const view *v)
 {
     return v->impl->icon(v->self);

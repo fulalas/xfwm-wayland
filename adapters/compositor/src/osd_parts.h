@@ -30,6 +30,7 @@ void osd_cycle_hide(osd_cycle *cycle);
 bool osd_cycle_is_shown(const osd_cycle *cycle);
 int osd_cycle_item_at(const osd_cycle *cycle, wm_point point);
 void osd_cycle_view_committed(osd_cycle *cycle, view *view);
+void osd_cycle_icon_changed(osd_cycle *cycle, view *view);
 void osd_cycle_view_destroyed(osd_cycle *cycle, view *view);
 void osd_cycle_repaint(osd_cycle *cycle);
 

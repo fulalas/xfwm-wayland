@@ -1,3 +1,4 @@
+#include <math.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "output.h"
@@ -113,7 +114,7 @@ static void apply_decorations(view *v)
     decor_paint paint = {
         .layout = &v->target.decor,
         .title = v->target.title,
-        .icon = view_icon(v),
+        .icon = view_icon_for(v, &v->target.decor.app_icon, scale),
         .scale = scale,
     };
     decorations_paint(v->decor, &paint);

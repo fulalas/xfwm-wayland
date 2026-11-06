@@ -1,5 +1,7 @@
 #include "theme.h"
 
+#include "canvas.h"
+
 #include <stdarg.h>
 
 #include <glib.h>
@@ -9,7 +11,7 @@ enum {
 };
 
 struct theme {
-    int pixmap_scale;
+    double pixmap_scale;
     cairo_surface_t *side[WM_SIDE_COUNT][WM_FRAME_STATE_COUNT];
     cairo_surface_t *side_stretch[WM_SIDE_COUNT][WM_FRAME_STATE_COUNT];
     cairo_surface_t *corner[WM_CORNER_COUNT][WM_FRAME_STATE_COUNT];
@@ -84,7 +86,7 @@ cairo_surface_t *appearance_theme_pixmap(const theme *theme, wm_pixmap_ref ref)
     return table.slots[ref.index * table.columns + ref.image];
 }
 
-int appearance_theme_pixmap_scale(const theme *theme)
+double appearance_theme_pixmap_scale(const theme *theme)
 {
     return theme->pixmap_scale;
 }
@@ -206,8 +208,5 @@ static wm_size logical_size(const theme *theme, cairo_surface_t *surface)
     if (surface == NULL) {
         return (wm_size) { 0, 0 };
     }
-    return (wm_size) {
-        cairo_image_surface_get_width(surface) / theme->pixmap_scale,
-        cairo_image_surface_get_height(surface) / theme->pixmap_scale,
-    };
+    return appearance_surface_logical_size(surface, theme->pixmap_scale);
 }

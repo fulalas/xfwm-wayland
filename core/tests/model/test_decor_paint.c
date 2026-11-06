@@ -197,6 +197,7 @@ static void test_app_icon_is_painted_over_menu_button(void)
     CHECK(fixture_find_op(&layout, WM_PIXMAP_BUTTON, WM_BUTTON_MENU) != NULL);
     CHECK_INT_EQ(WM_PIXMAP_APP_ICON, icon->pixmap.kind);
     CHECK_RECT_EQ(((wm_rect) {5, 2, 16, 16}), icon->dest);
+    CHECK_RECT_EQ(icon->dest, layout.app_icon);
 }
 
 static void test_no_app_icon_without_menu_pixmap(void)
@@ -206,6 +207,7 @@ static void test_no_app_icon_without_menu_pixmap(void)
     fixture.theme.button[WM_BUTTON_MENU][WM_IMAGE_ACTIVE] = (wm_size) {0, 0};
     wm_decor_layout layout = fixture_layout(&fixture);
     CHECK(fixture_find_op(&layout, WM_PIXMAP_APP_ICON, 0) == NULL);
+    CHECK(wm_rect_is_empty(&layout.app_icon));
 }
 
 static void test_app_icon_on_stretched_title_uses_title_slice(void)

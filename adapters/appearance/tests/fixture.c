@@ -25,8 +25,12 @@ void fixture_dir_remove(char *dir)
 
     while (handle != NULL && (name = g_dir_read_name(handle)) != NULL) {
         char *path = g_build_filename(dir, name, NULL);
-        g_remove(path);
-        g_free(path);
+        if (g_file_test(path, G_FILE_TEST_IS_DIR) && !g_file_test(path, G_FILE_TEST_IS_SYMLINK)) {
+            fixture_dir_remove(path);
+        } else {
+            g_remove(path);
+            g_free(path);
+        }
     }
     if (handle != NULL) {
         g_dir_close(handle);

@@ -26,6 +26,7 @@ typedef struct cycle_layout {
     size_t count;
     wm_rect items[WM_CYCLE_ITEM_MAX];
     wm_rect previews[WM_CYCLE_ITEM_MAX];
+    wm_rect icons[WM_CYCLE_ITEM_MAX];
 } cycle_layout;
 
 typedef struct cycle_paint_request {

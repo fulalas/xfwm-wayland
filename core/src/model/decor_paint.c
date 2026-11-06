@@ -4,18 +4,19 @@ static wm_size source_size(const wm_theme_metrics *theme, wm_pixmap_ref pixmap);
 static void add_side(const decor_frame *frame, wm_decor_layout *layout, wm_side side);
 static void add_corner(const decor_frame *frame, wm_decor_layout *layout, wm_corner corner);
 
-void decor_add_op(wm_decor_layout *layout, const wm_theme_metrics *theme, wm_paint_op op)
+bool decor_add_op(wm_decor_layout *layout, const wm_theme_metrics *theme, wm_paint_op op)
 {
     if (layout->op_count >= WM_DECOR_OP_MAX) {
-        return;
+        return false;
     }
     if (wm_rect_is_empty(&op.dest) || wm_rect_is_empty(&op.clip)) {
-        return;
+        return false;
     }
     if (wm_size_is_empty(source_size(theme, op.pixmap))) {
-        return;
+        return false;
     }
     layout->ops[layout->op_count++] = op;
+    return true;
 }
 
 void decor_paint_sides(const decor_plan *plan, wm_decor_layout *layout)

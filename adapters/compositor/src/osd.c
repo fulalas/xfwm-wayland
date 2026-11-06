@@ -105,6 +105,13 @@ wm_pointer_target osd_target_at(const osd *o, node_role role, wm_point point)
     return (wm_pointer_target){WM_TARGET_OTHER, NULL, -1};
 }
 
+void osd_view_icon_changed(osd *o, view *v)
+{
+    if (o != NULL && o->cycle != NULL) {
+        osd_cycle_icon_changed(o->cycle, v);
+    }
+}
+
 void osd_view_committed(osd *o, view *v)
 {
     if (o != NULL) {

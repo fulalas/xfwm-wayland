@@ -64,7 +64,7 @@ static void paint_cell(cairo_t *cr, const tabwin_paint *paint, size_t index)
     const wm_cycle_view *view = paint->request->view;
     canvas_image icon = {
         .surface = icon_of(paint->request, index),
-        .rect = appearance_tabwin_icon_rect(view, &paint->request->layout->items[index]),
+        .rect = paint->request->layout->icons[index],
         .alpha = view->items[index].minimized ? minimized_icon_alpha : opaque_alpha,
     };
 

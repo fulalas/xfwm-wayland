@@ -25,6 +25,7 @@ struct osd_cycle {
     cycle_layout layout;
     wm_point origin;
     bool shown;
+    struct wl_event_source *repaint_idle;
 };
 
 static void store_view(osd_cycle *cycle, const wm_cycle_view *view);
@@ -37,6 +38,9 @@ static osd_preview *preview_slot(osd_cycle *cycle, size_t index);
 static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node);
 static void clear_previews_from(osd_cycle *cycle, size_t first);
 static void destroy_previews(osd_cycle *cycle);
+static bool lists_view(const osd_cycle *cycle, const view *v);
+static void handle_repaint_idle(void *data);
+static void cancel_repaint(osd_cycle *cycle);
 
 osd_cycle *osd_cycle_create(compositor *server, struct wlr_scene_tree *parent)
 {
@@ -59,6 +63,7 @@ osd_cycle *osd_cycle_create(compositor *server, struct wlr_scene_tree *parent)
 
 void osd_cycle_destroy(osd_cycle *cycle)
 {
+    cancel_repaint(cycle);
     destroy_previews(cycle);
     if (cycle->tree != NULL) {
         wlr_scene_node_destroy(&cycle->tree->node);
@@ -81,6 +86,7 @@ void osd_cycle_show(osd_cycle *cycle, const wm_cycle_view *view)
 
 void osd_cycle_hide(osd_cycle *cycle)
 {
+    cancel_repaint(cycle);
     cycle->shown = false;
     clear_previews_from(cycle, 0);
     wlr_scene_node_set_enabled(&cycle->tree->node, false);
@@ -110,6 +116,14 @@ void osd_cycle_view_committed(osd_cycle *cycle, view *v)
             update_preview(cycle, i);
         }
     }
+}
+
+void osd_cycle_icon_changed(osd_cycle *cycle, view *v)
+{
+    if (!cycle->shown || cycle->repaint_idle != NULL || !lists_view(cycle, v)) {
+        return;
+    }
+    cycle->repaint_idle = wl_event_loop_add_idle(cycle->server->loop, handle_repaint_idle, cycle);
 }
 
 void osd_cycle_view_destroyed(osd_cycle *cycle, view *v)
@@ -169,9 +183,10 @@ static void paint_panel(osd_cycle *cycle)
 
 static void collect_icons(const osd_cycle *cycle, cairo_surface_t **icons)
 {
+    double scale = outputs_max_scale(cycle->server->outputs);
     for (size_t i = 0; i < cycle->view.count; i++) {
         view *v = cycle->view.items[i].window;
-        icons[i] = v != NULL ? view_icon(v) : NULL;
+        icons[i] = v != NULL ? view_icon_for(v, &cycle->layout.icons[i], scale) : NULL;
     }
 }
 
@@ -231,5 +246,30 @@ static void destroy_previews(osd_cycle *cycle)
             osd_preview_destroy(cycle->previews[i]);
             cycle->previews[i] = NULL;
         }
+    }
+}
+
+static bool lists_view(const osd_cycle *cycle, const view *v)
+{
+    for (size_t i = 0; i < cycle->view.count; i++) {
+        if (cycle->view.items[i].window == v) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void handle_repaint_idle(void *data)
+{
+    osd_cycle *cycle = data;
+    cycle->repaint_idle = NULL;
+    osd_cycle_repaint(cycle);
+}
+
+static void cancel_repaint(osd_cycle *cycle)
+{
+    if (cycle->repaint_idle != NULL) {
+        wl_event_source_remove(cycle->repaint_idle);
+        cycle->repaint_idle = NULL;
     }
 }

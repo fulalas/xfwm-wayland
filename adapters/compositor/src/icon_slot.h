@@ -24,6 +24,7 @@ void icon_slot_set(icon_slot *slot, cairo_surface_t *surface);
 void icon_slot_set_app(icon_slot *slot, const app_icon *icon);
 void icon_slot_lookup_app(icon_slot *slot, const char *app_id);
 cairo_surface_t *icon_slot_surface(const icon_slot *slot);
+cairo_surface_t *icon_slot_surface_at(icon_slot *slot, int pixels);
 const char *icon_slot_app_name(const icon_slot *slot);
 cairo_surface_t *icon_slot_app_pixels(const icon_slot *slot);
 unsigned icon_slot_serial(const icon_slot *slot);
