@@ -14,6 +14,7 @@ xfce_logic = static_library(
   'xfce_logic',
   files(
     'src/accelerator.c',
+    'src/app_shortcuts.c',
     'src/accessibility_resolve.c',
     'src/changes.c',
     'src/config_table.c',
@@ -39,7 +40,7 @@ xfce_logic = static_library(
     '../../helper/protocol_text.c',
   ),
   include_directories: [xfce_inc, include_directories('../../helper')],
-  dependencies: [xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep, display_hash_dep],
+  dependencies: [wm_core_dep, xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep, display_hash_dep],
 )
 
 xfce_lib = static_library(
@@ -63,6 +64,7 @@ xfce_lib = static_library(
     'src/session_launch.c',
     'src/settings.c',
     'src/shortcuts.c',
+    'src/shortcuts_portal.c',
     'src/spawn.c',
     'src/terminate.c',
     'src/x11_setting_values.c',
@@ -98,7 +100,7 @@ xfce_dep = declare_dependency(
   ],
 )
 
-xfce_tests = ['accelerator', 'accessibility', 'config', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts']
+xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts']
 
 foreach name : xfce_tests
   test(

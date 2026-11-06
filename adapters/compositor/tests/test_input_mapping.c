@@ -29,6 +29,28 @@ static void test_keysyms_are_lowercased(void)
     CHECK_INT_EQ(XKB_KEY_Tab, input_mapping_keysym(XKB_KEY_Tab));
 }
 
+static void test_special_keys_are_shared_with_x11(void)
+{
+    key_chord volume = {XKB_KEY_XF86AudioRaiseVolume, XKB_KEY_XF86AudioRaiseVolume, 0};
+    key_chord function = {XKB_KEY_F12, XKB_KEY_F12, 0};
+    CHECK(input_mapping_shared_with_x11(&volume));
+    CHECK(input_mapping_shared_with_x11(&function));
+}
+
+static void test_typed_text_is_not_shared_with_x11(void)
+{
+    key_chord letter = {XKB_KEY_A, XKB_KEY_a, WM_MOD_SHIFT};
+    key_chord space = {XKB_KEY_space, XKB_KEY_space, 0};
+    key_chord enter = {XKB_KEY_Return, XKB_KEY_Return, 0};
+    key_chord shift = {XKB_KEY_Shift_L, XKB_KEY_Shift_L, 0};
+    key_chord shortcut = {XKB_KEY_a, XKB_KEY_a, WM_MOD_CTRL};
+    CHECK(!input_mapping_shared_with_x11(&letter));
+    CHECK(!input_mapping_shared_with_x11(&space));
+    CHECK(!input_mapping_shared_with_x11(&enter));
+    CHECK(!input_mapping_shared_with_x11(&shift));
+    CHECK(input_mapping_shared_with_x11(&shortcut));
+}
+
 static void test_vt_switch_from_translated_keysym(void)
 {
     key_chord chord = {XKB_KEY_XF86Switch_VT_3, XKB_KEY_F3, WM_MOD_CTRL | WM_MOD_ALT};
@@ -102,6 +124,8 @@ int main(void)
         {"wheel_value120_is_kept", test_wheel_value120_is_kept},
         {"lock_modifiers_are_ignored", test_lock_modifiers_are_ignored},
         {"keysyms_are_lowercased", test_keysyms_are_lowercased},
+        {"special_keys_are_shared_with_x11", test_special_keys_are_shared_with_x11},
+        {"typed_text_is_not_shared_with_x11", test_typed_text_is_not_shared_with_x11},
         {"vt_switch_from_translated_keysym", test_vt_switch_from_translated_keysym},
         {"vt_switch_from_function_key", test_vt_switch_from_function_key},
         {"function_key_without_chord_is_not_vt", test_function_key_without_chord_is_not_vt},

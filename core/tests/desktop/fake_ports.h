@@ -55,6 +55,9 @@ typedef struct fake_world {
     wm_point warp;
     int warp_calls;
     char spawned[FAKE_TEXT_MAX];
+    uint32_t app_shortcut_id;
+    int app_shortcut_presses;
+    int app_shortcut_releases;
     int logout_calls;
     int stored_workspace_count;
     int store_calls;

@@ -1,6 +1,7 @@
 #ifndef WM_PORTS_H
 #define WM_PORTS_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -35,6 +36,7 @@ typedef struct wm_commands {
     void (*ask_terminate)(void *self, void *window);
     void (*warp_pointer)(void *self, wm_point point);
     void (*spawn)(void *self, const char *command);
+    void (*app_shortcut)(void *self, uint32_t id, bool pressed, uint32_t time_ms);
     void (*logout)(void *self);
     void (*store_workspace_count)(void *self, int count);
     void (*schedule_timer)(void *self, uint32_t delay_ms);

@@ -67,6 +67,12 @@ unsigned input_mapping_vt(const key_chord *chord)
     return 0;
 }
 
+bool input_mapping_shared_with_x11(const key_chord *chord)
+{
+    wm_key key = {chord->translated_keysym, chord->modifiers};
+    return wm_key_is_global(&key);
+}
+
 uint32_t input_mapping_button(uint32_t linux_button)
 {
     for (size_t i = 0; i < sizeof(button_pairs) / sizeof(button_pairs[0]); i++) {

@@ -302,6 +302,7 @@ compositor_sources = files(
   'src/xwayland_describe.c',
   'src/xwayland_ewmh.c',
   'src/xwayland_geometry.c',
+  'src/xwayland_keys.c',
   'src/xwayland_messages.c',
   'src/xwayland_properties.c',
   'src/xwayland_requests.c',

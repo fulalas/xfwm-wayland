@@ -16,10 +16,11 @@ wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event)
 
 wm_dispatch wm_key_released(wm_desktop *desktop, const wm_key_event *event)
 {
-    wm_dispatch result = WM_FORWARD;
-    if (cycle_is_active(desktop)) {
+    wm_dispatch result = actions_release_key(desktop, event);
+    bool grabbed = menu_is_active(desktop) || moveresize_is_active(desktop);
+    if (result == WM_FORWARD && cycle_is_active(desktop)) {
         result = cycle_key_release(desktop, event);
-    } else if (menu_is_active(desktop) || moveresize_is_active(desktop)) {
+    } else if (result == WM_FORWARD && grabbed) {
         result = WM_CONSUMED;
     }
     present_flush(desktop);

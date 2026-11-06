@@ -6,3 +6,8 @@ i18n.merge_file(
   install: true,
   install_dir: get_option('datadir') / 'wayland-sessions',
 )
+
+install_data(
+  'xfwm-wayland.portal',
+  install_dir: get_option('datadir') / 'xdg-desktop-portal' / 'portals',
+)

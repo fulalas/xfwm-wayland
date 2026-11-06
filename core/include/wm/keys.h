@@ -1,6 +1,7 @@
 #ifndef WM_KEYS_H
 #define WM_KEYS_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -104,13 +105,21 @@ typedef struct wm_command_binding {
     const char *command;
 } wm_command_binding;
 
+typedef struct wm_app_shortcut {
+    wm_key key;
+    uint32_t id;
+} wm_app_shortcut;
+
 typedef struct wm_keymap {
     const wm_key_binding *bindings;
     size_t binding_count;
     const wm_command_binding *commands;
     size_t command_count;
+    const wm_app_shortcut *app_shortcuts;
+    size_t app_shortcut_count;
 } wm_keymap;
 
 wm_action wm_action_from_name(const char *name);
+bool wm_key_is_global(const wm_key *key);
 
 #endif

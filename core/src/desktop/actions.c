@@ -19,6 +19,7 @@ typedef struct window_action {
     window_handler run;
 } window_action;
 
+static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *event);
 static bool is_grab_only(wm_action action);
 static bool is_window_action(wm_action action);
 static void run_focused(wm_desktop *desktop, wm_window *window, wm_action action);
@@ -92,7 +93,10 @@ wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
         return WM_CONSUMED;
     }
     wm_action action = keybindings_action_for(&desktop->keys, event);
-    if (action == WM_ACTION_NONE || is_grab_only(action)) {
+    if (action == WM_ACTION_NONE) {
+        return press_app_shortcut(desktop, event);
+    }
+    if (is_grab_only(action)) {
         return WM_FORWARD;
     }
     wm_window *focused = desktop->focus.focused;
@@ -103,6 +107,34 @@ wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
     } else {
         actions_run_global(desktop, action);
     }
+    return WM_CONSUMED;
+}
+
+wm_dispatch actions_release_key(wm_desktop *desktop, const wm_key_event *event)
+{
+    uint32_t id = desktop->held_app_shortcut;
+    if (id == 0 || desktop->held_app_shortcut_keysym != event->keysym) {
+        return WM_FORWARD;
+    }
+    desktop->held_app_shortcut = 0;
+    wm_commands *commands = &desktop->ports.commands;
+    commands->app_shortcut(commands->self, id, false, event->time_ms);
+    return WM_CONSUMED;
+}
+
+static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *event)
+{
+    const wm_app_shortcut *shortcut = keybindings_app_shortcut_for(&desktop->keys, event);
+    if (shortcut == NULL) {
+        return WM_FORWARD;
+    }
+    wm_commands *commands = &desktop->ports.commands;
+    if (desktop->held_app_shortcut != 0) {
+        commands->app_shortcut(commands->self, desktop->held_app_shortcut, false, event->time_ms);
+    }
+    desktop->held_app_shortcut = shortcut->id;
+    desktop->held_app_shortcut_keysym = event->keysym;
+    commands->app_shortcut(commands->self, shortcut->id, true, event->time_ms);
     return WM_CONSUMED;
 }
 

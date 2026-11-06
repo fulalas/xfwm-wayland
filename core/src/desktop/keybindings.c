@@ -14,8 +14,8 @@ enum {
 
 static bool key_matches(const wm_key *key, const wm_key_event *event);
 static uint32_t default_keysym(wm_action action);
-static void copy_bindings(keybindings *keys, const wm_keymap *keymap);
 static void copy_commands(keybindings *keys, const wm_keymap *keymap);
+static void *copy_array(const void *items, size_t count, size_t size, size_t *copied);
 static char *copy_text(const char *text);
 
 void keybindings_free(keybindings *keys)
@@ -25,6 +25,7 @@ void keybindings_free(keybindings *keys)
     }
     free(keys->commands);
     free(keys->bindings);
+    free(keys->app_shortcuts);
     *keys = (keybindings) {0};
 }
 
@@ -34,8 +35,11 @@ void keybindings_copy(keybindings *keys, const wm_keymap *keymap)
     if (keymap == NULL) {
         return;
     }
-    copy_bindings(keys, keymap);
+    keys->bindings = copy_array(keymap->bindings, keymap->binding_count,
+                                sizeof(keys->bindings[0]), &keys->binding_count);
     copy_commands(keys, keymap);
+    keys->app_shortcuts = copy_array(keymap->app_shortcuts, keymap->app_shortcut_count,
+                                     sizeof(keys->app_shortcuts[0]), &keys->app_shortcut_count);
 }
 
 wm_action keybindings_action_for(const keybindings *keys, const wm_key_event *event)
@@ -53,6 +57,17 @@ const char *keybindings_command_for(const keybindings *keys, const wm_key_event 
     for (size_t i = 0; i < keys->command_count; i++) {
         if (key_matches(&keys->commands[i].key, event)) {
             return keys->commands[i].command;
+        }
+    }
+    return NULL;
+}
+
+const wm_app_shortcut *keybindings_app_shortcut_for(const keybindings *keys,
+                                                     const wm_key_event *event)
+{
+    for (size_t i = 0; i < keys->app_shortcut_count; i++) {
+        if (key_matches(&keys->app_shortcuts[i].key, event)) {
+            return &keys->app_shortcuts[i];
         }
     }
     return NULL;
@@ -119,17 +134,14 @@ static uint32_t default_keysym(wm_action action)
     }
 }
 
-static void copy_bindings(keybindings *keys, const wm_keymap *keymap)
+static void *copy_array(const void *items, size_t count, size_t size, size_t *copied)
 {
-    if (keymap->binding_count == 0) {
-        return;
+    void *copy = count > 0 ? malloc(count * size) : NULL;
+    *copied = copy != NULL ? count : 0;
+    if (copy != NULL) {
+        memcpy(copy, items, count * size);
     }
-    keys->bindings = malloc(keymap->binding_count * sizeof(keys->bindings[0]));
-    if (keys->bindings == NULL) {
-        return;
-    }
-    memcpy(keys->bindings, keymap->bindings, keymap->binding_count * sizeof(keys->bindings[0]));
-    keys->binding_count = keymap->binding_count;
+    return copy;
 }
 
 static void copy_commands(keybindings *keys, const wm_keymap *keymap)

@@ -22,6 +22,7 @@ static void close_window(void *self, void *window);
 static void ask_terminate(void *self, void *window);
 static void warp_pointer(void *self, wm_point point);
 static void spawn(void *self, const char *command);
+static void app_shortcut(void *self, uint32_t id, bool pressed, uint32_t time_ms);
 static void logout(void *self);
 static void store_workspace_count(void *self, int count);
 static void schedule_timer(void *self, uint32_t delay_ms);
@@ -41,7 +42,7 @@ void fake_world_init(fake_world *world)
         zoom_changed, cursor_changed,
     };
     world->ports.commands = (wm_commands) {
-        world, configure, close_window, ask_terminate, warp_pointer, spawn,
+        world, configure, close_window, ask_terminate, warp_pointer, spawn, app_shortcut,
         logout, store_workspace_count, schedule_timer,
     };
     world->ports.environment = (wm_environment) {
@@ -283,6 +284,18 @@ static void spawn(void *self, const char *command)
 {
     fake_world *world = world_of(self);
     strncpy(world->spawned, command, FAKE_TEXT_MAX - 1);
+}
+
+static void app_shortcut(void *self, uint32_t id, bool pressed, uint32_t time_ms)
+{
+    (void) time_ms;
+    fake_world *world = world_of(self);
+    world->app_shortcut_id = id;
+    if (pressed) {
+        world->app_shortcut_presses++;
+    } else {
+        world->app_shortcut_releases++;
+    }
 }
 
 static void logout(void *self)

@@ -7,6 +7,7 @@
 #include "wm/keys.h"
 
 bool accelerator_parse(const char *text, wm_key *key);
+bool accelerator_parse_trigger(const char *text, wm_key *key);
 uint32_t accelerator_modifier_from_name(const char *name);
 
 #endif

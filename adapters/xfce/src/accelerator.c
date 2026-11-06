@@ -26,6 +26,7 @@ static const modifier_name modifier_names[] = {
     { "Mod4", WM_MOD_SUPER },
     { "Hyper", WM_MOD_SUPER },
     { "Meta", WM_MOD_SUPER },
+    { "Logo", WM_MOD_SUPER },
     { "Mod3", WM_MOD_MOD3 },
     { "Mod5", WM_MOD_MOD5 },
 };
@@ -33,27 +34,40 @@ static const modifier_name modifier_names[] = {
 static const char *skip_modifiers(const char *text, uint32_t *modifiers);
 static const char *skip_one_modifier(const char *text, uint32_t *modifiers);
 static uint32_t keysym_from_name(const char *name);
+static bool make_key(const char *name, uint32_t modifiers, wm_key *key);
 static bool is_disabled(const char *text);
 
 bool accelerator_parse(const char *text, wm_key *key)
 {
     uint32_t modifiers = 0;
     const char *name;
-    uint32_t keysym;
 
     if (!text || is_disabled(text)) {
         return false;
     }
     name = skip_modifiers(text, &modifiers);
-    if (!name) {
+    return name != NULL && make_key(name, modifiers, key);
+}
+
+bool accelerator_parse_trigger(const char *text, wm_key *key)
+{
+    if (text == NULL || *text == '\0') {
         return false;
     }
-    keysym = keysym_from_name(name);
-    if (keysym == XKB_KEY_NoSymbol) {
-        return false;
+    char **parts = g_strsplit(text, "+", -1);
+    guint last = g_strv_length(parts) - 1;
+    uint32_t modifiers = 0;
+    bool parsed = true;
+
+    for (guint i = 0; parsed && i < last; i++) {
+        const char *name = g_strstrip(parts[i]);
+        uint32_t modifier = accelerator_modifier_from_name(name);
+        parsed = modifier != 0 || g_ascii_strcasecmp(name, "NUM") == 0;
+        modifiers |= modifier;
     }
-    *key = (wm_key) { .keysym = xkb_keysym_to_lower(keysym), .modifiers = modifiers };
-    return true;
+    parsed = parsed && make_key(g_strstrip(parts[last]), modifiers, key);
+    g_strfreev(parts);
+    return parsed;
 }
 
 uint32_t accelerator_modifier_from_name(const char *name)
@@ -104,6 +118,17 @@ static uint32_t keysym_from_name(const char *name)
         keysym = xkb_keysym_from_name(name, XKB_KEYSYM_CASE_INSENSITIVE);
     }
     return keysym;
+}
+
+static bool make_key(const char *name, uint32_t modifiers, wm_key *key)
+{
+    uint32_t keysym = keysym_from_name(name);
+
+    if (keysym == XKB_KEY_NoSymbol) {
+        return false;
+    }
+    *key = (wm_key) { .keysym = xkb_keysym_to_lower(keysym), .modifiers = modifiers };
+    return true;
 }
 
 static bool is_disabled(const char *text)

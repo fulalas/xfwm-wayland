@@ -1,0 +1,4 @@
+[portal]
+DBusName=org.freedesktop.impl.portal.desktop.xfwm
+Interfaces=org.freedesktop.impl.portal.GlobalShortcuts;
+UseIn=xfce

@@ -33,6 +33,12 @@ wm_dispatch fake_key(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers)
     return wm_key_pressed(desktop, &event);
 }
 
+wm_dispatch fake_key_release(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers)
+{
+    wm_key_event event = {keysym, modifiers, 0};
+    return wm_key_released(desktop, &event);
+}
+
 wm_point fake_part_point(const wm_window *window, wm_part part)
 {
     wm_window_view view = wm_window_current_view(window);
@@ -79,7 +85,12 @@ void fake_set_keymap(wm_desktop *desktop)
     static const wm_command_binding commands[] = {
         {{FAKE_KEY_T, WM_MOD_CTRL | WM_MOD_ALT}, "xfce4-terminal"},
     };
-    wm_keymap keymap = {bindings, sizeof(bindings) / sizeof(bindings[0]), commands, 1};
+    static const wm_app_shortcut app_shortcuts[] = {
+        {{FAKE_KEY_T, WM_MOD_SUPER}, FAKE_APP_SHORTCUT},
+        {{FAKE_KEY_T, WM_MOD_CTRL | WM_MOD_ALT}, FAKE_APP_SHORTCUT + 1},
+    };
+    wm_keymap keymap = {bindings, sizeof(bindings) / sizeof(bindings[0]), commands, 1,
+                        app_shortcuts, sizeof(app_shortcuts) / sizeof(app_shortcuts[0])};
     wm_desktop_set_keymap(desktop, &keymap);
 }
 

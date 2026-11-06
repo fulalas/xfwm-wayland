@@ -121,6 +121,43 @@ static void test_command_binding_spawns(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_app_shortcut_reports_press_and_release(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    CHECK_INT_EQ(WM_CONSUMED, fake_key(desktop, FAKE_KEY_T, WM_MOD_SUPER));
+    CHECK_INT_EQ(FAKE_APP_SHORTCUT, world.app_shortcut_id);
+    CHECK_INT_EQ(1, world.app_shortcut_presses);
+    CHECK_INT_EQ(WM_CONSUMED, fake_key_release(desktop, FAKE_KEY_T, WM_MOD_SUPER));
+    CHECK_INT_EQ(1, world.app_shortcut_releases);
+    CHECK_INT_EQ(WM_FORWARD, fake_key_release(desktop, FAKE_KEY_T, WM_MOD_SUPER));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_second_app_shortcut_releases_the_first(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_key(desktop, FAKE_KEY_T, WM_MOD_SUPER);
+    fake_key(desktop, FAKE_KEY_T, WM_MOD_SUPER);
+    CHECK_INT_EQ(2, world.app_shortcut_presses);
+    CHECK_INT_EQ(1, world.app_shortcut_releases);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_user_shortcut_beats_app_shortcut(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_key(desktop, FAKE_KEY_T, WM_MOD_CTRL | WM_MOD_ALT);
+    CHECK(world.spawned[0] == 'x');
+    CHECK_INT_EQ(0, world.app_shortcut_presses);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_fill_key_grows_to_neighbours(void)
 {
     fake_world world;
@@ -183,6 +220,9 @@ int main(void)
          test_not_responding_after_close_asks_terminate},
         {"close_without_focus_logs_out", test_close_without_focus_logs_out},
         {"command_binding_spawns", test_command_binding_spawns},
+        {"app_shortcut_reports_press_and_release", test_app_shortcut_reports_press_and_release},
+        {"second_app_shortcut_releases_the_first", test_second_app_shortcut_releases_the_first},
+        {"user_shortcut_beats_app_shortcut", test_user_shortcut_beats_app_shortcut},
         {"fill_key_grows_to_neighbours", test_fill_key_grows_to_neighbours},
         {"request_configure_ignored_when_maximized",
          test_request_configure_ignored_when_maximized},

@@ -14,6 +14,7 @@
 #include "session_launch.h"
 #include "settings.h"
 #include "shortcuts.h"
+#include "shortcuts_portal.h"
 #include "spawn.h"
 #include "x11_settings.h"
 
@@ -22,6 +23,7 @@ struct xfce_environment {
     channels *channels;
     dispatcher *dispatcher;
     keymap_store *keymap;
+    shortcuts_portal *portal;
     gtk_bridge *bridge;
     session_launch *session;
     char *theme_name;
@@ -35,6 +37,7 @@ static void on_dispatch(void *self, unsigned flags);
 static void notify_settings(xfce_environment *environment, unsigned flags);
 static void on_style_changed(void *self);
 static void on_session_ended(void *self);
+static void on_app_shortcuts_changed(void *self);
 static void notify(xfce_environment *environment, void (*callback)(void *self));
 static keyboard_prefs keyboard_prefs_of(void *self);
 static pointer_prefs pointer_prefs_of(void *self, const char *device_name);
@@ -53,11 +56,13 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
     channel_watch watch = { .self = environment, .changed = on_channel_changed };
     dispatch_target target = { .self = environment, .run = on_dispatch };
     bridge_listener bridge_listener = { .self = environment, .style_changed = on_style_changed };
+    shortcuts_portal_listener portal_listener = { environment, on_app_shortcuts_changed };
 
     environment->listener = *listener;
     environment->channels = channels_create(&watch);
     environment->dispatcher = dispatcher_create(&target);
     environment->bridge = gtk_bridge_create(&bridge_listener);
+    environment->portal = shortcuts_portal_create(&portal_listener);
     settings_store_missing_defaults(channels_get(environment->channels, CHANNEL_XFWM4));
     refresh_settings(environment);
     reload_keymap(environment);
@@ -67,6 +72,7 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
 void xfce_environment_destroy(xfce_environment *environment)
 {
     session_launch_destroy(environment->session);
+    shortcuts_portal_destroy(environment->portal);
     gtk_bridge_destroy(environment->bridge);
     dispatcher_destroy(environment->dispatcher);
     channels_destroy(environment->channels);
@@ -99,7 +105,17 @@ wm_config xfce_environment_config(xfce_environment *environment,
 
 wm_keymap xfce_environment_keymap(xfce_environment *environment)
 {
-    return keymap_store_view(environment->keymap);
+    wm_keymap keymap = keymap_store_view(environment->keymap);
+
+    keymap.app_shortcut_count = shortcuts_portal_keymap(environment->portal,
+                                                        &keymap.app_shortcuts);
+    return keymap;
+}
+
+void xfce_environment_app_shortcut(xfce_environment *environment, uint32_t id, bool pressed,
+                                   uint32_t time_ms)
+{
+    shortcuts_portal_activate(environment->portal, id, pressed, time_ms);
 }
 
 xfce_style xfce_environment_style(xfce_environment *environment)
@@ -246,6 +262,13 @@ static void on_session_ended(void *self)
     xfce_environment *environment = self;
 
     notify(environment, environment->listener.session_ended);
+}
+
+static void on_app_shortcuts_changed(void *self)
+{
+    xfce_environment *environment = self;
+
+    notify(environment, environment->listener.shortcuts_changed);
 }
 
 static void notify(xfce_environment *environment, void (*callback)(void *self))

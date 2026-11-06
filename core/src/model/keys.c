@@ -4,6 +4,13 @@
 #include <string.h>
 
 enum {
+    KEYSYM_F1 = 0xffbe,
+    KEYSYM_F35 = 0xffe0,
+    KEYSYM_PAUSE = 0xff13,
+    KEYSYM_SYS_REQ = 0xff15,
+    KEYSYM_PRINT = 0xff61,
+    KEYSYM_BREAK = 0xff6b,
+    KEYSYM_VENDOR_FIRST = 0x10000000,
     NUMBERED_WORKSPACE_COUNT = WM_ACTION_WORKSPACE_12 - WM_ACTION_WORKSPACE_1 + 1,
     DECIMAL_BASE = 10,
     WORKSPACE_NUMBER_MAX_DIGITS = 2,
@@ -148,6 +155,16 @@ static int workspace_number(const char *text)
         return 0;
     }
     return number;
+}
+
+bool wm_key_is_global(const wm_key *key)
+{
+    uint32_t sym = key->keysym;
+    if ((key->modifiers & (WM_MOD_CTRL | WM_MOD_ALT | WM_MOD_SUPER)) != 0) {
+        return true;
+    }
+    return (sym >= KEYSYM_F1 && sym <= KEYSYM_F35) || (sym >= KEYSYM_PAUSE && sym <= KEYSYM_SYS_REQ)
+           || (sym >= KEYSYM_PRINT && sym <= KEYSYM_BREAK) || sym >= KEYSYM_VENDOR_FIRST;
 }
 
 static bool is_digit(char character)

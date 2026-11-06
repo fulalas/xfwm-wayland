@@ -17,6 +17,7 @@ wm_dispatch fake_release(fake_world *world, wm_desktop *desktop, const fake_clic
 wm_dispatch fake_scroll(fake_world *world, wm_desktop *desktop, const fake_click *where,
                         int vertical_steps);
 wm_dispatch fake_key(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers);
+wm_dispatch fake_key_release(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers);
 wm_point fake_part_point(const wm_window *window, wm_part part);
 fake_click fake_on_part(wm_window *window, wm_part part, uint32_t button);
 void fake_set_keymap(wm_desktop *desktop);
@@ -39,6 +40,10 @@ enum fake_keysym {
     FAKE_KEY_2 = 0x32,
     FAKE_KEY_D = 0x64,
     FAKE_KEY_X = 0x78,
+};
+
+enum {
+    FAKE_APP_SHORTCUT = 7,
 };
 
 #endif

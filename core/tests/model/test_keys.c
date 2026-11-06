@@ -63,6 +63,30 @@ static void test_unknown_names_map_to_none(void)
     CHECK_INT_EQ(WM_ACTION_NONE, wm_action_from_name(NULL));
 }
 
+static void test_global_keys_are_special_or_modified(void)
+{
+    wm_key volume = {0x1008ff13, 0};
+    wm_key function = {0xffc9, 0};
+    wm_key print = {0xff61, 0};
+    wm_key copy = {0x63, WM_MOD_CTRL};
+    CHECK(wm_key_is_global(&volume));
+    CHECK(wm_key_is_global(&function));
+    CHECK(wm_key_is_global(&print));
+    CHECK(wm_key_is_global(&copy));
+}
+
+static void test_typing_keys_are_not_global(void)
+{
+    wm_key letter = {0x61, WM_MOD_SHIFT};
+    wm_key enter = {0xff0d, 0};
+    wm_key escape = {0xff1b, 0};
+    wm_key shift = {0xffe1, 0};
+    CHECK(!wm_key_is_global(&letter));
+    CHECK(!wm_key_is_global(&enter));
+    CHECK(!wm_key_is_global(&escape));
+    CHECK(!wm_key_is_global(&shift));
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -75,6 +99,8 @@ int main(void)
         {"out_of_range_workspace_numbers_are_unknown",
          test_out_of_range_workspace_numbers_are_unknown},
         {"unknown_names_map_to_none", test_unknown_names_map_to_none},
+        {"global_keys_are_special_or_modified", test_global_keys_are_special_or_modified},
+        {"typing_keys_are_not_global", test_typing_keys_are_not_global},
     };
     return check_run(cases, sizeof cases / sizeof cases[0]);
 }

@@ -49,7 +49,7 @@ test(
     ['test_input_mapping.c', '../src/input_mapping.c'],
     include_directories: compositor_test_inc,
     c_args: compositor_c_args,
-    dependencies: [check_dep, wlroots_dep, xkbcommon_dep],
+    dependencies: [check_dep, wm_core_dep, wlroots_dep, xkbcommon_dep],
   ),
 )
 
