@@ -20,7 +20,7 @@ struct cursor_sprite {
     struct wlr_xcursor *xcursor;
     size_t frame;
     float scale;
-    float source_scale;
+    float load_scale;
     int size;
     struct wlr_buffer **resized;
     size_t resized_count;
@@ -39,6 +39,8 @@ static struct wlr_buffer *resized_frame(cursor_sprite *sprite, size_t frame,
 static struct wlr_buffer *resize_image(const struct wlr_xcursor_image *image,
                                        const scalable_layout *layout);
 static void drop_resized(cursor_sprite *sprite);
+static struct wlr_xcursor *load_xcursor(const cursor_theme_view *theme, const char *name,
+                                        float load_scale);
 static bool shrink_into(cairo_surface_t *target, const struct wlr_xcursor_image *image);
 static void enlarge_into(cairo_surface_t *target, const struct wlr_xcursor_image *image);
 
@@ -111,14 +113,17 @@ static bool show_scalable(cursor_sprite *sprite, const cursor_theme_view *theme,
 static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, const char *name)
 {
     float scale = theme->scale > 0.0f ? theme->scale : 1.0f;
-    float source_scale = scale * SOURCE_OVERSAMPLE;
-    if (theme->manager == NULL || !wlr_xcursor_manager_load(theme->manager, source_scale)) {
+    float load_scale = scale;
+    struct wlr_xcursor *xcursor = load_xcursor(theme, name, load_scale);
+    if (xcursor == NULL) {
         return false;
     }
-    struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(theme->manager, name,
-                                                                  source_scale);
-    if (xcursor == NULL || xcursor->image_count == 0) {
-        return false;
+    if (xcursor->images[0]->width != (uint32_t) lroundf((float) theme->size * scale)) {
+        struct wlr_xcursor *larger = load_xcursor(theme, name, scale * SOURCE_OVERSAMPLE);
+        if (larger != NULL) {
+            xcursor = larger;
+            load_scale = scale * SOURCE_OVERSAMPLE;
+        }
     }
     if (xcursor != sprite->xcursor || scale != sprite->scale || theme->size != sprite->size) {
         drop_resized(sprite);
@@ -126,7 +131,7 @@ static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, 
     sprite->animation = NULL;
     sprite->xcursor = xcursor;
     sprite->scale = scale;
-    sprite->source_scale = source_scale;
+    sprite->load_scale = load_scale;
     sprite->size = theme->size;
     show_frame(sprite, 0);
     return true;
@@ -172,9 +177,9 @@ static void show_xcursor_frame(cursor_sprite *sprite, size_t frame)
                               layout.buffer_scale);
     } else {
         wlr_cursor_set_buffer(sprite->cursor, wlr_xcursor_image_get_buffer(image),
-                              (int32_t) lroundf((float) image->hotspot_x / sprite->source_scale),
-                              (int32_t) lroundf((float) image->hotspot_y / sprite->source_scale),
-                              sprite->source_scale);
+                              (int32_t) lroundf((float) image->hotspot_x / sprite->load_scale),
+                              (int32_t) lroundf((float) image->hotspot_y / sprite->load_scale),
+                              sprite->load_scale);
     }
     schedule_next(sprite, image->delay);
 }
@@ -249,6 +254,17 @@ static void enlarge_into(cairo_surface_t *target, const struct wlr_xcursor_image
     xcursor_resize(&source, (uint32_t *) cairo_image_surface_get_data(target),
                    cairo_image_surface_get_width(target), cairo_image_surface_get_height(target));
     cairo_surface_mark_dirty(target);
+}
+
+static struct wlr_xcursor *load_xcursor(const cursor_theme_view *theme, const char *name,
+                                        float load_scale)
+{
+    if (theme->manager == NULL || !wlr_xcursor_manager_load(theme->manager, load_scale)) {
+        return NULL;
+    }
+    struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(theme->manager, name,
+                                                                  load_scale);
+    return xcursor != NULL && xcursor->image_count > 0 ? xcursor : NULL;
 }
 
 static void drop_resized(cursor_sprite *sprite)

@@ -22,7 +22,6 @@ struct decorations {
     const compositor_painter *painter;
     band_set main;
     band_set mirror;
-    float opacity;
     band_mark marks[FRAME_BAND_COUNT];
     wm_decor_layout painted_layout;
     char *painted_title;
@@ -61,7 +60,6 @@ decorations *decorations_create(struct wlr_scene_tree *parent, const compositor_
         return NULL;
     }
     d->painter = painter;
-    d->opacity = 1.0f;
     if (!band_set_create(&d->main, parent)) {
         free(d);
         return NULL;
@@ -111,7 +109,6 @@ void decorations_hide(decorations *d)
 
 void decorations_set_opacity(decorations *d, float opacity)
 {
-    d->opacity = opacity;
     band_set_opacity(&d->main, opacity);
 }
 

@@ -30,6 +30,7 @@ typedef struct issued_token {
     bool trusted;
     int64_t created_ms;
     struct wl_list link;
+    struct wl_listener client_destroy;
 } issued_token;
 
 typedef struct token_draft {
@@ -64,6 +65,7 @@ static bool draft_trusted(const token_draft *draft, struct wl_client *client);
 static issued_token *issue(activation_protocol *protocol, struct wl_client *client,
                            bool trusted);
 static void drop_oldest_of(activation_protocol *protocol, struct wl_client *client);
+static void handle_client_destroy(struct wl_listener *listener, void *data);
 static issued_token *take_token(activation_protocol *protocol, const char *name);
 static void drop_expired(activation_protocol *protocol);
 static void drop_token(activation_protocol *protocol, issued_token *token);
@@ -282,6 +284,8 @@ static issued_token *issue(activation_protocol *protocol, struct wl_client *clie
     token->trusted = trusted;
     token->created_ms = now_ms();
     wl_list_insert(protocol->issued.prev, &token->link);
+    token->client_destroy.notify = handle_client_destroy;
+    wl_client_add_destroy_listener(client, &token->client_destroy);
     return token;
 }
 
@@ -327,8 +331,16 @@ static void drop_expired(activation_protocol *protocol)
 static void drop_token(activation_protocol *protocol, issued_token *token)
 {
     (void) protocol;
+    wl_list_remove(&token->client_destroy.link);
     wl_list_remove(&token->link);
     free(token);
+}
+
+static void handle_client_destroy(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    issued_token *token = wl_container_of(listener, token, client_destroy);
+    drop_token(NULL, token);
 }
 
 static bool random_name(char *name)

@@ -230,12 +230,19 @@ static void render(window_capture_source *s)
         return;
     }
     float scale = sync_scene(s);
+    int width = (int) ceilf((float) frame.width * scale);
+    int height = (int) ceilf((float) frame.height * scale);
     struct wlr_output_state state;
     wlr_output_state_init(&state);
-    wlr_output_state_set_enabled(&state, true);
-    wlr_output_state_set_scale(&state, scale);
-    wlr_output_state_set_custom_mode(&state, (int) ceilf((float) frame.width * scale),
-                                     (int) ceilf((float) frame.height * scale), 0);
+    if (!s->output.enabled) {
+        wlr_output_state_set_enabled(&state, true);
+    }
+    if (s->output.scale != scale) {
+        wlr_output_state_set_scale(&state, scale);
+    }
+    if (s->output.width != width || s->output.height != height) {
+        wlr_output_state_set_custom_mode(&state, width, height, 0);
+    }
     if (!wlr_scene_output_build_state(s->scene_output, &state, NULL) ||
         !wlr_output_commit_state(&s->output, &state)) {
         wlr_log(WLR_DEBUG, "cannot render the capture of a window");

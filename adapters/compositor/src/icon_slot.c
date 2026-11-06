@@ -139,6 +139,11 @@ static void request_icon(icon_slot *slot, const char *app_id, const char *icon_n
     char *app_id_copy = strdup(app_id);
     char *name_copy = strdup(icon_name);
     forget_lookup(slot);
+    if (app_id_copy == NULL || name_copy == NULL) {
+        free(app_id_copy);
+        free(name_copy);
+        return;
+    }
     slot->lookup_app_id = app_id_copy;
     slot->lookup_name = name_copy;
     lookup(slot, slot, ICON_REQUEST_SIZE, handle_icon_found);
