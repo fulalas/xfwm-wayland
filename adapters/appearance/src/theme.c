@@ -12,7 +12,6 @@ enum {
 
 struct theme {
     double pixmap_scale;
-    bool scalable;
     cairo_surface_t *side[WM_SIDE_COUNT][WM_FRAME_STATE_COUNT];
     cairo_surface_t *side_stretch[WM_SIDE_COUNT][WM_FRAME_STATE_COUNT];
     cairo_surface_t *corner[WM_CORNER_COUNT][WM_FRAME_STATE_COUNT];
@@ -57,7 +56,6 @@ theme *appearance_theme_create(const theme_source *source)
     theme *theme = g_new0(struct theme, 1);
 
     theme->pixmap_scale = source->pixmap_scale;
-    theme->scalable = source->images.scale > 0.0;
     load_sides(theme, &source->images);
     load_corners(theme, &source->images);
     load_buttons(theme, &source->images);
@@ -91,11 +89,6 @@ cairo_surface_t *appearance_theme_pixmap(const theme *theme, wm_pixmap_ref ref)
 double appearance_theme_pixmap_scale(const theme *theme)
 {
     return theme->pixmap_scale;
-}
-
-bool appearance_theme_scalable(const theme *theme)
-{
-    return theme->scalable;
 }
 
 wm_theme_metrics appearance_theme_metrics(const theme *theme)

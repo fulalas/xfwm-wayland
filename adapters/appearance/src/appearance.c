@@ -30,7 +30,7 @@ typedef struct loaded_theme {
 
 static void apply_style(appearance *appearance, const theme_request *request);
 static void apply_title_font(appearance *appearance, const char *theme_font,
-                             const theme_request *request);
+                             const char *request_font);
 static bool load_theme(appearance *appearance, const theme_request *request,
                        loaded_theme *loaded);
 static void keep_previous_theme(appearance *appearance, const theme_request *request);
@@ -39,16 +39,16 @@ static void apply_theme(appearance *appearance, loaded_theme *loaded);
 static void update_title_colors(appearance *appearance);
 static ui_color symbol_color(const appearance *appearance, color_symbol_id id,
                              const ui_color *fallback);
-static void replace_font(text_font *font, const char *description, double dpi);
-static double title_dpi(const appearance *appearance, double scale);
+static void replace_font(const appearance *appearance, text_font *font,
+                         const char *description);
 
 appearance *appearance_create(void)
 {
     appearance *appearance = g_new0(struct appearance, 1);
 
     appearance->style = appearance_fallback_style();
-    replace_font(&appearance->ui_font, appearance->style.font, appearance->style.font_dpi);
-    replace_font(&appearance->title.font, appearance->style.font, appearance->style.font_dpi);
+    replace_font(appearance, &appearance->ui_font, appearance->style.font);
+    replace_font(appearance, &appearance->title.font, appearance->style.font);
     appearance_color_symbols_resolve(&appearance->symbols, &appearance->style, NULL);
     update_title_colors(appearance);
     return appearance;
@@ -81,7 +81,7 @@ bool appearance_load(appearance *appearance, const theme_request *request)
     }
     apply_theme(appearance, &loaded);
     apply_title_font(appearance, appearance_theme_option(appearance, title_font_option),
-                     request);
+                     request->title_font);
     appearance_request_memo_store(&appearance->loaded, request);
     return true;
 }
@@ -125,30 +125,18 @@ const title_style *appearance_title_style(const appearance *appearance)
 static void apply_style(appearance *appearance, const theme_request *request)
 {
     appearance->style = request->style != NULL ? *request->style : appearance_fallback_style();
-    replace_font(&appearance->ui_font, appearance->style.font, appearance->style.font_dpi);
+    replace_font(appearance, &appearance->ui_font, appearance->style.font);
 }
 
 static void apply_title_font(appearance *appearance, const char *theme_font,
-                             const theme_request *request)
+                             const char *request_font)
 {
-    const char *wanted = theme_font != NULL ? theme_font : request->title_font;
+    const char *wanted = theme_font != NULL ? theme_font : request_font;
 
     if (wanted == NULL || wanted[0] == '\0') {
         wanted = appearance->style.font;
     }
-    replace_font(&appearance->title.font, wanted,
-                 title_dpi(appearance, request->max_output_scale));
-}
-
-static double title_dpi(const appearance *appearance, double scale)
-{
-    double dpi = appearance->style.font_dpi;
-
-    if (dpi <= 0.0 || scale <= 0.0 || appearance->theme == NULL
-        || !appearance_theme_scalable(appearance->theme)) {
-        return dpi;
-    }
-    return dpi * scale;
+    replace_font(appearance, &appearance->title.font, wanted);
 }
 
 static bool load_theme(appearance *appearance, const theme_request *request,
@@ -174,7 +162,7 @@ static bool load_theme(appearance *appearance, const theme_request *request,
 static void keep_previous_theme(appearance *appearance, const theme_request *request)
 {
     appearance_request_memo_clear(&appearance->loaded);
-    apply_title_font(appearance, NULL, request);
+    apply_title_font(appearance, NULL, request->title_font);
     appearance_color_symbols_resolve(&appearance->symbols, &appearance->style, appearance->rc);
     update_title_colors(appearance);
 }
@@ -226,9 +214,10 @@ static ui_color symbol_color(const appearance *appearance, color_symbol_id id,
     return color;
 }
 
-static void replace_font(text_font *font, const char *description, double dpi)
+static void replace_font(const appearance *appearance, text_font *font,
+                         const char *description)
 {
-    text_font_request request = { description, dpi };
+    text_font_request request = { description, appearance->style.font_dpi };
 
     appearance_text_font_destroy(font);
     *font = appearance_text_font_create(&request);

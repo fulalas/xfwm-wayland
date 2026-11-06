@@ -17,7 +17,6 @@ theme *appearance_theme_create(const theme_source *source);
 void appearance_theme_destroy(theme *theme);
 cairo_surface_t *appearance_theme_pixmap(const theme *theme, wm_pixmap_ref ref);
 double appearance_theme_pixmap_scale(const theme *theme);
-bool appearance_theme_scalable(const theme *theme);
 wm_theme_metrics appearance_theme_metrics(const theme *theme);
 
 #endif

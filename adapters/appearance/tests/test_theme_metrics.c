@@ -296,18 +296,12 @@ static int scaled_title_height(char *dir, double dpi)
     return height;
 }
 
-static void test_svg_theme_scales_title_font(void)
+static void test_svg_theme_keeps_the_title_font_size(void)
 {
     double dpi = 96.0 / 1.5;
 
-    CHECK(scaled_title_height(make_svg_theme(), dpi) * 4
-          > scaled_title_height(make_theme(), dpi) * 5);
-}
-
-static void test_svg_title_without_dpi_is_not_scaled_twice(void)
-{
-    CHECK_INT_EQ(scaled_title_height(make_theme(), 0.0),
-                 scaled_title_height(make_svg_theme(), 0.0));
+    CHECK_INT_EQ(scaled_title_height(make_theme(), dpi),
+                 scaled_title_height(make_svg_theme(), dpi));
 }
 
 static const char colored_line_svg[] =
@@ -371,11 +365,9 @@ int main(void)
         { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
         { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
         { "svg_wins_over_bitmaps", test_svg_wins_over_bitmaps },
-        { "svg_theme_scales_title_font", test_svg_theme_scales_title_font },
         { "svg_uses_theme_colors_and_one_pixel_lines",
           test_svg_uses_theme_colors_and_one_pixel_lines },
-        { "svg_title_without_dpi_is_not_scaled_twice",
-          test_svg_title_without_dpi_is_not_scaled_twice },
+        { "svg_theme_keeps_the_title_font_size", test_svg_theme_keeps_the_title_font_size },
     };
 
     int result = check_run(cases, sizeof cases / sizeof cases[0]);
