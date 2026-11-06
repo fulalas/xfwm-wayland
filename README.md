@@ -34,8 +34,8 @@ development and not ready for daily use. Compared on the same machine:
 |--------------------------------------|--------------------|--------------------------|
 | Written in                           | Rust, on `Smithay` | C, on `wlroots`          |
 | Dependencies built                   | 286                | 21                       |
-| Build time (release)                 | 138 s              | 7 s                      |
-| Program size                         | 26.4 MB            | 2.0 MB                   |
+| Build time (release)                 | 138 s              | 4 s                      |
+| Program size                         | 26.4 MB            | 0.7 MB                   |
 | Average power                        | 9.6 W              | 8.6 W                    |
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
