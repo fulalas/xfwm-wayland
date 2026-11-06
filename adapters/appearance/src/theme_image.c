@@ -1,10 +1,16 @@
 #include "theme_image.h"
 
 #include <stdint.h>
+#include <string.h>
 
 #include <glib.h>
 
+#include "mysvg.h"
+
 static const char *const overlay_extensions[] = { "svg", "png", "gif", "jpg", "bmp" };
+static const char *const bitmap_extensions[] = { "xpm", "png", "gif", "jpg", "bmp" };
+static const char svg_extension[] = "svg";
+static const char xpm_extension[] = "xpm";
 
 enum {
     OPAQUE = 0xFF,
@@ -18,6 +24,12 @@ enum {
     ALPHA_CHANNEL = 3,
 };
 
+static bool has_svg_twin(const char *dir, const char *file);
+static cairo_surface_t *load_bitmap(const theme_image_source *source, const char *name);
+static cairo_surface_t *load_svg(const theme_image_source *source, const char *name);
+static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols);
+static cairo_surface_t *surface_with_alpha(const GdkPixbuf *pixbuf);
+static uint32_t premultiplied_pixel(const guchar *pixel, int channels);
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf);
 static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
 static GdkPixbuf *load_overlay(const char *dir, const char *name);
@@ -25,7 +37,53 @@ static GdkPixbuf *compose(GdkPixbuf *base, GdkPixbuf *overlay);
 static void copy_row(const GdkPixbuf *pixbuf, int y, uint32_t *dest);
 static uint32_t cut_out_pixel(const guchar *pixel, int channels);
 
+bool appearance_theme_images_scalable(const char *dir)
+{
+    GDir *entries = g_dir_open(dir, 0, NULL);
+    bool has_svg = false;
+    bool scalable = entries != NULL;
+
+    for (const char *file; scalable && entries != NULL && (file = g_dir_read_name(entries));) {
+        const char *dot = strrchr(file, '.');
+        if (dot == NULL) {
+            continue;
+        }
+        has_svg = has_svg || strcmp(dot + 1, svg_extension) == 0;
+        scalable = strcmp(dot + 1, xpm_extension) != 0 && has_svg_twin(dir, file);
+    }
+    if (entries != NULL) {
+        g_dir_close(entries);
+    }
+    return scalable && has_svg;
+}
+
 cairo_surface_t *appearance_theme_image_load(const theme_image_source *source, const char *name)
+{
+    cairo_surface_t *svg = source->scale > 0.0 ? load_svg(source, name) : NULL;
+
+    return svg != NULL ? svg : load_bitmap(source, name);
+}
+
+static bool has_svg_twin(const char *dir, const char *file)
+{
+    const char *dot = strrchr(file, '.');
+    bool bitmap = false;
+
+    for (size_t i = 0; i < G_N_ELEMENTS(bitmap_extensions); i++) {
+        bitmap = bitmap || strcmp(dot + 1, bitmap_extensions[i]) == 0;
+    }
+    if (!bitmap) {
+        return true;
+    }
+    char *svg = g_strdup_printf("%.*s.%s", (int) (dot - file), file, svg_extension);
+    char *path = g_build_filename(dir, svg, NULL);
+    bool found = g_file_test(path, G_FILE_TEST_IS_REGULAR);
+    g_free(path);
+    g_free(svg);
+    return found;
+}
+
+static cairo_surface_t *load_bitmap(const theme_image_source *source, const char *name)
 {
     GdkPixbuf *base = load_xpm(source, name);
     GdkPixbuf *image = compose(base, load_overlay(source->dir, name));
@@ -36,6 +94,73 @@ cairo_surface_t *appearance_theme_image_load(const theme_image_source *source, c
     cairo_surface_t *surface = surface_from_pixbuf(image);
     g_object_unref(image);
     return surface;
+}
+
+static cairo_surface_t *load_svg(const theme_image_source *source, const char *name)
+{
+    char *file = g_strdup_printf("%s.%s", name, svg_extension);
+    char *path = g_build_filename(source->dir, file, NULL);
+    xfwmColorSymbol *colors = svg_colors(source->symbols);
+    GdkPixbuf *pixbuf = g_file_test(path, G_FILE_TEST_IS_REGULAR)
+                            ? xfwmSvgLoad(path, colors, source->scale)
+                            : NULL;
+    cairo_surface_t *surface = pixbuf != NULL ? surface_with_alpha(pixbuf) : NULL;
+
+    if (pixbuf != NULL) {
+        g_object_unref(pixbuf);
+    }
+    g_free(colors);
+    g_free(path);
+    g_free(file);
+    return surface;
+}
+
+static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols)
+{
+    size_t count = symbols != NULL ? symbols->count : 0;
+    xfwmColorSymbol *colors = g_new0(xfwmColorSymbol, count + 1);
+
+    for (size_t i = 0; i < count; i++) {
+        colors[i] = (xfwmColorSymbol) { (gchar *) symbols->items[i].name,
+                                        symbols->items[i].value };
+    }
+    return colors;
+}
+
+static cairo_surface_t *surface_with_alpha(const GdkPixbuf *pixbuf)
+{
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+    int channels = gdk_pixbuf_get_n_channels(pixbuf);
+    size_t source_stride = (size_t) gdk_pixbuf_get_rowstride(pixbuf);
+    const guchar *source = gdk_pixbuf_read_pixels(pixbuf);
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    unsigned char *data = cairo_image_surface_get_data(surface);
+    size_t stride = (size_t) cairo_image_surface_get_stride(surface);
+
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
+        return surface;
+    }
+    cairo_surface_flush(surface);
+    for (int y = 0; y < height; y++) {
+        uint32_t *row = (uint32_t *) (void *) (data + (size_t) y * stride);
+        const guchar *pixels = source + (size_t) y * source_stride;
+        for (int x = 0; x < width; x++) {
+            row[x] = premultiplied_pixel(pixels + (size_t) x * (size_t) channels, channels);
+        }
+    }
+    cairo_surface_mark_dirty(surface);
+    return surface;
+}
+
+static uint32_t premultiplied_pixel(const guchar *pixel, int channels)
+{
+    unsigned alpha = channels == RGBA_CHANNELS ? pixel[ALPHA_CHANNEL] : OPAQUE;
+    unsigned red = (pixel[RED_CHANNEL] * alpha + OPAQUE / 2) / OPAQUE;
+    unsigned green = (pixel[GREEN_CHANNEL] * alpha + OPAQUE / 2) / OPAQUE;
+    unsigned blue = (pixel[BLUE_CHANNEL] * alpha + OPAQUE / 2) / OPAQUE;
+
+    return ((uint32_t) alpha << ALPHA_SHIFT) | (red << RED_SHIFT) | (green << GREEN_SHIFT) | blue;
 }
 
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf)

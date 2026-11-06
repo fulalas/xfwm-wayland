@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <string.h>
 
 #include <glib.h>
@@ -153,7 +154,7 @@ static void test_themerc_title_font_wins(void)
 static void test_double_scale_halves_metrics(void)
 {
     char *dir = make_theme();
-    theme_source source = { { dir, NULL }, 2 };
+    theme_source source = { { dir, NULL, 0.0 }, 2 };
     theme *theme = appearance_theme_create(&source);
     wm_theme_metrics metrics = appearance_theme_metrics(theme);
 
@@ -172,7 +173,7 @@ static void test_half_transparent_pixels_are_cut_out(void)
     char *dir = fixture_dir_create();
     g_free(fixture_write(dir, "top-left-active.xpm", clear_pixel_xpm));
     CHECK(fixture_write_png_pixel(dir, "top-left-active.png", HALF_BLACK));
-    theme_image_source source = { dir, NULL };
+    theme_image_source source = { dir, NULL, 0.0 };
     cairo_surface_t *image = appearance_theme_image_load(&source, "top-left-active");
 
     CHECK(image != NULL);
@@ -232,6 +233,114 @@ static void test_theme_pixels_map_to_screen_pixels(void)
     check_variant(2.0, "", 2.0);
 }
 
+static const char red_svg[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 6\">"
+                               "<rect width=\"4\" height=\"6\" fill=\"#ff0000\"/></svg>\n";
+
+static char *make_svg_theme(void)
+{
+    char *dir = fixture_dir_create();
+
+    g_free(fixture_write(dir, "themerc", themerc_content));
+    g_free(fixture_write(dir, "left-active.svg", red_svg));
+    fixture_write_png(dir, "left-active.png", 4, 6);
+    return dir;
+}
+
+static void test_svg_theme_draws_at_screen_scale(void)
+{
+    char *dir = make_svg_theme();
+    CHECK(appearance_theme_images_scalable(dir));
+    theme_source source = { { dir, NULL, 1.5 }, 1.5 };
+    theme *theme = appearance_theme_create(&source);
+    wm_pixmap_ref left = { WM_PIXMAP_SIDE, WM_SIDE_LEFT, WM_FRAME_ACTIVE };
+    cairo_surface_t *image = appearance_theme_pixmap(theme, left);
+
+    CHECK(image != NULL);
+    CHECK_INT_EQ(6, cairo_image_surface_get_width(image));
+    CHECK_INT_EQ(9, cairo_image_surface_get_height(image));
+    CHECK(size_is(appearance_theme_metrics(theme).side[WM_SIDE_LEFT][WM_FRAME_ACTIVE], 4, 6));
+    appearance_theme_destroy(theme);
+    fixture_dir_remove(dir);
+}
+
+static void test_bitmap_without_svg_keeps_pixmaps(void)
+{
+    char *dir = make_svg_theme();
+
+    fixture_write_png(dir, "close-active.png", 16, 14);
+    CHECK(!appearance_theme_images_scalable(dir));
+    fixture_dir_remove(dir);
+    dir = make_svg_theme();
+    g_free(fixture_write(dir, "left-active.xpm", left_xpm));
+    CHECK(!appearance_theme_images_scalable(dir));
+    fixture_dir_remove(dir);
+    dir = make_theme();
+    CHECK(!appearance_theme_images_scalable(dir));
+    fixture_dir_remove(dir);
+}
+
+static int scaled_title_height(char *dir, double dpi)
+{
+    appearance *appearance = appearance_create();
+    compositor_painter painter = appearance_painter(appearance);
+    ui_style style = appearance_fallback_style();
+    theme_request request = { dir, "Sans 9", 1.5, &style };
+
+    style.font_dpi = dpi;
+    CHECK(appearance_load(appearance, &request));
+    int height = painter.measure_title(painter.self, "Title").height;
+    appearance_destroy(appearance);
+    fixture_dir_remove(dir);
+    return height;
+}
+
+static void test_svg_theme_scales_title_font(void)
+{
+    double dpi = 96.0 / 1.5;
+
+    CHECK(scaled_title_height(make_svg_theme(), dpi) * 4
+          > scaled_title_height(make_theme(), dpi) * 5);
+}
+
+static void test_svg_title_without_dpi_is_not_scaled_twice(void)
+{
+    CHECK_INT_EQ(scaled_title_height(make_theme(), 0.0),
+                 scaled_title_height(make_svg_theme(), 0.0));
+}
+
+static const char colored_line_svg[] =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 2\">"
+    "<rect width=\"4\" height=\"2\" style=\"fill:var(--active_color_1, #00ff00)\""
+    " shape-rendering=\"crispEdges\"/>"
+    "<rect width=\"1\" height=\"2\" fill=\"#000000\" shape-rendering=\"crispEdges\"/></svg>\n";
+
+static uint32_t image_pixel(cairo_surface_t *image, int x, int y)
+{
+    const unsigned char *data = cairo_image_surface_get_data(image);
+    int stride = cairo_image_surface_get_stride(image);
+
+    return ((const uint32_t *) (const void *) (data + y * stride))[x];
+}
+
+static void test_svg_uses_theme_colors_and_one_pixel_lines(void)
+{
+    enum { BLACK = 0xff000000u, RED = 0xffff0000u };
+    static const xpm_symbol items[] = { { "active_color_1", "#ff0000" } };
+    xpm_symbols symbols = { items, G_N_ELEMENTS(items) };
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "left-active.svg", colored_line_svg));
+    theme_image_source source = { dir, &symbols, 1.5 };
+    cairo_surface_t *image = appearance_theme_image_load(&source, "left-active");
+
+    CHECK(image != NULL);
+    CHECK_INT_EQ(6, cairo_image_surface_get_width(image));
+    CHECK_INT_EQ(BLACK, image_pixel(image, 0, 1));
+    CHECK_INT_EQ(RED, image_pixel(image, 1, 1));
+    CHECK_INT_EQ(RED, image_pixel(image, 5, 1));
+    cairo_surface_destroy(image);
+    fixture_dir_remove(dir);
+}
+
 static void test_thin_pixmaps_keep_one_pixel(void)
 {
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 4);
@@ -258,6 +367,13 @@ int main(void)
         { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
         { "theme_pixels_map_to_screen_pixels", test_theme_pixels_map_to_screen_pixels },
         { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
+        { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
+        { "bitmap_without_svg_keeps_pixmaps", test_bitmap_without_svg_keeps_pixmaps },
+        { "svg_theme_scales_title_font", test_svg_theme_scales_title_font },
+        { "svg_uses_theme_colors_and_one_pixel_lines",
+          test_svg_uses_theme_colors_and_one_pixel_lines },
+        { "svg_title_without_dpi_is_not_scaled_twice",
+          test_svg_title_without_dpi_is_not_scaled_twice },
     };
 
     int result = check_run(cases, sizeof cases / sizeof cases[0]);

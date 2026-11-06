@@ -40,7 +40,7 @@ development and not ready for daily use. Compared on the same machine:
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.7 ms                  |
-| Unit tests                           | 49                 | 668                      |
+| Unit tests                           | 49                 | 674                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
@@ -115,6 +115,9 @@ Windows
 * Window sessions use the Wayland protocol instead of the X11 session manager:
   programs that support it get their size, position, state and workspace back.
   They are kept in `~/.local/state/xfwm-wayland/sessions` for 90 days.
+* Themes made only of SVG images (an `.svg` for every image) scale with the
+  screen and stay sharp; the title font scales with them. Other themes are
+  drawn pixel for pixel, like X11.
 * X11 programs look blurry on scaled screens: `wlroots` 0.20 can't scale
   `XWayland` sharply (see
   [wlroots !2064](https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/2064)).

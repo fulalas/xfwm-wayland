@@ -119,6 +119,49 @@ static void test_right_corner_follows_screen_alignment(void)
     check_right_corner((wm_point) { 1, 0 }, 6);
 }
 
+static const char right_corner_svg[] =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 8 3\" shape-rendering=\"crispEdges\">"
+    "<rect width=\"7\" height=\"3\" fill=\"#ff0000\"/>"
+    "<rect x=\"7\" width=\"1\" height=\"3\" fill=\"#0000ff\"/></svg>\n";
+
+static int svg_corner_blue_columns(wm_point origin)
+{
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "themerc", ""));
+    g_free(fixture_write(dir, "top-right-active.svg", right_corner_svg));
+    appearance *appearance = appearance_create();
+    ui_style style = appearance_fallback_style();
+    theme_request theme = { dir, "Sans 9", 1.5, &style };
+    CHECK(appearance_load(appearance, &theme));
+    compositor_painter painter = appearance_painter(appearance);
+    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
+    layout.ops[0] = (wm_paint_op) {
+        .pixmap = { WM_PIXMAP_CORNER, WM_CORNER_TOP_RIGHT, WM_FRAME_ACTIVE },
+        .dest = { 0, 0, 5, 3 },
+        .mode = WM_FILL_PLAIN,
+        .clip = { 0, 0, 5, 3 },
+    };
+    frame_paint_request request = { &layout, { 0, 0, 5, 3 }, 1.5, NULL, NULL, origin };
+    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+    int width = cairo_image_surface_get_width(surface);
+    int blue = 0;
+
+    CHECK_INT_EQ(0xff0000ff, pixel_at(surface, width - 1, 1));
+    for (int x = 0; x < width; x++) {
+        blue += pixel_at(surface, x, 1) == 0xff0000ff;
+    }
+    cairo_surface_destroy(surface);
+    appearance_destroy(appearance);
+    fixture_dir_remove(dir);
+    return blue;
+}
+
+static void test_svg_border_keeps_its_width_when_moved(void)
+{
+    CHECK_INT_EQ(svg_corner_blue_columns((wm_point) { 0, 0 }),
+                 svg_corner_blue_columns((wm_point) { 1, 0 }));
+}
+
 static const char dark_light_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
                                           "\"2 2 2 1\",\n\". c #000000\",\n\"# c #FFFFFF\",\n"
                                           "\".#\",\".#\"};\n";
@@ -336,6 +379,7 @@ int main(void)
         { "band_edge_stays_opaque", test_band_edge_stays_opaque },
         { "right_corner_keeps_its_outer_column", test_right_corner_keeps_its_outer_column },
         { "right_corner_follows_screen_alignment", test_right_corner_follows_screen_alignment },
+        { "svg_border_keeps_its_width_when_moved", test_svg_border_keeps_its_width_when_moved },
         { "tiled_edge_does_not_wrap", test_tiled_edge_does_not_wrap },
         { "tile_starts_at_its_origin", test_tile_starts_at_its_origin },
         { "title_measure_grows_with_text", test_title_measure_grows_with_text },
