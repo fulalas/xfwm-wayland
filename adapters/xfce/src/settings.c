@@ -2,12 +2,14 @@
 
 #include "config_table.h"
 #include "config_values.h"
+#include "workspace_rows.h"
 #include "xfconf_source.h"
 
 static const char general_prefix[] = "/general/";
 static const char workspace_names_property[] = "/general/workspace_names";
 
 static void apply_workspace_names(wm_config *config, XfconfChannel *xfwm4);
+static void apply_pager_rows(wm_config *config, XfconfChannel *panel);
 static void store_default(void *self, const config_default *entry);
 static void init_default_value(GValue *value, const config_default *entry);
 
@@ -25,6 +27,7 @@ wm_config settings_load(const channels *channels, const setting_source *theme)
 
     config_apply_sources(&config, &sources);
     apply_workspace_names(&config, xfwm4);
+    apply_pager_rows(&config, channels_get(channels, CHANNEL_PANEL));
     xfconf_source_destroy(stored);
     xfconf_source_destroy(xsettings);
     return config;
@@ -77,6 +80,19 @@ static void apply_workspace_names(wm_config *config, XfconfChannel *xfwm4)
         config_set_workspace_names(config, (const char *const *) names);
     }
     g_strfreev(names);
+}
+
+static void apply_pager_rows(wm_config *config, XfconfChannel *panel)
+{
+    GHashTable *plugins = panel ? xfconf_channel_get_properties(panel, "/plugins") : NULL;
+
+    if (plugins) {
+        int rows = pager_rows_from(plugins);
+        if (rows > 0) {
+            config->workspaces.rows = rows;
+        }
+        g_hash_table_destroy(plugins);
+    }
 }
 
 static void store_default(void *self, const config_default *entry)

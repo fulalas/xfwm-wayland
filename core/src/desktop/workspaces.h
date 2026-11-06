@@ -16,8 +16,9 @@ typedef struct workspace_state {
 
 void workspaces_switch(wm_desktop *desktop, int workspace, wm_window *carried);
 void workspaces_switch_without_focus(wm_desktop *desktop, int workspace, wm_window *carried);
-void workspaces_move(wm_desktop *desktop, int column_delta, wm_window *carried);
-bool workspaces_move_changed(wm_desktop *desktop, int column_delta, wm_window *carried);
+void workspaces_move(wm_desktop *desktop, int row_delta, int column_delta, wm_window *carried);
+bool workspaces_move_changed(wm_desktop *desktop, int row_delta, int column_delta,
+                             wm_window *carried);
 void workspaces_set_count(wm_desktop *desktop, int count);
 void workspaces_change_count(wm_desktop *desktop, int count);
 void workspaces_insert(wm_desktop *desktop, int position);

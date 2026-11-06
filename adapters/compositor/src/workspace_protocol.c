@@ -42,7 +42,7 @@ static void reconcile(workspace_protocol *workspaces, const wm_workspaces_view *
 static struct wlr_ext_workspace_handle_v1 *take_handle(workspace_protocol *workspaces, unsigned id);
 static struct wlr_ext_workspace_handle_v1 *create_handle(workspace_protocol *workspaces,
                                                          unsigned id);
-static void set_position(struct wlr_ext_workspace_handle_v1 *handle, int index);
+static void set_position(struct wlr_ext_workspace_handle_v1 *handle, int index, int columns);
 static void update_handle(workspace_protocol *workspaces, int index,
                           const wm_workspaces_view *view);
 
@@ -194,7 +194,7 @@ static void reconcile(workspace_protocol *w, const wm_workspaces_view *view)
             handles[i] = create_handle(w, view->ids[i]);
         }
         if (handles[i] != NULL) {
-            set_position(handles[i], i);
+            set_position(handles[i], i, view->columns);
         }
     }
     destroy_all(w);
@@ -229,11 +229,12 @@ static struct wlr_ext_workspace_handle_v1 *create_handle(workspace_protocol *w, 
     return handle;
 }
 
-static void set_position(struct wlr_ext_workspace_handle_v1 *handle, int index)
+static void set_position(struct wlr_ext_workspace_handle_v1 *handle, int index, int columns)
 {
-    uint32_t coordinates[COORDINATE_COUNT] = {(uint32_t) index, 0};
-    const uint32_t *current = handle->coordinates.data;
-    if (handle->coordinates.size == sizeof(coordinates) && current[0] == coordinates[0]) {
+    uint32_t coordinates[COORDINATE_COUNT] = {(uint32_t) (index % columns),
+                                              (uint32_t) (index / columns)};
+    if (handle->coordinates.size == sizeof(coordinates) &&
+        memcmp(handle->coordinates.data, coordinates, sizeof(coordinates)) == 0) {
         return;
     }
     wlr_ext_workspace_handle_v1_set_coordinates(handle, coordinates, COORDINATE_COUNT);

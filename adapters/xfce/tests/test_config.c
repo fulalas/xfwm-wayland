@@ -107,7 +107,7 @@ static void test_clamped_values(void)
     static const fake_entry stored[] = {
         { "frame_opacity", "150" }, { "inactive_opacity", "-5" }, { "margin_top", "-20" },
         { "workspace_count", "0" }, { "cycle_tabwin_mode", "7" }, { "double_click_time", "-300" },
-        { NULL, NULL },
+        { "workspace_nrows", "-2" }, { NULL, NULL },
     };
     wm_config config = apply(stored, no_entries);
 
@@ -115,6 +115,7 @@ static void test_clamped_values(void)
     CHECK_INT_EQ(0, config.compositing.inactive_opacity_percent);
     CHECK_INT_EQ(0, config.placement.margins.top);
     CHECK_INT_EQ(1, config.workspaces.count);
+    CHECK_INT_EQ(1, config.workspaces.rows);
     CHECK_INT_EQ(WM_TABWIN_LIST, config.cycle.tabwin_mode);
     CHECK_INT_EQ(300, config.mouse.double_click_time_ms);
 }

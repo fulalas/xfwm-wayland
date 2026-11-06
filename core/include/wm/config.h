@@ -153,6 +153,7 @@ typedef struct wm_cycle_config {
 
 typedef struct wm_workspace_config {
     int count;
+    int rows;
     bool toggle;
     bool wrap_cycle;
     bool wrap_layout;

@@ -83,6 +83,7 @@ typedef struct wm_window_view {
 typedef struct wm_workspaces_view {
     int count;
     int current;
+    int columns;
     const char *names[WM_WORKSPACE_MAX];
     unsigned ids[WM_WORKSPACE_MAX];
 } wm_workspaces_view;

@@ -11,6 +11,7 @@ typedef enum channel_id {
     CHANNEL_DISPLAYS,
     CHANNEL_ACCESSIBILITY,
     CHANNEL_POWER_MANAGER,
+    CHANNEL_PANEL,
     CHANNEL_COUNT,
 } channel_id;
 

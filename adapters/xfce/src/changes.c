@@ -14,6 +14,7 @@ static const char *const channel_names[CHANNEL_COUNT] = {
     [CHANNEL_DISPLAYS] = "displays-wl",
     [CHANNEL_ACCESSIBILITY] = "accessibility",
     [CHANNEL_POWER_MANAGER] = "xfce4-power-manager",
+    [CHANNEL_PANEL] = "xfce4-panel",
 };
 
 static const char *const theme_properties[] = { "/general/theme", "/general/title_font" };
@@ -22,6 +23,7 @@ static unsigned xfwm4_flags(const char *property);
 static bool is_theme_property(const char *property);
 static unsigned xsettings_flags(const char *property);
 static unsigned shortcut_flags(const char *property);
+static unsigned panel_flags(const char *property);
 
 const char *channel_name(channel_id id)
 {
@@ -48,6 +50,8 @@ unsigned change_flags_for(channel_id id, const char *property)
                        || strcmp(property, "/xfce4-power-manager/presentation-mode") == 0
                    ? CHANGE_POWER
                    : 0;
+    case CHANNEL_PANEL:
+        return panel_flags(property);
     default:
         return 0;
     }
@@ -89,4 +93,13 @@ static unsigned shortcut_flags(const char *property)
         return CHANGE_SHORTCUTS;
     }
     return 0;
+}
+
+static unsigned panel_flags(const char *property)
+{
+    if (!g_str_has_prefix(property, "/plugins/plugin-")) {
+        return 0;
+    }
+    const char *rest = strchr(property + strlen("/plugins/"), '/');
+    return rest == NULL || strcmp(rest, "/rows") == 0 ? CHANGE_SETTINGS : 0;
 }

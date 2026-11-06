@@ -159,6 +159,7 @@ static wm_workspace_config workspace_defaults(void)
 {
     return (wm_workspace_config) {
         .count = DEFAULT_WORKSPACE_COUNT,
+        .rows = 1,
         .toggle = false,
         .wrap_cycle = true,
         .wrap_layout = true,

@@ -9,6 +9,7 @@ typedef struct wrap_state {
     uint32_t last_resist_ms;
     int edge_x;
     int edge_y;
+    int original_x;
     int original_y;
 } wrap_state;
 

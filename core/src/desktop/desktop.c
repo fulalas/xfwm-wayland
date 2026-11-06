@@ -97,7 +97,8 @@ void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace)
 static void apply_config(wm_desktop *desktop, const wm_config *previous)
 {
     workspaces_set_count(desktop, desktop->config.workspaces.count);
-    if (names_changed(previous, &desktop->config)) {
+    if (names_changed(previous, &desktop->config) ||
+        previous->workspaces.rows != desktop->config.workspaces.rows) {
         present_mark_workspaces(desktop);
     }
     if (!desktop->config.compositing.enabled) {

@@ -13,8 +13,14 @@ static void show_new_workspace(wm_desktop *desktop);
 static void hide_old_workspace(wm_desktop *desktop, wm_window *previous);
 static wm_window *workspace_focus_candidate(wm_desktop *desktop, wm_window *previous);
 static void focus_after_switch(wm_desktop *desktop, wm_window *new_focus, wm_window *carried);
-static int target_column(const wm_desktop *desktop, int delta);
-static int wrapped(int value, int limit);
+typedef struct workspace_grid {
+    int rows;
+    int columns;
+} workspace_grid;
+
+static workspace_grid grid_of(const wm_desktop *desktop);
+static int move_target(const wm_desktop *desktop, int row_delta, int column_delta);
+static int shifted(int value, int by, int limit, bool wrap);
 static void store_count(wm_desktop *desktop, int count);
 static void assign_new_ids(workspace_state *state, int from, int to);
 static void remove_id(workspace_state *state, int position);
@@ -43,19 +49,19 @@ void workspaces_switch_without_focus(wm_desktop *desktop, int workspace, wm_wind
     }
 }
 
-void workspaces_move(wm_desktop *desktop, int column_delta, wm_window *carried)
+void workspaces_move(wm_desktop *desktop, int row_delta, int column_delta, wm_window *carried)
 {
-    int current = desktop->workspaces.current;
-    int target = target_column(desktop, column_delta);
-    if (target != current) {
+    int target = move_target(desktop, row_delta, column_delta);
+    if (target != desktop->workspaces.current) {
         workspaces_switch(desktop, target, carried);
     }
 }
 
-bool workspaces_move_changed(wm_desktop *desktop, int column_delta, wm_window *carried)
+bool workspaces_move_changed(wm_desktop *desktop, int row_delta, int column_delta,
+                             wm_window *carried)
 {
     int before = desktop->workspaces.current;
-    workspaces_move(desktop, column_delta, carried);
+    workspaces_move(desktop, row_delta, column_delta, carried);
     return desktop->workspaces.current != before;
 }
 
@@ -126,6 +132,7 @@ wm_workspaces_view workspaces_view(const wm_desktop *desktop)
     wm_workspaces_view view = {0};
     view.count = desktop->workspaces.count;
     view.current = desktop->workspaces.current;
+    view.columns = grid_of(desktop).columns;
     for (int i = 0; i < view.count; i++) {
         const char *name = desktop->config.workspaces.names[i];
         view.names[i] = name[0] != '\0' ? name : NULL;
@@ -237,25 +244,33 @@ static void focus_after_switch(wm_desktop *desktop, wm_window *new_focus, wm_win
     focus_set(desktop, new_focus);
 }
 
-static int target_column(const wm_desktop *desktop, int delta)
+static workspace_grid grid_of(const wm_desktop *desktop)
 {
-    int limit = desktop->workspaces.count;
-    if (delta >= limit) {
-        delta = limit - 1;
-    }
-    int value = desktop->workspaces.current + delta;
-    if (desktop->config.workspaces.wrap_layout) {
-        return wrapped(value, limit);
-    }
-    return wm_clamp(value, 0, limit - 1);
+    int count = desktop->workspaces.count;
+    int columns = (count - 1) / wm_clamp(desktop->config.workspaces.rows, 1, count) + 1;
+    return (workspace_grid) {(count - 1) / columns + 1, columns};
 }
 
-static int wrapped(int value, int limit)
+static int move_target(const wm_desktop *desktop, int row_delta, int column_delta)
 {
-    if (value >= limit) {
-        return value % limit;
-    }
-    return value < 0 ? (value + limit) % limit : value;
+    workspace_grid grid = grid_of(desktop);
+    bool wrap = desktop->config.workspaces.wrap_layout;
+    int current = desktop->workspaces.current;
+    int count = desktop->workspaces.count;
+    int row = current / grid.columns;
+    int column = current % grid.columns;
+    do {
+        row = shifted(row, row_delta, grid.rows, wrap);
+        column = shifted(column, column_delta, grid.columns, wrap);
+    } while (wrap && row * grid.columns + column >= count);
+    int target = row * grid.columns + column;
+    return target < count ? target : current;
+}
+
+static int shifted(int value, int by, int limit, bool wrap)
+{
+    value += by;
+    return wrap ? (value % limit + limit) % limit : wm_clamp(value, 0, limit - 1);
 }
 
 static void store_count(wm_desktop *desktop, int count)

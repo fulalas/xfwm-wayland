@@ -33,6 +33,7 @@ static void apply_percent(wm_config *config, size_t offset, const char *text);
 static void apply_hdr_brightness(wm_config *config, size_t offset, const char *text);
 static void apply_margin(wm_config *config, size_t offset, const char *text);
 static void apply_workspace_count(wm_config *config, size_t offset, const char *text);
+static void apply_workspace_rows(wm_config *config, size_t offset, const char *text);
 static void apply_tabwin_mode(wm_config *config, size_t offset, const char *text);
 static void apply_button_layout(wm_config *config, size_t offset, const char *text);
 static void apply_activate_action(wm_config *config, size_t offset, const char *text);
@@ -141,6 +142,7 @@ static const config_setting config_settings[] = {
     { "use_gl_compositing", CONFIG_BOOL, "true", apply_bool, AT(compositing.use_gl) },
     { "vblank_mode", CONFIG_TEXT, "auto", apply_vblank_mode, AT(compositing.vblank_mode) },
     { "workspace_count", CONFIG_INT, "4", apply_workspace_count, AT(workspaces.count) },
+    { "workspace_nrows", CONFIG_INT, NULL, apply_workspace_rows, AT(workspaces.rows) },
     { "wrap_cycle", CONFIG_BOOL, "true", apply_bool, AT(workspaces.wrap_cycle) },
     { "wrap_layout", CONFIG_BOOL, "true", apply_bool, AT(workspaces.wrap_layout) },
     { "wrap_resistance", CONFIG_INT, "10", apply_int, AT(move.wrap_resistance) },
@@ -254,6 +256,11 @@ static void apply_workspace_count(wm_config *config, size_t offset, const char *
     int count = CLAMP(config_int(text), WORKSPACE_COUNT_MIN, WM_WORKSPACE_MAX);
 
     *(int *) field(config, offset) = count;
+}
+
+static void apply_workspace_rows(wm_config *config, size_t offset, const char *text)
+{
+    *(int *) field(config, offset) = CLAMP(config_int(text), 1, WM_WORKSPACE_MAX);
 }
 
 static void apply_tabwin_mode(wm_config *config, size_t offset, const char *text)

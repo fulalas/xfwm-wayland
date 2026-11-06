@@ -1,5 +1,6 @@
 xfce_glib_dep = dependency('glib-2.0')
 xfce_gio_dep = dependency('gio-2.0')
+xfce_gobject_dep = dependency('gobject-2.0')
 xfce_gio_unix_dep = dependency('gio-unix-2.0')
 xfce_xfconf_dep = dependency('libxfconf-0')
 xfce_xkbcommon_dep = dependency('xkbcommon')
@@ -38,10 +39,12 @@ xfce_logic = static_library(
     'src/shortcut_defaults.c',
     'src/shortcut_property.c',
     'src/style_state.c',
+    'src/workspace_rows.c',
     '../../helper/protocol_text.c',
   ),
   include_directories: [xfce_inc, include_directories('../../helper')],
-  dependencies: [wm_core_dep, xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep, display_hash_dep],
+  dependencies: [wm_core_dep, xfce_glib_dep, xfce_gobject_dep, xfce_xkbcommon_dep, xfce_cairo_dep,
+                 display_hash_dep],
 )
 
 xfce_lib = static_library(
@@ -103,7 +106,7 @@ xfce_dep = declare_dependency(
   ],
 )
 
-xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'display_off', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts']
+xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'display_off', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts', 'workspace_rows']
 
 foreach name : xfce_tests
   test(
@@ -113,7 +116,7 @@ foreach name : xfce_tests
       'tests/test_' + name + '.c',
       include_directories: [xfce_inc, include_directories('src')],
       link_with: xfce_logic,
-      dependencies: [check_dep, xfce_glib_dep, xfce_xkbcommon_dep, xfce_cairo_dep],
+      dependencies: [check_dep, xfce_glib_dep, xfce_gobject_dep, xfce_xkbcommon_dep, xfce_cairo_dep],
     ),
   )
 endforeach
@@ -136,6 +139,6 @@ test(
     'tests/test_x11_settings.c',
     'src/x11_setting_values.c',
     include_directories: [xfce_inc, include_directories('src')],
-    dependencies: [check_dep, xfce_glib_dep, dependency('gobject-2.0')],
+    dependencies: [check_dep, xfce_glib_dep, xfce_gobject_dep],
   ),
 )

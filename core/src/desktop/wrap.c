@@ -21,14 +21,21 @@ typedef struct wrap_edges {
     int max_y;
 } wrap_edges;
 
+typedef struct wrap_axis {
+    int position;
+    int min;
+    int max;
+    int drift;
+    int row_step;
+    int column_step;
+} wrap_axis;
+
 static bool is_enabled(const wm_desktop *desktop, const wm_window *carried);
 static wrap_edges screen_edges(const wm_desktop *desktop);
 static void remember_origin(wm_desktop *desktop);
 static void count_push(wm_desktop *desktop, int *counter, uint32_t time_ms);
 static int push_back(int position, int min, int max);
-static int wrap_horizontally(wm_desktop *desktop, wm_window *carried, const wrap_edges *edges,
-                             int fallback);
-static void reset_vertical(wm_desktop *desktop);
+static int wrap_along(wm_desktop *desktop, wm_window *carried, wrap_axis axis, int fallback);
 static void warp(wm_desktop *desktop, int dx, int dy);
 
 void wrap_at_screen_edges(wm_desktop *desktop, wm_window *carried, uint32_t time_ms)
@@ -47,11 +54,16 @@ void wrap_at_screen_edges(wm_desktop *desktop, wm_window *carried, uint32_t time
     if (dy != 0) {
         count_push(desktop, &wrap->edge_y, time_ms);
     }
+    wm_point pointer = desktop->pointer;
     if (wrap->edge_x > desktop->config.move.wrap_resistance) {
-        dx = wrap_horizontally(desktop, carried, &edges, dx);
+        wrap->edge_x = 0;
+        wrap_axis axis = {pointer.x, edges.min_x, edges.max_x, pointer.y - wrap->original_y, 0, 1};
+        dx = wrap_along(desktop, carried, axis, dx);
     }
     if (wrap->edge_y > desktop->config.move.wrap_resistance) {
-        reset_vertical(desktop);
+        wrap->edge_y = 0;
+        wrap_axis axis = {pointer.y, edges.min_y, edges.max_y, pointer.x - wrap->original_x, 1, 0};
+        dy = wrap_along(desktop, carried, axis, dy);
     }
     if (dx != 0 || dy != 0) {
         warp(desktop, dx, dy);
@@ -79,6 +91,9 @@ static void remember_origin(wm_desktop *desktop)
     if (wrap->edge_x == 0) {
         wrap->original_y = desktop->pointer.y;
     }
+    if (wrap->edge_y == 0) {
+        wrap->original_x = desktop->pointer.x;
+    }
 }
 
 static void count_push(wm_desktop *desktop, int *counter, uint32_t time_ms)
@@ -100,30 +115,19 @@ static int push_back(int position, int min, int max)
     return position == max ? -1 : 0;
 }
 
-static int wrap_horizontally(wm_desktop *desktop, wm_window *carried, const wrap_edges *edges,
-                             int fallback)
+static int wrap_along(wm_desktop *desktop, wm_window *carried, wrap_axis axis, int fallback)
 {
-    wrap_state *wrap = &desktop->wrap;
-    wm_point pointer = desktop->pointer;
-    int span = edges->max_x - edges->min_x;
+    int span = axis.max - axis.min;
     int delta = WARP_NUMERATOR * span / WARP_DENOMINATOR;
     int resisted = span - RESISTANCE_FACTOR * desktop->config.move.wrap_resistance;
     delta = wm_max(delta, resisted);
-    wrap->edge_x = 0;
-    wrap->last_resist_ms = 0;
-    if (abs(pointer.y - wrap->original_y) >= MAX_SNAP_DRIFT) {
+    desktop->wrap.last_resist_ms = 0;
+    if (abs(axis.drift) >= MAX_SNAP_DRIFT) {
         return fallback;
     }
-    if (pointer.x == edges->min_x) {
-        return workspaces_move_changed(desktop, -1, carried) ? delta : fallback;
-    }
-    return workspaces_move_changed(desktop, 1, carried) ? -delta : fallback;
-}
-
-static void reset_vertical(wm_desktop *desktop)
-{
-    desktop->wrap.edge_y = 0;
-    desktop->wrap.last_resist_ms = 0;
+    int step = axis.position == axis.min ? -1 : 1;
+    bool moved = workspaces_move_changed(desktop, step * axis.row_step, step * axis.column_step, carried);
+    return moved ? -step * delta : fallback;
 }
 
 static void warp(wm_desktop *desktop, int dx, int dy)

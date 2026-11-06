@@ -16,11 +16,12 @@ static void next_workspace(wm_desktop *desktop);
 static void previous_workspace(wm_desktop *desktop);
 static void left_workspace(wm_desktop *desktop);
 static void right_workspace(wm_desktop *desktop);
+static void up_workspace(wm_desktop *desktop);
+static void down_workspace(wm_desktop *desktop);
 static void add_workspace(wm_desktop *desktop);
 static void delete_workspace(wm_desktop *desktop);
 static void add_adjacent_workspace(wm_desktop *desktop);
 static void delete_active_workspace(wm_desktop *desktop);
-static void ignore(wm_desktop *desktop);
 
 static const global_action GLOBAL_ACTIONS[] = {
     {WM_ACTION_SWITCH_WINDOW, cycle_switch_window},
@@ -29,8 +30,8 @@ static const global_action GLOBAL_ACTIONS[] = {
     {WM_ACTION_PREV_WORKSPACE, previous_workspace},
     {WM_ACTION_LEFT_WORKSPACE, left_workspace},
     {WM_ACTION_RIGHT_WORKSPACE, right_workspace},
-    {WM_ACTION_UP_WORKSPACE, ignore},
-    {WM_ACTION_DOWN_WORKSPACE, ignore},
+    {WM_ACTION_UP_WORKSPACE, up_workspace},
+    {WM_ACTION_DOWN_WORKSPACE, down_workspace},
     {WM_ACTION_ADD_WORKSPACE, add_workspace},
     {WM_ACTION_DEL_WORKSPACE, delete_workspace},
     {WM_ACTION_ADD_ADJACENT_WORKSPACE, add_adjacent_workspace},
@@ -67,12 +68,22 @@ static void previous_workspace(wm_desktop *desktop)
 
 static void left_workspace(wm_desktop *desktop)
 {
-    workspaces_move(desktop, -1, NULL);
+    workspaces_move(desktop, 0, -1, NULL);
 }
 
 static void right_workspace(wm_desktop *desktop)
 {
-    workspaces_move(desktop, 1, NULL);
+    workspaces_move(desktop, 0, 1, NULL);
+}
+
+static void up_workspace(wm_desktop *desktop)
+{
+    workspaces_move(desktop, -1, 0, NULL);
+}
+
+static void down_workspace(wm_desktop *desktop)
+{
+    workspaces_move(desktop, 1, 0, NULL);
 }
 
 static void add_workspace(wm_desktop *desktop)
@@ -93,9 +104,4 @@ static void add_adjacent_workspace(wm_desktop *desktop)
 static void delete_active_workspace(wm_desktop *desktop)
 {
     workspaces_delete(desktop, desktop->workspaces.current);
-}
-
-static void ignore(wm_desktop *desktop)
-{
-    (void) desktop;
 }

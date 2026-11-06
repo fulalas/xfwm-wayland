@@ -36,7 +36,8 @@ static void carry_to_next(wm_desktop *desktop, wm_window *window);
 static void carry_to_previous(wm_desktop *desktop, wm_window *window);
 static void carry_left(wm_desktop *desktop, wm_window *window);
 static void carry_right(wm_desktop *desktop, wm_window *window);
-static void ignore_window(wm_desktop *desktop, wm_window *window);
+static void carry_up(wm_desktop *desktop, wm_window *window);
+static void carry_down(wm_desktop *desktop, wm_window *window);
 
 static const window_action WINDOW_ACTIONS[] = {
     {WM_ACTION_CLOSE_WINDOW, window_ops_close},
@@ -61,8 +62,8 @@ static const window_action WINDOW_ACTIONS[] = {
     {WM_ACTION_MOVE_PREV_WORKSPACE, carry_to_previous},
     {WM_ACTION_MOVE_LEFT_WORKSPACE, carry_left},
     {WM_ACTION_MOVE_RIGHT_WORKSPACE, carry_right},
-    {WM_ACTION_MOVE_UP_WORKSPACE, ignore_window},
-    {WM_ACTION_MOVE_DOWN_WORKSPACE, ignore_window},
+    {WM_ACTION_MOVE_UP_WORKSPACE, carry_up},
+    {WM_ACTION_MOVE_DOWN_WORKSPACE, carry_down},
 };
 
 static const struct {
@@ -255,16 +256,20 @@ static void carry_to_previous(wm_desktop *desktop, wm_window *window)
 
 static void carry_left(wm_desktop *desktop, wm_window *window)
 {
-    workspaces_move(desktop, -1, window);
+    workspaces_move(desktop, 0, -1, window);
 }
 
 static void carry_right(wm_desktop *desktop, wm_window *window)
 {
-    workspaces_move(desktop, 1, window);
+    workspaces_move(desktop, 0, 1, window);
 }
 
-static void ignore_window(wm_desktop *desktop, wm_window *window)
+static void carry_up(wm_desktop *desktop, wm_window *window)
 {
-    (void) desktop;
-    (void) window;
+    workspaces_move(desktop, -1, 0, window);
+}
+
+static void carry_down(wm_desktop *desktop, wm_window *window)
+{
+    workspaces_move(desktop, 1, 0, window);
 }

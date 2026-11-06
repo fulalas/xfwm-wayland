@@ -235,6 +235,25 @@ static void test_drag_wraps_to_next_workspace(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_drag_wraps_to_the_row_above(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.move.wrap_resistance = 2;
+    config.workspaces.rows = 2;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_click click = drag_title(&world, desktop, window);
+    for (int i = 0; i < 4; i++) {
+        drag_to(&world, desktop, &click, (wm_point) {click.point.x, 0});
+    }
+    CHECK_INT_EQ(world.workspaces.count / 2, world.workspaces.current);
+    CHECK_INT_EQ(world.workspaces.count / 2, wm_window_current_view(window).workspace);
+    CHECK(world.warp.y > 500);
+    fake_release(&world, desktop, &click);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_closing_last_moved_window_frees_pointer(void)
 {
     fake_world world;
@@ -267,6 +286,7 @@ int main(void)
         {"resize_respects_minimum_size", test_resize_respects_minimum_size},
         {"easy_click_moves_from_content", test_easy_click_moves_from_content},
         {"drag_wraps_to_next_workspace", test_drag_wraps_to_next_workspace},
+        {"drag_wraps_to_the_row_above", test_drag_wraps_to_the_row_above},
         {"closing_last_moved_window_frees_pointer",
          test_closing_last_moved_window_frees_pointer},
     };
