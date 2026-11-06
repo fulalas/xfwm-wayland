@@ -55,7 +55,6 @@ typedef struct protocol_globals {
     struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel;
     struct wlr_ext_foreign_toplevel_list_v1 *foreign_toplevel_list;
     struct wlr_ext_workspace_manager_v1 *workspace;
-    struct wlr_xdg_activation_v1 *activation;
     struct wlr_output_manager_v1 *output_manager;
     struct wlr_output_power_manager_v1 *output_power;
     struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1 *toplevel_capture;

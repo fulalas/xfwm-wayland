@@ -76,7 +76,11 @@ endforeach
 
 present_protocol_dir = dependency('wayland-protocols').get_variable('pkgdatadir') / 'staging'
 present_protocol_files = []
-foreach protocol : [['fifo', 'fifo-v1'], ['commit-timing', 'commit-timing-v1']]
+foreach protocol : [
+  ['fifo', 'fifo-v1'],
+  ['commit-timing', 'commit-timing-v1'],
+  ['xdg-activation', 'xdg-activation-v1'],
+]
   foreach kind : [['server-header', '-protocol.h'], ['private-code', '-protocol.c']]
     present_protocol_files += custom_target(
       protocol[1] + kind[1],
@@ -133,6 +137,7 @@ compositor_sources = files(
   'src/absolute_input.c',
   'src/accessibility.c',
   'src/activation.c',
+  'src/activation_protocol.c',
   'src/brightness_curve.c',
   'src/cairo_buffer.c',
   'src/click_focus.c',

@@ -5,7 +5,6 @@
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
-#include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/util/log.h>
 
 #include "protocols.h"
@@ -24,13 +23,12 @@ bool protocols_create_desktop(compositor *server)
     globals->foreign_toplevel_list =
         wlr_ext_foreign_toplevel_list_v1_create(display, STAGING_VERSION);
     globals->workspace = wlr_ext_workspace_manager_v1_create(display, STAGING_VERSION);
-    globals->activation = wlr_xdg_activation_v1_create(display);
     globals->output_manager = wlr_output_manager_v1_create(display);
     globals->output_power = wlr_output_power_manager_v1_create(display);
     create_capture_sources(server);
     bool created = globals->foreign_toplevel != NULL && globals->foreign_toplevel_list != NULL &&
-                   globals->workspace != NULL && globals->activation != NULL &&
-                   globals->output_manager != NULL && globals->output_power != NULL;
+                   globals->workspace != NULL && globals->output_manager != NULL &&
+                   globals->output_power != NULL;
     if (!created) {
         wlr_log(WLR_ERROR, "cannot create the desktop integration globals");
     }
