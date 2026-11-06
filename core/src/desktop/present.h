@@ -13,6 +13,8 @@ typedef struct present_state {
     bool outline_dirty;
     bool outline_visible;
     wm_rect outline;
+    bool size_visible;
+    wm_size_view size;
     bool cursor_reported;
     wm_cursor_shape reported_cursor;
     wm_cursor_shape cursor;

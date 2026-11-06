@@ -25,6 +25,8 @@ typedef struct wm_presenter {
     void (*menu_hidden)(void *self);
     void (*outline_shown)(void *self, const wm_rect *rect);
     void (*outline_hidden)(void *self);
+    void (*size_shown)(void *self, const wm_size_view *view);
+    void (*size_hidden)(void *self);
     void (*zoom_changed)(void *self, const wm_zoom_view *view);
     void (*cursor_changed)(void *self, wm_cursor_shape shape);
 } wm_presenter;

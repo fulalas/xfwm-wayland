@@ -13,6 +13,7 @@ struct wlr_scene_tree;
 typedef struct osd_menu osd_menu;
 typedef struct osd_cycle osd_cycle;
 typedef struct osd_outline osd_outline;
+typedef struct osd_size osd_size;
 typedef struct osd_find_cursor osd_find_cursor;
 
 osd_menu *osd_menu_create(compositor *server, struct wlr_scene_tree *parent);
@@ -38,6 +39,11 @@ osd_outline *osd_outline_create(struct wlr_scene_tree *parent);
 void osd_outline_destroy(osd_outline *outline);
 void osd_outline_show(osd_outline *outline, const wm_rect *rect);
 void osd_outline_hide(osd_outline *outline);
+
+osd_size *osd_size_create(compositor *server, struct wlr_scene_tree *parent);
+void osd_size_destroy(osd_size *label);
+void osd_size_show(osd_size *label, const wm_size_view *view);
+void osd_size_hide(osd_size *label);
 
 osd_find_cursor *osd_find_cursor_create(compositor *server, struct wlr_scene_tree *parent);
 void osd_find_cursor_destroy(osd_find_cursor *find);

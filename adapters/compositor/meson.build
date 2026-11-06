@@ -206,6 +206,7 @@ compositor_sources = files(
   'src/osd_geometry.c',
   'src/osd_menu.c',
   'src/osd_outline.c',
+  'src/osd_size.c',
   'src/osd_preview.c',
   'src/output.c',
   'src/output_arrange.c',

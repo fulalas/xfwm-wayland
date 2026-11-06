@@ -1,4 +1,5 @@
 #include "appearance_internal.h"
+#include "label_painter.h"
 #include "menu_layout.h"
 #include "menu_painter.h"
 #include "shadow.h"
@@ -12,6 +13,8 @@ static menu_layout layout_menu(void *self, const wm_menu_level *level);
 static cairo_surface_t *paint_menu(void *self, const menu_paint_request *request);
 static cycle_layout layout_cycle(void *self, const wm_cycle_view *view);
 static cairo_surface_t *paint_cycle(void *self, const cycle_paint_request *request);
+static wm_size layout_label(void *self, const char *text);
+static cairo_surface_t *paint_label(void *self, const label_paint_request *request);
 
 compositor_painter appearance_painter(appearance *appearance)
 {
@@ -26,6 +29,8 @@ compositor_painter appearance_painter(appearance *appearance)
             .paint_menu = paint_menu,
             .layout_cycle = layout_cycle,
             .paint_cycle = paint_cycle,
+            .layout_label = layout_label,
+            .paint_label = paint_label,
         },
     };
 }
@@ -74,4 +79,18 @@ static cairo_surface_t *paint_cycle(void *self, const cycle_paint_request *reque
     ui_text ui = appearance_ui_text(self);
 
     return appearance_tabwin_paint(&ui, request);
+}
+
+static wm_size layout_label(void *self, const char *text)
+{
+    ui_text ui = appearance_ui_text(self);
+
+    return appearance_label_layout(ui.font, text);
+}
+
+static cairo_surface_t *paint_label(void *self, const label_paint_request *request)
+{
+    ui_text ui = appearance_ui_text(self);
+
+    return appearance_label_paint(&ui, request);
 }

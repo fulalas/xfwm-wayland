@@ -7,6 +7,7 @@
 #include "maximize.h"
 #include "monitors.h"
 #include "present.h"
+#include "size_hints.h"
 
 enum {
     KEY_MOVE_STEP = 16,
@@ -294,7 +295,8 @@ static void handle_arrow(wm_desktop *desktop, uint32_t keysym)
     if (desktop->session.kind == SESSION_MOVE) {
         move_arrow(desktop, direction);
     } else {
-        wm_point step = {direction.x * KEY_RESIZE_STEP, direction.y * KEY_RESIZE_STEP};
+        wm_point steps = size_hints_key_steps(desktop->session.window, KEY_RESIZE_STEP);
+        wm_point step = {direction.x * steps.x, direction.y * steps.y};
         resize_session_arrow(desktop, side, step);
     }
 }

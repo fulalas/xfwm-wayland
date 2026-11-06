@@ -162,6 +162,12 @@ typedef struct wm_menu_view {
     wm_menu_level submenu;
 } wm_menu_view;
 
+typedef struct wm_size_view {
+    wm_rect frame;
+    int columns;
+    int rows;
+} wm_size_view;
+
 typedef struct wm_zoom_view {
     double level;
     wm_point center;

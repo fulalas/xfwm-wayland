@@ -267,6 +267,22 @@ static void test_cycle_surface_matches_size(void)
     appearance_destroy(appearance);
 }
 
+static void test_size_label_fits_its_text(void)
+{
+    appearance *appearance = appearance_create();
+    compositor_osd_painter painter = appearance_painter(appearance).osd;
+    wm_size small = painter.layout_label(painter.self, "(8x2)");
+    wm_size large = painter.layout_label(painter.self, "(180x52)");
+    label_paint_request request = { "(180x52)", large, 1.5 };
+    cairo_surface_t *surface = painter.paint_label(painter.self, &request);
+
+    CHECK(large.width > small.width);
+    CHECK_INT_EQ(small.height, large.height);
+    CHECK_INT_EQ((int) (1.5 * large.width + 0.5), cairo_image_surface_get_width(surface));
+    cairo_surface_destroy(surface);
+    appearance_destroy(appearance);
+}
+
 static void test_cycle_cells_follow_grid(void)
 {
     appearance *appearance = appearance_create();
@@ -376,6 +392,7 @@ int main(void)
 {
     static const check_case cases[] = {
         { "frame_surface_uses_scaled_band", test_frame_surface_uses_scaled_band },
+        { "size_label_fits_its_text", test_size_label_fits_its_text },
         { "band_edge_stays_opaque", test_band_edge_stays_opaque },
         { "right_corner_keeps_its_outer_column", test_right_corner_keeps_its_outer_column },
         { "right_corner_follows_screen_alignment", test_right_corner_follows_screen_alignment },

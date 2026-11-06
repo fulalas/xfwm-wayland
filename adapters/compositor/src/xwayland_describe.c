@@ -79,16 +79,30 @@ wm_window_type xwayland_view_type(const xwayland_view *xv)
 
 wm_size_hints xwayland_view_size_hints(const xwayland_view *xv)
 {
-    wm_size_hints hints = {{0, 0}, {0, 0}};
+    wm_size_hints hints = {0};
     const xcb_size_hints_t *size_hints = xv->xsurface->size_hints;
     if (size_hints == NULL) {
         return hints;
     }
-    if ((size_hints->flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) != 0) {
+    uint32_t flags = size_hints->flags;
+    if ((flags & XCB_ICCCM_SIZE_HINT_BASE_SIZE) != 0) {
+        hints.base = (wm_size){size_hints->base_width, size_hints->base_height};
+        hints.min = hints.base;
+    }
+    if ((flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) != 0) {
         hints.min = (wm_size){size_hints->min_width, size_hints->min_height};
     }
-    if ((size_hints->flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE) != 0) {
+    if ((flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE) != 0) {
         hints.max = (wm_size){size_hints->max_width, size_hints->max_height};
+    }
+    if ((flags & XCB_ICCCM_SIZE_HINT_P_RESIZE_INC) != 0) {
+        hints.step = (wm_size){size_hints->width_inc, size_hints->height_inc};
+    }
+    if ((flags & XCB_ICCCM_SIZE_HINT_P_ASPECT) != 0) {
+        hints.min_aspect = (wm_size){wm_max(size_hints->min_aspect_num, 1),
+                                     wm_max(size_hints->min_aspect_den, 1)};
+        hints.max_aspect = (wm_size){wm_max(size_hints->max_aspect_num, 1),
+                                     wm_max(size_hints->max_aspect_den, 1)};
     }
     return hints;
 }

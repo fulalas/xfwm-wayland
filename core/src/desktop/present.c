@@ -1,11 +1,14 @@
 #include "present.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "cycle.h"
 #include "desktop_state.h"
+#include "frame.h"
 #include "highlight.h"
 #include "menu.h"
+#include "size_hints.h"
 #include "timers.h"
 #include "view.h"
 #include "workspaces.h"
@@ -17,6 +20,7 @@ static void flush_stacking(wm_desktop *desktop);
 static void flush_focus(wm_desktop *desktop);
 static void flush_workspaces(wm_desktop *desktop);
 static void flush_outline(wm_desktop *desktop);
+static void flush_size(wm_desktop *desktop);
 static void flush_cursor(wm_desktop *desktop);
 
 void present_flush(wm_desktop *desktop)
@@ -30,6 +34,7 @@ void present_flush(wm_desktop *desktop)
     menu_present(desktop);
     highlight_present(desktop);
     flush_outline(desktop);
+    flush_size(desktop);
     zoom_present(desktop);
     flush_cursor(desktop);
     timers_reschedule(desktop);
@@ -154,6 +159,30 @@ static void flush_outline(wm_desktop *desktop)
         presenter->outline_shown(presenter->self, &present->outline);
     } else {
         presenter->outline_hidden(presenter->self);
+    }
+}
+
+static void flush_size(wm_desktop *desktop)
+{
+    present_state *present = &desktop->present;
+    const wm_presenter *presenter = &desktop->ports.presenter;
+    const move_session *session = &desktop->session;
+    wm_size_view view = {0};
+    bool visible = session->kind == SESSION_RESIZE && size_hints_has_steps(session->window);
+    if (visible) {
+        wm_size steps = size_hints_steps_of(session->window);
+        view = (wm_size_view) {frame_rect(desktop, session->window), steps.width, steps.height};
+    }
+    if (visible == present->size_visible &&
+        (!visible || memcmp(&view, &present->size, sizeof(view)) == 0)) {
+        return;
+    }
+    present->size_visible = visible;
+    present->size = view;
+    if (visible) {
+        presenter->size_shown(presenter->self, &present->size);
+    } else {
+        presenter->size_hidden(presenter->self);
     }
 }
 

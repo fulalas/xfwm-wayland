@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "size_hints.h"
+
 static const uint32_t OPACITY_OPAQUE = 0xffffffffu;
 
 static char *copy_text(const char *text);
@@ -27,6 +29,7 @@ wm_window *window_create(const wm_window_desc *desc, unsigned long serial)
     window->client = desc->geometry;
     window->drawn = (wm_size) {desc->geometry.width, desc->geometry.height};
     window->hints = desc->size_hints;
+    size_hints_normalize(&window->hints);
     window->title = copy_text(desc->title);
     window->app_id = copy_text(desc->app_id);
     window->opacity = window_opacity_from_double(desc->opacity);

@@ -203,6 +203,107 @@ static void test_resize_respects_minimum_size(void)
     wm_desktop_destroy(desktop);
 }
 
+static wm_window *map_with_steps(wm_desktop *desktop, wm_rect geometry, wm_size base,
+                                 wm_size step)
+{
+    wm_window_desc desc = fake_desc(1, geometry);
+    desc.size_hints.base = base;
+    desc.size_hints.step = step;
+    return wm_window_map(desktop, &desc);
+}
+
+static void test_resize_snaps_to_steps(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = map_with_steps(desktop, (wm_rect) {0, 0, 404, 304}, (wm_size) {4, 4},
+                                       (wm_size) {10, 20});
+    fake_click click = fake_on_part(window, WM_PART_SIDE_RIGHT, WM_MOUSE_LEFT);
+    fake_press(&world, desktop, &click);
+    drag_to(&world, desktop, &click, (wm_point) {click.point.x + 57, click.point.y});
+    CHECK_INT_EQ(454, fake_client_of(window).width);
+    CHECK(world.size_visible);
+    CHECK_INT_EQ(45, world.size.columns);
+    CHECK_INT_EQ(15, world.size.rows);
+    fake_release(&world, desktop, &click);
+    CHECK(!world.size_visible);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_app_resize_ignores_steps(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = map_with_steps(desktop, (wm_rect) {0, 0, 404, 304}, (wm_size) {4, 4},
+                                       (wm_size) {10, 20});
+    wm_rect wanted = {100, 100, 461, 311};
+    wm_request_configure(desktop, window, &wanted);
+    CHECK_INT_EQ(461, fake_client_of(window).width);
+    CHECK_INT_EQ(311, fake_client_of(window).height);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_keyboard_resize_uses_steps(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = map_with_steps(desktop, (wm_rect) {0, 0, 300, 300}, (wm_size) {0, 0},
+                                       (wm_size) {3, 25});
+    fake_key(desktop, FAKE_KEY_F8, WM_MOD_ALT);
+    CHECK(world.size_visible);
+    CHECK_INT_EQ(100, world.size.columns);
+    CHECK_INT_EQ(12, world.size.rows);
+    fake_key(desktop, WM_KEYSYM_RIGHT, 0);
+    fake_key(desktop, WM_KEYSYM_RIGHT, 0);
+    fake_key(desktop, WM_KEYSYM_DOWN, 0);
+    fake_key(desktop, WM_KEYSYM_DOWN, 0);
+    fake_key(desktop, WM_KEYSYM_RETURN, 0);
+    CHECK_INT_EQ(309, fake_client_of(window).width);
+    CHECK_INT_EQ(325, fake_client_of(window).height);
+    CHECK(!world.size_visible);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_resize_keeps_aspect_ratio(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 200});
+    desc.size_hints.min_aspect = (wm_size) {2, 1};
+    desc.size_hints.max_aspect = (wm_size) {2, 1};
+    wm_window *window = wm_window_map(desktop, &desc);
+    fake_click click = fake_on_part(window, WM_PART_SIDE_RIGHT, WM_MOUSE_LEFT);
+    fake_press(&world, desktop, &click);
+    drag_to(&world, desktop, &click, (wm_point) {click.point.x + 100, click.point.y});
+    fake_release(&world, desktop, &click);
+    CHECK_INT_EQ(500, fake_client_of(window).width);
+    CHECK_INT_EQ(250, fake_client_of(window).height);
+    CHECK(!world.size_visible);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_resize_from_bottom_widens_for_ratio(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 200});
+    desc.size_hints.min_aspect = (wm_size) {2, 1};
+    desc.size_hints.max_aspect = (wm_size) {2, 1};
+    wm_window *window = wm_window_map(desktop, &desc);
+    fake_click click = fake_on_part(window, WM_PART_SIDE_BOTTOM, WM_MOUSE_LEFT);
+    fake_press(&world, desktop, &click);
+    drag_to(&world, desktop, &click, (wm_point) {click.point.x, click.point.y + 100});
+    fake_release(&world, desktop, &click);
+    CHECK_INT_EQ(600, fake_client_of(window).width);
+    CHECK_INT_EQ(300, fake_client_of(window).height);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_easy_click_moves_from_content(void)
 {
     fake_world world;
@@ -284,6 +385,11 @@ int main(void)
         {"frame_follows_drawn_size_during_resize", test_frame_follows_drawn_size_during_resize},
         {"frame_follows_drawn_size_from_top_edge", test_frame_follows_drawn_size_from_top_edge},
         {"resize_respects_minimum_size", test_resize_respects_minimum_size},
+        {"resize_snaps_to_steps", test_resize_snaps_to_steps},
+        {"app_resize_ignores_steps", test_app_resize_ignores_steps},
+        {"keyboard_resize_uses_steps", test_keyboard_resize_uses_steps},
+        {"resize_keeps_aspect_ratio", test_resize_keeps_aspect_ratio},
+        {"resize_from_bottom_widens_for_ratio", test_resize_from_bottom_widens_for_ratio},
         {"easy_click_moves_from_content", test_easy_click_moves_from_content},
         {"drag_wraps_to_next_workspace", test_drag_wraps_to_next_workspace},
         {"drag_wraps_to_the_row_above", test_drag_wraps_to_the_row_above},

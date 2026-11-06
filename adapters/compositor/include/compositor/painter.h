@@ -43,6 +43,12 @@ typedef struct menu_paint_request {
     double scale;
 } menu_paint_request;
 
+typedef struct label_paint_request {
+    const char *text;
+    wm_size size;
+    double scale;
+} label_paint_request;
+
 typedef struct shadow_template {
     cairo_surface_t *surface;
     int corner_size;
@@ -54,6 +60,8 @@ typedef struct compositor_osd_painter {
     cairo_surface_t *(*paint_menu)(void *self, const menu_paint_request *request);
     cycle_layout (*layout_cycle)(void *self, const wm_cycle_view *view);
     cairo_surface_t *(*paint_cycle)(void *self, const cycle_paint_request *request);
+    wm_size (*layout_label)(void *self, const char *text);
+    cairo_surface_t *(*paint_label)(void *self, const label_paint_request *request);
 } compositor_osd_painter;
 
 typedef struct compositor_painter {

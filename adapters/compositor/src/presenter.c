@@ -18,6 +18,8 @@ static void present_menu(void *self, const wm_menu_view *view);
 static void hide_menu(void *self);
 static void present_outline(void *self, const wm_rect *rect);
 static void hide_outline(void *self);
+static void present_size(void *self, const wm_size_view *view);
+static void hide_size(void *self);
 static void present_zoom(void *self, const wm_zoom_view *view);
 static void present_cursor(void *self, wm_cursor_shape shape);
 
@@ -35,6 +37,8 @@ wm_presenter compositor_presenter(compositor *c)
         .menu_hidden = hide_menu,
         .outline_shown = present_outline,
         .outline_hidden = hide_outline,
+        .size_shown = present_size,
+        .size_hidden = hide_size,
         .zoom_changed = present_zoom,
         .cursor_changed = present_cursor,
     };
@@ -109,6 +113,18 @@ static void hide_outline(void *self)
 {
     compositor *c = self;
     osd_hide_outline(c->osd);
+}
+
+static void present_size(void *self, const wm_size_view *view)
+{
+    compositor *c = self;
+    osd_show_size(c->osd, view);
+}
+
+static void hide_size(void *self)
+{
+    compositor *c = self;
+    osd_hide_size(c->osd);
 }
 
 static void present_zoom(void *self, const wm_zoom_view *view)

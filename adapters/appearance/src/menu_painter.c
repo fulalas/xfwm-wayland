@@ -5,8 +5,6 @@
 #include "menu_layout.h"
 #include "menu_marks.h"
 
-static const double half_pixel = 0.5;
-
 typedef struct menu_paint {
     const ui_text *ui;
     const wm_menu_level *level;
@@ -14,7 +12,6 @@ typedef struct menu_paint {
     menu_columns columns;
 } menu_paint;
 
-static void paint_background(cairo_t *cr, const ui_style *style, wm_size size);
 static void paint_item(cairo_t *cr, const menu_paint *paint, size_t index);
 static void paint_separator(cairo_t *cr, const menu_paint *paint, size_t index);
 static const ui_color *item_color(const menu_paint *paint, size_t index);
@@ -28,23 +25,11 @@ cairo_surface_t *appearance_menu_paint(const ui_text *ui, const menu_paint_reque
     canvas canvas = appearance_canvas_create(layout->size, request->scale);
     size_t count = MIN(layout->count, appearance_menu_item_count(request->level));
 
-    paint_background(canvas.cr, ui->style, layout->size);
+    appearance_ui_panel(canvas.cr, ui->style, layout->size, MENU_BORDER);
     for (size_t i = 0; i < count; i++) {
         paint_item(canvas.cr, &paint, i);
     }
     return appearance_canvas_finish(&canvas);
-}
-
-static void paint_background(cairo_t *cr, const ui_style *style, wm_size size)
-{
-    wm_rect outer = { 0, 0, size.width, size.height };
-
-    appearance_ui_fill_rect(cr, &outer, &style->background);
-    cairo_rectangle(cr, half_pixel, half_pixel, size.width - MENU_BORDER,
-                    size.height - MENU_BORDER);
-    cairo_set_line_width(cr, MENU_BORDER);
-    appearance_text_set_color(cr, &style->border);
-    cairo_stroke(cr);
 }
 
 static void paint_item(cairo_t *cr, const menu_paint *paint, size_t index)

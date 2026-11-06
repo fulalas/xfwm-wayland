@@ -44,6 +44,8 @@ typedef struct fake_world {
     bool menu_visible;
     wm_rect outline;
     bool outline_visible;
+    wm_size_view size;
+    bool size_visible;
     wm_zoom_view zoom;
     int zoom_calls;
     wm_cursor_shape cursor;

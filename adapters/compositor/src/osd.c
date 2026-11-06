@@ -10,6 +10,7 @@ struct osd {
     osd_menu *menu;
     osd_cycle *cycle;
     osd_outline *outline;
+    osd_size *size;
     osd_find_cursor *find_cursor;
 };
 
@@ -22,10 +23,12 @@ osd *osd_create(compositor *server)
     o->server = server;
     struct wlr_scene_tree *parent = scene_layers_tree(server->layers, SCENE_LAYER_OSD);
     o->outline = osd_outline_create(parent);
+    o->size = osd_size_create(server, parent);
     o->cycle = osd_cycle_create(server, parent);
     o->menu = osd_menu_create(server, parent);
     o->find_cursor = osd_find_cursor_create(server, parent);
-    if (o->outline == NULL || o->cycle == NULL || o->menu == NULL || o->find_cursor == NULL) {
+    if (o->outline == NULL || o->size == NULL || o->cycle == NULL || o->menu == NULL ||
+        o->find_cursor == NULL) {
         osd_destroy(o);
         return NULL;
     }
@@ -42,6 +45,9 @@ void osd_destroy(osd *o)
     }
     if (o->outline != NULL) {
         osd_outline_destroy(o->outline);
+    }
+    if (o->size != NULL) {
+        osd_size_destroy(o->size);
     }
     if (o->find_cursor != NULL) {
         osd_find_cursor_destroy(o->find_cursor);
@@ -77,6 +83,16 @@ void osd_show_outline(osd *o, const wm_rect *rect)
 void osd_hide_outline(osd *o)
 {
     osd_outline_hide(o->outline);
+}
+
+void osd_show_size(osd *o, const wm_size_view *view)
+{
+    osd_size_show(o->size, view);
+}
+
+void osd_hide_size(osd *o)
+{
+    osd_size_hide(o->size);
 }
 
 void osd_show_find_cursor(osd *o)

@@ -165,7 +165,8 @@ static void test_fixed_size_is_not_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window = map_with_hints(desktop, 1, (wm_size_hints) {{400, 300}, {400, 300}});
+    wm_window *window =
+        map_with_hints(desktop, 1, (wm_size_hints) {.min = {400, 300}, .max = {400, 300}});
     CHECK(!starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -174,7 +175,8 @@ static void test_one_free_dimension_is_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window = map_with_hints(desktop, 1, (wm_size_hints) {{400, 300}, {800, 300}});
+    wm_window *window =
+        map_with_hints(desktop, 1, (wm_size_hints) {.min = {400, 300}, .max = {800, 300}});
     CHECK(starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -183,7 +185,8 @@ static void test_min_above_max_is_not_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window = map_with_hints(desktop, 1, (wm_size_hints) {{500, 400}, {300, 200}});
+    wm_window *window =
+        map_with_hints(desktop, 1, (wm_size_hints) {.min = {500, 400}, .max = {300, 200}});
     CHECK(!starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -192,7 +195,8 @@ static void test_max_only_is_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window = map_with_hints(desktop, 1, (wm_size_hints) {{0, 0}, {800, 600}});
+    wm_window *window =
+        map_with_hints(desktop, 1, (wm_size_hints) {.min = {0, 0}, .max = {800, 600}});
     CHECK(starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -202,7 +206,7 @@ static void test_fixed_size_ignores_initial_maximize(void)
     fake_world world;
     wm_desktop *desktop = start(&world);
     wm_window_desc desc = fake_desc(1, small);
-    desc.size_hints = (wm_size_hints) {{400, 300}, {400, 300}};
+    desc.size_hints = (wm_size_hints) {.min = {400, 300}, .max = {400, 300}};
     desc.states = WM_STATE_MAXIMIZED;
     wm_window *window = wm_window_map(desktop, &desc);
     CHECK(!view_of(window).maximized);

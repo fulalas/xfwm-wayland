@@ -64,6 +64,10 @@ typedef struct wm_state_change {
 typedef struct wm_size_hints {
     wm_size min;
     wm_size max;
+    wm_size base;
+    wm_size step;
+    wm_size min_aspect;
+    wm_size max_aspect;
 } wm_size_hints;
 
 typedef struct wm_window_desc {

@@ -24,6 +24,7 @@ appearance_lib = static_library(
     'src/menu_labels.c',
     'src/menu_layout.c',
     'src/menu_marks.c',
+    'src/label_painter.c',
     'src/menu_painter.c',
     'src/mysvg.c',
     'src/painter.c',

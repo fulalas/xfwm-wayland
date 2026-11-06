@@ -1,5 +1,6 @@
 #include "desktop_state.h"
 #include "present.h"
+#include "size_hints.h"
 #include "stack.h"
 #include "transients.h"
 #include "urgency.h"
@@ -36,6 +37,7 @@ void wm_window_set_capabilities(wm_desktop *desktop, wm_window *window, uint32_t
 void wm_window_set_size_hints(wm_desktop *desktop, wm_window *window, const wm_size_hints *hints)
 {
     window->hints = *hints;
+    size_hints_normalize(&window->hints);
     window_update_flags(window);
     present_flush(desktop);
 }

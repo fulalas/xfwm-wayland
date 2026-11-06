@@ -15,6 +15,8 @@ static void menu_shown(void *self, const wm_menu_view *view);
 static void menu_hidden(void *self);
 static void outline_shown(void *self, const wm_rect *rect);
 static void outline_hidden(void *self);
+static void size_shown(void *self, const wm_size_view *view);
+static void size_hidden(void *self);
 static void zoom_changed(void *self, const wm_zoom_view *view);
 static void cursor_changed(void *self, wm_cursor_shape shape);
 static void configure(void *self, void *window, const wm_rect *client);
@@ -39,7 +41,7 @@ void fake_world_init(fake_world *world)
     world->ports.presenter = (wm_presenter) {
         world, window_changed, stacking_changed, focus_changed, workspaces_changed,
         cycle_shown, cycle_hidden, menu_shown, menu_hidden, outline_shown, outline_hidden,
-        zoom_changed, cursor_changed,
+        size_shown, size_hidden, zoom_changed, cursor_changed,
     };
     world->ports.commands = (wm_commands) {
         world, configure, close_window, ask_terminate, warp_pointer, spawn, app_shortcut,
@@ -235,6 +237,17 @@ static void outline_shown(void *self, const wm_rect *rect)
 static void outline_hidden(void *self)
 {
     world_of(self)->outline_visible = false;
+}
+
+static void size_shown(void *self, const wm_size_view *view)
+{
+    world_of(self)->size = *view;
+    world_of(self)->size_visible = true;
+}
+
+static void size_hidden(void *self)
+{
+    world_of(self)->size_visible = false;
 }
 
 static void zoom_changed(void *self, const wm_zoom_view *view)
