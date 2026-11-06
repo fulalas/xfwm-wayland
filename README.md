@@ -40,7 +40,7 @@ development and not ready for daily use. Compared on the same machine:
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.7 ms                  |
-| Unit tests                           | 49                 | 663                      |
+| Unit tests                           | 49                 | 666                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
@@ -104,9 +104,9 @@ Screen
 
 Input
 
-* Cursor themes with scalable (SVG) cursors are drawn at exactly the size set
-  and stay sharp at any size; other themes show their nearest size unscaled,
-  like X11.
+* The cursor is drawn at exactly the size set. Cursor themes with scalable
+  (SVG) cursors stay smooth at any size; other themes have their nearest size
+  scaled without smoothing, like X11.
 * Touchscreen and tablet calibration uses `libinput_Calibration_Matrix`
   instead of X11's `Coordinate_Transformation_Matrix`.
 

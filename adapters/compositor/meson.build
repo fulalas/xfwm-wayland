@@ -279,6 +279,7 @@ compositor_sources = files(
   'src/x11_atoms.c',
   'src/x11_gravity.c',
   'src/x11_link.c',
+  'src/xcursor_resize.c',
   'src/xdg_decorations.c',
   'src/xdg_session.c',
   'src/xdg_session_restore.c',

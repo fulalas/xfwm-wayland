@@ -25,6 +25,7 @@ compositor_pure_tests = {
   'session_apply': ['../src/session_apply.c'],
   'present_rules': ['../src/present_rules.c'],
   'scalable_layout': ['../src/scalable_layout.c'],
+  'xcursor_resize': ['../src/xcursor_resize.c'],
   'repaint_timing': ['../src/repaint_timing.c', '../src/present_rules.c'],
   'scale_guess': ['../src/scale_guess.c'],
 }

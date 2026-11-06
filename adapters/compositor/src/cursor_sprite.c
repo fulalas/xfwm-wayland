@@ -2,9 +2,14 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/xcursor.h>
+
+#include "cairo_buffer.h"
+#include "scalable_layout.h"
+#include "xcursor_resize.h"
 
 struct cursor_sprite {
     struct wlr_cursor *cursor;
@@ -13,6 +18,9 @@ struct cursor_sprite {
     struct wlr_xcursor *xcursor;
     size_t frame;
     float scale;
+    int size;
+    struct wlr_buffer **resized;
+    size_t resized_count;
 };
 
 static int handle_timer(void *data);
@@ -23,6 +31,11 @@ static void show_frame(cursor_sprite *sprite, size_t frame);
 static void show_animation_frame(cursor_sprite *sprite, size_t frame);
 static void show_xcursor_frame(cursor_sprite *sprite, size_t frame);
 static void schedule_next(cursor_sprite *sprite, uint32_t delay_ms);
+static struct wlr_buffer *resized_frame(cursor_sprite *sprite, size_t frame,
+                                        const scalable_layout *layout);
+static struct wlr_buffer *resize_image(const struct wlr_xcursor_image *image,
+                                       const scalable_layout *layout);
+static void drop_resized(cursor_sprite *sprite);
 
 cursor_sprite *cursor_sprite_create(struct wlr_cursor *cursor, struct wl_event_loop *loop)
 {
@@ -42,6 +55,7 @@ cursor_sprite *cursor_sprite_create(struct wlr_cursor *cursor, struct wl_event_l
 void cursor_sprite_destroy(cursor_sprite *sprite)
 {
     wl_event_source_remove(sprite->timer);
+    drop_resized(sprite);
     free(sprite);
 }
 
@@ -52,6 +66,7 @@ bool cursor_sprite_show(cursor_sprite *sprite, const cursor_theme_view *theme, c
 
 void cursor_sprite_stop(cursor_sprite *sprite)
 {
+    drop_resized(sprite);
     sprite->animation = NULL;
     sprite->xcursor = NULL;
     wl_event_source_timer_update(sprite->timer, 0);
@@ -98,9 +113,14 @@ static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, 
     if (xcursor == NULL || xcursor->image_count == 0) {
         return false;
     }
+    float scale = theme->scale > 0.0f ? theme->scale : 1.0f;
+    if (xcursor != sprite->xcursor || scale != sprite->scale || theme->size != sprite->size) {
+        drop_resized(sprite);
+    }
     sprite->animation = NULL;
     sprite->xcursor = xcursor;
-    sprite->scale = theme->scale > 0.0f ? theme->scale : 1.0f;
+    sprite->scale = scale;
+    sprite->size = theme->size;
     show_frame(sprite, 0);
     return true;
 }
@@ -130,11 +150,75 @@ static void show_animation_frame(cursor_sprite *sprite, size_t frame)
 static void show_xcursor_frame(cursor_sprite *sprite, size_t frame)
 {
     struct wlr_xcursor_image *image = sprite->xcursor->images[frame];
-    wlr_cursor_set_buffer(sprite->cursor, wlr_xcursor_image_get_buffer(image),
-                          (int32_t) lroundf((float) image->hotspot_x / sprite->scale),
-                          (int32_t) lroundf((float) image->hotspot_y / sprite->scale),
-                          sprite->scale);
+    struct wlr_buffer *buffer = NULL;
+    scalable_layout layout = {0};
+    if (image->width > 0 && image->height > 0) {
+        scalable_request request = {image->width, image->width, sprite->size, sprite->scale};
+        layout = scalable_layout_for(&request);
+        buffer = layout.pixels == (int) image->width ? wlr_xcursor_image_get_buffer(image)
+                                                     : resized_frame(sprite, frame, &layout);
+    }
+    if (buffer != NULL) {
+        wlr_cursor_set_buffer(sprite->cursor, buffer,
+                              (int32_t) lround(image->hotspot_x * layout.hotspot_factor),
+                              (int32_t) lround(image->hotspot_y * layout.hotspot_factor),
+                              layout.buffer_scale);
+    } else {
+        wlr_cursor_set_buffer(sprite->cursor, wlr_xcursor_image_get_buffer(image),
+                              (int32_t) lroundf((float) image->hotspot_x / sprite->scale),
+                              (int32_t) lroundf((float) image->hotspot_y / sprite->scale),
+                              sprite->scale);
+    }
     schedule_next(sprite, image->delay);
+}
+
+static struct wlr_buffer *resized_frame(cursor_sprite *sprite, size_t frame,
+                                        const scalable_layout *layout)
+{
+    if (sprite->resized == NULL) {
+        sprite->resized = calloc(sprite->xcursor->image_count, sizeof(*sprite->resized));
+        sprite->resized_count = sprite->resized != NULL ? sprite->xcursor->image_count : 0;
+    }
+    if (frame >= sprite->resized_count) {
+        return NULL;
+    }
+    if (sprite->resized[frame] == NULL) {
+        sprite->resized[frame] = resize_image(sprite->xcursor->images[frame], layout);
+    }
+    return sprite->resized[frame];
+}
+
+static struct wlr_buffer *resize_image(const struct wlr_xcursor_image *image,
+                                       const scalable_layout *layout)
+{
+    int width = layout->pixels;
+    int height = xcursor_resized_length((int) image->height, layout->pixels, (int) image->width);
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS ||
+        cairo_image_surface_get_stride(surface) != width * 4) {
+        cairo_surface_destroy(surface);
+        return NULL;
+    }
+    cairo_surface_flush(surface);
+    xcursor_pixels source = {(const uint32_t *) image->buffer, (int) image->width,
+                             (int) image->height};
+    xcursor_resize(&source, (uint32_t *) cairo_image_surface_get_data(surface), width, height);
+    cairo_surface_mark_dirty(surface);
+    struct wlr_buffer *buffer = cairo_buffer_create(surface);
+    cairo_surface_destroy(surface);
+    return buffer;
+}
+
+static void drop_resized(cursor_sprite *sprite)
+{
+    for (size_t i = 0; i < sprite->resized_count; i++) {
+        if (sprite->resized[i] != NULL) {
+            wlr_buffer_drop(sprite->resized[i]);
+        }
+    }
+    free(sprite->resized);
+    sprite->resized = NULL;
+    sprite->resized_count = 0;
 }
 
 static void schedule_next(cursor_sprite *sprite, uint32_t delay_ms)
