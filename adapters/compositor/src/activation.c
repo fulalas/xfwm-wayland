@@ -21,7 +21,8 @@ struct activation {
     struct wl_listener mapped;
 };
 
-static void handle_request_activate(void *self, struct wlr_surface *surface, bool trusted);
+static void handle_request_activate(void *self, struct wlr_surface *surface,
+                                    activation_trust trust);
 static void handle_mapped(struct wl_listener *listener, void *data);
 static void handle_surface_destroy(struct wl_listener *listener, void *data);
 static void remember(activation *activation, struct wlr_surface *surface, bool trusted);
@@ -65,12 +66,16 @@ bool activation_allows_map(const activation *a, const struct wlr_surface *surfac
     return pending == NULL || pending->trusted;
 }
 
-static void handle_request_activate(void *self, struct wlr_surface *surface, bool trusted)
+static void handle_request_activate(void *self, struct wlr_surface *surface,
+                                    activation_trust trust)
 {
     activation *a = self;
+    bool trusted = trust == ACTIVATION_TOKEN_TRUSTED;
     view *v = views_find_by_surface(a->server, surface);
     if (v == NULL || view_window(v) == NULL) {
-        remember(a, surface, trusted);
+        if (trust != ACTIVATION_TOKEN_UNKNOWN) {
+            remember(a, surface, trusted);
+        }
         return;
     }
     wm_activation_source source =

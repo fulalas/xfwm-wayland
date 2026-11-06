@@ -14,6 +14,7 @@ typedef struct text_font {
 
 typedef struct text_font_request {
     const char *description;
+    double dpi;
 } text_font_request;
 
 text_font appearance_text_font_create(const text_font_request *request);

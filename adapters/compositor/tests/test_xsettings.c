@@ -36,10 +36,21 @@ static void test_window_scale_is_forced_to_one(void)
     xsettings_table_destroy(table);
 }
 
-static void test_dpi_is_pinned_to_96(void)
+static void test_dpi_is_divided_by_scale(void)
 {
     xsettings_table *table = xsettings_table_create();
+    xsettings_table_set_scale(table, 1.5);
     add_integer(table, "Xft/DPI", 144 * 1024);
+    CHECK_INT_EQ(96 * 1024, xsettings_table_find(table, "Xft/DPI")->integer);
+    xsettings_table_set_scale(table, 1.0);
+    add_integer(table, "Xft/DPI", 120 * 1024);
+    CHECK_INT_EQ(120 * 1024, xsettings_table_find(table, "Xft/DPI")->integer);
+    xsettings_table_destroy(table);
+}
+
+static void test_dpi_defaults_to_96(void)
+{
+    xsettings_table *table = xsettings_table_create();
     CHECK_INT_EQ(96 * 1024, xsettings_table_find(table, "Xft/DPI")->integer);
     xsettings_table_destroy(table);
 }
@@ -87,7 +98,7 @@ static void test_xresources_replace_managed_lines(void)
     add_string(table, "Xft/HintStyle", "hintslight");
     char *merged = xresources_merge("XTerm*faceName:\tMono\nXft.dpi:\t96\nXft.hinting: 1\n", table);
     CHECK(strstr(merged, "XTerm*faceName:\tMono\n") != NULL);
-    const char *dpi = strstr(merged, "Xft.dpi:\t96\n");
+    const char *dpi = strstr(merged, "Xft.dpi:\t110\n");
     CHECK(dpi != NULL && strstr(dpi + 1, "Xft.dpi") == NULL);
     CHECK(strstr(merged, "Xft.hinting") == NULL);
     CHECK(strstr(merged, "Xft.hintstyle:\thintslight\n") != NULL);
@@ -101,7 +112,8 @@ int main(void)
     const check_case cases[] = {
         {"window_scale_is_forced_to_one", test_window_scale_is_forced_to_one},
         {"later_value_replaces_earlier", test_later_value_replaces_earlier},
-        {"dpi_is_pinned_to_96", test_dpi_is_pinned_to_96},
+        {"dpi_is_divided_by_scale", test_dpi_is_divided_by_scale},
+        {"dpi_defaults_to_96", test_dpi_defaults_to_96},
         {"reset_keeps_only_pinned_settings", test_reset_keeps_only_pinned_settings},
         {"wire_layout_of_string_setting", test_wire_layout_of_string_setting},
         {"xresources_replace_managed_lines", test_xresources_replace_managed_lines},

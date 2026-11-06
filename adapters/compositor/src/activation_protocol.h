@@ -8,9 +8,15 @@ struct wlr_surface;
 
 typedef struct activation_protocol activation_protocol;
 
+typedef enum activation_trust {
+    ACTIVATION_TOKEN_UNKNOWN,
+    ACTIVATION_TOKEN_UNTRUSTED,
+    ACTIVATION_TOKEN_TRUSTED,
+} activation_trust;
+
 typedef struct activation_request_handler {
     void *self;
-    void (*activate)(void *self, struct wlr_surface *surface, bool trusted);
+    void (*activate)(void *self, struct wlr_surface *surface, activation_trust trust);
 } activation_request_handler;
 
 activation_protocol *activation_protocol_create(struct wl_display *display,

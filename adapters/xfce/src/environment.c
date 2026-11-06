@@ -107,6 +107,14 @@ xfce_style xfce_environment_style(xfce_environment *environment)
     return gtk_bridge_style(environment->bridge);
 }
 
+int xfce_environment_font_dpi(xfce_environment *environment)
+{
+    XfconfChannel *xsettings = channels_get(environment->channels, CHANNEL_XSETTINGS);
+    int dpi = xfconf_channel_get_int(xsettings, "/Xft/DPI", 0);
+
+    return dpi > 0 ? dpi : 0;
+}
+
 compositor_services xfce_environment_services(xfce_environment *environment)
 {
     return (compositor_services) {

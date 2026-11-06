@@ -28,6 +28,7 @@ typedef struct ui_style {
     ui_color border;
     ui_color insensitive_foreground;
     char font[APPEARANCE_FONT_MAX];
+    double font_dpi;
 } ui_style;
 
 typedef struct theme_request {

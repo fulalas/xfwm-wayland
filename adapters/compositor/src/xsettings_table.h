@@ -10,6 +10,7 @@ typedef struct xsettings_table xsettings_table;
 xsettings_table *xsettings_table_create(void);
 void xsettings_table_destroy(xsettings_table *table);
 void xsettings_table_reset(xsettings_table *table);
+void xsettings_table_set_scale(xsettings_table *table, double scale);
 void xsettings_table_add(xsettings_table *table, const x11_setting *setting);
 size_t xsettings_table_count(const xsettings_table *table);
 const x11_setting *xsettings_table_at(const xsettings_table *table, size_t index);

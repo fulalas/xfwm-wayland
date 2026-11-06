@@ -10,6 +10,9 @@ text_font appearance_text_font_create(const text_font_request *request)
         .description = pango_font_description_from_string(request->description),
     };
 
+    if (request->dpi > 0.0) {
+        pango_cairo_context_set_resolution(font.context, request->dpi);
+    }
     font.line_height = measure_line_height(&font);
     return font;
 }

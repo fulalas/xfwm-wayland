@@ -15,18 +15,18 @@ enum {
     TOKEN_BYTES = 16,
     TOKEN_NAME_SIZE = TOKEN_BYTES * 2 + 1,
     TOKEN_LIFETIME_MS = 30000,
-    TOKENS_MAX = 64,
+    CLIENT_TOKENS_MAX = 16,
 };
 
 struct activation_protocol {
     struct wl_global *global;
     activation_request_handler handler;
     struct wl_list issued;
-    size_t issued_count;
 };
 
 typedef struct issued_token {
     char name[TOKEN_NAME_SIZE];
+    struct wl_client *client;
     bool trusted;
     int64_t created_ms;
     struct wl_list link;
@@ -38,6 +38,7 @@ typedef struct token_draft {
     struct wlr_seat *seat;
     uint32_t serial;
     struct wlr_surface *surface;
+    bool surface_lost;
     bool committed;
     struct wl_listener seat_destroy;
     struct wl_listener surface_destroy;
@@ -60,7 +61,9 @@ static void handle_seat_destroy(struct wl_listener *listener, void *data);
 static void handle_surface_destroy(struct wl_listener *listener, void *data);
 static token_draft *open_draft(struct wl_resource *resource);
 static bool draft_trusted(const token_draft *draft, struct wl_client *client);
-static issued_token *issue(activation_protocol *protocol, bool trusted);
+static issued_token *issue(activation_protocol *protocol, struct wl_client *client,
+                           bool trusted);
+static void drop_oldest_of(activation_protocol *protocol, struct wl_client *client);
 static issued_token *take_token(activation_protocol *protocol, const char *name);
 static void drop_expired(activation_protocol *protocol);
 static void drop_token(activation_protocol *protocol, issued_token *token);
@@ -154,12 +157,12 @@ static void handle_activate(struct wl_client *client, struct wl_resource *resour
     activation_protocol *protocol = wl_resource_get_user_data(resource);
     drop_expired(protocol);
     issued_token *token = take_token(protocol, name);
-    bool trusted = token != NULL && token->trusted;
+    activation_trust trust = ACTIVATION_TOKEN_UNKNOWN;
     if (token != NULL) {
+        trust = token->trusted ? ACTIVATION_TOKEN_TRUSTED : ACTIVATION_TOKEN_UNTRUSTED;
         drop_token(protocol, token);
     }
-    protocol->handler.activate(protocol->handler.self, wlr_surface_from_resource(surface),
-                               trusted);
+    protocol->handler.activate(protocol->handler.self, wlr_surface_from_resource(surface), trust);
 }
 
 static void draft_set_serial(struct wl_client *client, struct wl_resource *resource,
@@ -195,6 +198,7 @@ static void draft_set_surface(struct wl_client *client, struct wl_resource *reso
     }
     listener_disconnect(&draft->surface_destroy);
     draft->surface = wlr_surface_from_resource(surface);
+    draft->surface_lost = false;
     listener_connect(&draft->surface_destroy, &draft->surface->events.destroy,
                      handle_surface_destroy);
 }
@@ -207,7 +211,7 @@ static void draft_commit(struct wl_client *client, struct wl_resource *resource)
     }
     draft->committed = true;
     drop_expired(draft->owner);
-    issued_token *token = issue(draft->owner, draft_trusted(draft, client));
+    issued_token *token = issue(draft->owner, client, draft_trusted(draft, client));
     if (token == NULL) {
         wl_client_post_no_memory(client);
         return;
@@ -237,6 +241,7 @@ static void handle_surface_destroy(struct wl_listener *listener, void *data)
     token_draft *draft = wl_container_of(listener, draft, surface_destroy);
     listener_disconnect(&draft->surface_destroy);
     draft->surface = NULL;
+    draft->surface_lost = true;
 }
 
 static token_draft *open_draft(struct wl_resource *resource)
@@ -252,7 +257,7 @@ static token_draft *open_draft(struct wl_resource *resource)
 
 static bool draft_trusted(const token_draft *draft, struct wl_client *client)
 {
-    if (draft->seat == NULL) {
+    if (draft->seat == NULL || draft->surface_lost) {
         return false;
     }
     struct wlr_seat_client *seat_client = wlr_seat_client_for_wl_client(draft->seat, client);
@@ -264,22 +269,36 @@ static bool draft_trusted(const token_draft *draft, struct wl_client *client)
            draft->seat->pointer_state.focused_client == seat_client;
 }
 
-static issued_token *issue(activation_protocol *protocol, bool trusted)
+static issued_token *issue(activation_protocol *protocol, struct wl_client *client,
+                           bool trusted)
 {
-    if (protocol->issued_count >= TOKENS_MAX) {
-        issued_token *oldest = wl_container_of(protocol->issued.next, oldest, link);
-        drop_token(protocol, oldest);
-    }
+    drop_oldest_of(protocol, client);
     issued_token *token = calloc(1, sizeof(*token));
     if (token == NULL || !random_name(token->name)) {
         free(token);
         return NULL;
     }
+    token->client = client;
     token->trusted = trusted;
     token->created_ms = now_ms();
     wl_list_insert(protocol->issued.prev, &token->link);
-    protocol->issued_count++;
     return token;
+}
+
+static void drop_oldest_of(activation_protocol *protocol, struct wl_client *client)
+{
+    issued_token *oldest = NULL;
+    size_t count = 0;
+    issued_token *token;
+    wl_list_for_each(token, &protocol->issued, link) {
+        if (token->client == client) {
+            oldest = oldest != NULL ? oldest : token;
+            count++;
+        }
+    }
+    if (count >= CLIENT_TOKENS_MAX) {
+        drop_token(protocol, oldest);
+    }
 }
 
 static issued_token *take_token(activation_protocol *protocol, const char *name)
@@ -307,8 +326,8 @@ static void drop_expired(activation_protocol *protocol)
 
 static void drop_token(activation_protocol *protocol, issued_token *token)
 {
+    (void) protocol;
     wl_list_remove(&token->link);
-    protocol->issued_count--;
     free(token);
 }
 

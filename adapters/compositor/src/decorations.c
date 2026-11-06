@@ -113,7 +113,6 @@ void decorations_set_opacity(decorations *d, float opacity)
 {
     d->opacity = opacity;
     band_set_opacity(&d->main, opacity);
-    band_set_opacity(&d->mirror, opacity);
 }
 
 struct wlr_scene_tree *decorations_mirror(decorations *d, struct wlr_scene_tree *parent)
@@ -122,7 +121,6 @@ struct wlr_scene_tree *decorations_mirror(decorations *d, struct wlr_scene_tree 
     if (parent == NULL || !band_set_create(&d->mirror, parent)) {
         return NULL;
     }
-    band_set_opacity(&d->mirror, d->opacity);
     decorations_invalidate(d);
     return d->mirror.tree;
 }

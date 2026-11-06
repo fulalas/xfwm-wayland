@@ -3,6 +3,7 @@
 #include <glib.h>
 
 #include "appearance/appearance.h"
+#include "canvas.h"
 #include "check.h"
 #include "fixture.h"
 #include "theme.h"
@@ -231,6 +232,16 @@ static void test_theme_pixels_map_to_screen_pixels(void)
     check_variant(2.0, "", 2.0);
 }
 
+static void test_thin_pixmaps_keep_one_pixel(void)
+{
+    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 4);
+    wm_size size = appearance_surface_logical_size(surface, 3.0);
+
+    CHECK_INT_EQ(1, size.width);
+    CHECK_INT_EQ(1, size.height);
+    cairo_surface_destroy(surface);
+}
+
 int main(void)
 {
     data_home = fixture_dir_create();
@@ -246,6 +257,7 @@ int main(void)
         { "half_transparent_pixels_are_cut_out", test_half_transparent_pixels_are_cut_out },
         { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
         { "theme_pixels_map_to_screen_pixels", test_theme_pixels_map_to_screen_pixels },
+        { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
     };
 
     int result = check_run(cases, sizeof cases / sizeof cases[0]);

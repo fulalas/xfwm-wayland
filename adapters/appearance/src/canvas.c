@@ -6,6 +6,7 @@
 static const double pixel_epsilon = 1e-6;
 
 static int pixels(int logical, double scale);
+static int logical_length(int pixels, double scale);
 static double fill_factor(int pixel_count, int logical);
 
 canvas appearance_canvas_create(wm_size logical, double scale)
@@ -83,7 +84,16 @@ wm_size appearance_surface_size(cairo_surface_t *surface)
 wm_size appearance_surface_logical_size(cairo_surface_t *surface, double scale)
 {
     wm_size pixels = appearance_surface_size(surface);
-    return (wm_size) { (int) lround(pixels.width / scale), (int) lround(pixels.height / scale) };
+    return (wm_size) { logical_length(pixels.width, scale), logical_length(pixels.height, scale) };
+}
+
+static int logical_length(int pixels, double scale)
+{
+    if (pixels <= 0) {
+        return 0;
+    }
+    long length = lround(pixels / scale);
+    return length > 0 ? (int) length : 1;
 }
 
 static int pixels(int logical, double scale)
