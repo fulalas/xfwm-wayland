@@ -33,7 +33,7 @@ development and not ready for daily use. Compared on the same machine:
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
 | Written in                           | Rust, on `Smithay` | C, on `wlroots`          |
-| Dependencies built                   | 286                | 21                       |
+| Dependencies built                   | 286                | 22                       |
 | Build time (release)                 | 138 s              | 4 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
 | Average power                        | 9.6 W              | 8.6 W                    |
