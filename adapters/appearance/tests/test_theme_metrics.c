@@ -337,6 +337,26 @@ static void test_svg_uses_theme_colors_and_one_pixel_lines(void)
     fixture_dir_remove(dir);
 }
 
+static const char half_clear_svg[] =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 2 1\">"
+    "<rect width=\"1\" height=\"1\" fill=\"#000000\" shape-rendering=\"crispEdges\"/>"
+    "<rect x=\"1\" width=\"1\" height=\"1\" style=\"fill:#000000;fill-opacity:0.5\""
+    " shape-rendering=\"crispEdges\"/></svg>\n";
+
+static void test_svg_cuts_out_partly_clear_pixels(void)
+{
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "top-left-active.svg", half_clear_svg));
+    theme_image_source source = { dir, NULL, 1.0 };
+    cairo_surface_t *image = appearance_theme_image_load(&source, "top-left-active");
+
+    CHECK(image != NULL);
+    CHECK_INT_EQ(0xff, fixture_alpha_at(image, 0, 0));
+    CHECK_INT_EQ(0, fixture_alpha_at(image, 1, 0));
+    cairo_surface_destroy(image);
+    fixture_dir_remove(dir);
+}
+
 static void test_thin_pixmaps_keep_one_pixel(void)
 {
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 4);
@@ -365,6 +385,7 @@ int main(void)
         { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
         { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
         { "svg_wins_over_bitmaps", test_svg_wins_over_bitmaps },
+        { "svg_cuts_out_partly_clear_pixels", test_svg_cuts_out_partly_clear_pixels },
         { "svg_uses_theme_colors_and_one_pixel_lines",
           test_svg_uses_theme_colors_and_one_pixel_lines },
         { "svg_theme_keeps_the_title_font_size", test_svg_theme_keeps_the_title_font_size },

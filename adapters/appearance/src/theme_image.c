@@ -25,8 +25,6 @@ enum {
 static cairo_surface_t *load_bitmap(const theme_image_source *source, const char *name);
 static cairo_surface_t *load_svg(const theme_image_source *source, const char *name);
 static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols);
-static cairo_surface_t *surface_with_alpha(const GdkPixbuf *pixbuf);
-static uint32_t premultiplied_pixel(const guchar *pixel, int channels);
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf);
 static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
 static GdkPixbuf *load_overlay(const char *dir, const char *name);
@@ -77,7 +75,7 @@ static cairo_surface_t *load_svg(const theme_image_source *source, const char *n
     GdkPixbuf *pixbuf = g_file_test(path, G_FILE_TEST_IS_REGULAR)
                             ? xfwmSvgLoad(path, colors, source->scale)
                             : NULL;
-    cairo_surface_t *surface = pixbuf != NULL ? surface_with_alpha(pixbuf) : NULL;
+    cairo_surface_t *surface = pixbuf != NULL ? surface_from_pixbuf(pixbuf) : NULL;
 
     if (pixbuf != NULL) {
         g_object_unref(pixbuf);
@@ -98,42 +96,6 @@ static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols)
                                         symbols->items[i].value };
     }
     return colors;
-}
-
-static cairo_surface_t *surface_with_alpha(const GdkPixbuf *pixbuf)
-{
-    int width = gdk_pixbuf_get_width(pixbuf);
-    int height = gdk_pixbuf_get_height(pixbuf);
-    int channels = gdk_pixbuf_get_n_channels(pixbuf);
-    size_t source_stride = (size_t) gdk_pixbuf_get_rowstride(pixbuf);
-    const guchar *source = gdk_pixbuf_read_pixels(pixbuf);
-    cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
-    unsigned char *data = cairo_image_surface_get_data(surface);
-    size_t stride = (size_t) cairo_image_surface_get_stride(surface);
-
-    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
-        return surface;
-    }
-    cairo_surface_flush(surface);
-    for (int y = 0; y < height; y++) {
-        uint32_t *row = (uint32_t *) (void *) (data + (size_t) y * stride);
-        const guchar *pixels = source + (size_t) y * source_stride;
-        for (int x = 0; x < width; x++) {
-            row[x] = premultiplied_pixel(pixels + (size_t) x * (size_t) channels, channels);
-        }
-    }
-    cairo_surface_mark_dirty(surface);
-    return surface;
-}
-
-static uint32_t premultiplied_pixel(const guchar *pixel, int channels)
-{
-    unsigned alpha = channels == RGBA_CHANNELS ? pixel[ALPHA_CHANNEL] : OPAQUE;
-    unsigned red = (pixel[RED_CHANNEL] * alpha + OPAQUE / 2) / OPAQUE;
-    unsigned green = (pixel[GREEN_CHANNEL] * alpha + OPAQUE / 2) / OPAQUE;
-    unsigned blue = (pixel[BLUE_CHANNEL] * alpha + OPAQUE / 2) / OPAQUE;
-
-    return ((uint32_t) alpha << ALPHA_SHIFT) | (red << RED_SHIFT) | (green << GREEN_SHIFT) | blue;
 }
 
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf)
