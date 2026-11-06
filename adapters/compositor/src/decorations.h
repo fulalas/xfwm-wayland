@@ -15,11 +15,13 @@ typedef struct decor_paint {
     const char *title;
     cairo_surface_t *icon;
     double scale;
+    wm_point origin;
 } decor_paint;
 
 decorations *decorations_create(struct wlr_scene_tree *parent, const compositor_painter *painter);
 void decorations_destroy(decorations *decorations);
 void decorations_paint(decorations *decorations, const decor_paint *paint);
+bool decorations_same_alignment(wm_point a, wm_point b, double scale);
 void decorations_invalidate(decorations *decorations);
 void decorations_hide(decorations *decorations);
 void decorations_set_opacity(decorations *decorations, float opacity);

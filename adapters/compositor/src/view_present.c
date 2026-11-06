@@ -1,4 +1,5 @@
 #include <math.h>
+#include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "output.h"
@@ -13,6 +14,7 @@ static const double SHADOW_TEMPLATE_OPACITY = 1.0;
 static void store_target(view *view, const wm_window_view *state);
 static void apply_layer(view *view, wm_layer layer);
 static bool geometry_ready(const view *view);
+static wm_point frame_origin(const view *view, double scale);
 static void apply_decorations(view *view);
 static void apply_shadow(view *view);
 static void apply_opacity(view *view, const wm_opacity_view *previous);
@@ -41,9 +43,9 @@ void view_apply_geometry(view *v)
     wlr_scene_node_set_position(&v->tree->node, s->frame.x, s->frame.y);
     wlr_scene_node_set_position(&v->content->node, content_x, content_y);
     wlr_scene_node_set_position(&v->popups->node, content_x, content_y);
+    v->shown_frame = s->frame;
     apply_decorations(v);
     apply_shadow(v);
-    v->shown_frame = s->frame;
     v->presented = true;
 }
 
@@ -98,6 +100,17 @@ static bool geometry_ready(const view *v)
     return wm_size_equals(target, v->handshake.committed);
 }
 
+static wm_point frame_origin(const view *v, double scale)
+{
+    const wm_rect *frame = &v->shown_frame;
+    const output *o = outputs_for_rect(v->server->outputs, frame);
+    if (o == NULL || output_wlr(o)->scale != scale) {
+        return (wm_point){0, 0};
+    }
+    wm_rect full = output_full(o);
+    return (wm_point){frame->x - full.x, frame->y - full.y};
+}
+
 static void apply_decorations(view *v)
 {
     const wm_window_view *s = &v->target.state;
@@ -107,8 +120,10 @@ static void apply_decorations(view *v)
         return;
     }
     double scale = outputs_max_scale(v->server->outputs);
+    wm_point origin = frame_origin(v, scale);
     view_paint_mark *mark = &v->paint_mark;
-    if (mark->painted && mark->serial == s->decor_serial && mark->scale == scale) {
+    if (mark->painted && mark->serial == s->decor_serial && mark->scale == scale
+        && decorations_same_alignment(mark->origin, origin, scale)) {
         return;
     }
     decor_paint paint = {
@@ -116,9 +131,10 @@ static void apply_decorations(view *v)
         .title = v->target.title,
         .icon = view_icon_for(v, &v->target.decor.app_icon, scale),
         .scale = scale,
+        .origin = origin,
     };
     decorations_paint(v->decor, &paint);
-    *mark = (view_paint_mark){true, s->decor_serial, scale};
+    *mark = (view_paint_mark){true, s->decor_serial, scale, origin};
 }
 
 static void apply_shadow(view *v)

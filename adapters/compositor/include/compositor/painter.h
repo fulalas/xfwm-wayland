@@ -13,6 +13,7 @@ typedef struct frame_paint_request {
     double scale;
     const char *title;
     cairo_surface_t *icon;
+    wm_point origin;
 } frame_paint_request;
 
 typedef struct menu_layout {

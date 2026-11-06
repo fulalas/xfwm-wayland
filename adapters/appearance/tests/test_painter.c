@@ -28,7 +28,7 @@ static void test_frame_surface_uses_scaled_band(void)
     appearance *appearance = appearance_create();
     compositor_painter painter = appearance_painter(appearance);
     wm_decor_layout layout = { .has_frame = true };
-    frame_paint_request request = { &layout, { 5, 0, 10, 5 }, 1.5, "Title", NULL };
+    frame_paint_request request = { &layout, { 5, 0, 10, 5 }, 1.5, "Title", NULL, { 0, 0 } };
     cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
     CHECK_INT_EQ(15, cairo_image_surface_get_width(surface));
@@ -59,7 +59,7 @@ static void test_band_edge_stays_opaque(void)
         .mode = WM_FILL_PLAIN,
         .clip = { 0, 0, 4, 4 },
     };
-    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL };
+    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL, { 0, 0 } };
     cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
     CHECK_INT_EQ(3, cairo_image_surface_get_width(surface));
@@ -81,7 +81,7 @@ static const char right_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
                                        "\"8 3 2 1\",\n\". c #FF0000\",\n\"# c #0000FF\",\n"
                                        "\".......#\",\".......#\",\".......#\"};\n";
 
-static void test_right_corner_keeps_its_outer_column(void)
+static void check_right_corner(wm_point origin, int last_column)
 {
     char *dir = fixture_dir_create();
     g_free(fixture_write(dir, "themerc", ""));
@@ -98,13 +98,25 @@ static void test_right_corner_keeps_its_outer_column(void)
         .mode = WM_FILL_PLAIN,
         .clip = { 0, 0, 5, 2 },
     };
-    frame_paint_request request = { &layout, { 0, 0, 5, 2 }, 1.5, NULL, NULL };
+    frame_paint_request request = { &layout, { 0, 0, 5, 2 }, 1.5, NULL, NULL, origin };
     cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
-    CHECK_INT_EQ(0xff0000ff, pixel_at(surface, 6, 1));
+    CHECK_INT_EQ(last_column + 1, cairo_image_surface_get_width(surface));
+    CHECK_INT_EQ(0xff0000ff, pixel_at(surface, last_column, 1));
+    CHECK(pixel_at(surface, last_column - 1, 1) != 0xff0000ff);
     cairo_surface_destroy(surface);
     appearance_destroy(appearance);
     fixture_dir_remove(dir);
+}
+
+static void test_right_corner_keeps_its_outer_column(void)
+{
+    check_right_corner((wm_point) { 0, 0 }, 7);
+}
+
+static void test_right_corner_follows_screen_alignment(void)
+{
+    check_right_corner((wm_point) { 1, 0 }, 6);
 }
 
 static const char dark_light_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
@@ -129,7 +141,7 @@ static void test_tiled_edge_does_not_wrap(void)
         .mode = WM_FILL_TILE,
         .clip = { 0, 0, 2, 4 },
     };
-    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL };
+    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL, { 0, 0 } };
     cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
     CHECK_INT_EQ(OPAQUE_WHITE, pixel_at(surface, 2, 2));
@@ -161,7 +173,7 @@ static cairo_surface_t *paint_tile(const char *xpm, wm_rect band)
         .mode = WM_FILL_TILE,
         .clip = { 0, 0, 6, 1 },
     };
-    frame_paint_request request = { &layout, band, 1.0, NULL, NULL };
+    frame_paint_request request = { &layout, band, 1.0, NULL, NULL, { 0, 0 } };
     cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
     appearance_destroy(appearance);
@@ -323,6 +335,7 @@ int main(void)
         { "frame_surface_uses_scaled_band", test_frame_surface_uses_scaled_band },
         { "band_edge_stays_opaque", test_band_edge_stays_opaque },
         { "right_corner_keeps_its_outer_column", test_right_corner_keeps_its_outer_column },
+        { "right_corner_follows_screen_alignment", test_right_corner_follows_screen_alignment },
         { "tiled_edge_does_not_wrap", test_tiled_edge_does_not_wrap },
         { "tile_starts_at_its_origin", test_tile_starts_at_its_origin },
         { "title_measure_grows_with_text", test_title_measure_grows_with_text },

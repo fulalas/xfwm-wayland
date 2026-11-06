@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/types/wlr_buffer.h>
@@ -11,6 +12,7 @@ typedef struct band_mark {
     bool painted;
     wm_rect rect;
     double scale;
+    wm_point origin;
 } band_mark;
 
 typedef struct band_set {
@@ -18,32 +20,54 @@ typedef struct band_set {
     struct wlr_scene_buffer *bands[FRAME_BAND_COUNT];
 } band_set;
 
+typedef struct band_paint {
+    band_mark mark;
+    struct wlr_buffer *buffer;
+} band_paint;
+
 struct decorations {
     const compositor_painter *painter;
     band_set main;
     band_set mirror;
-    band_mark marks[FRAME_BAND_COUNT];
+    band_paint shown[FRAME_BAND_COUNT];
+    band_paint spare[FRAME_BAND_COUNT];
     wm_decor_layout painted_layout;
     char *painted_title;
+    cairo_surface_t *painted_icon;
 };
+
+typedef enum band_change {
+    BAND_SAME,
+    BAND_MOVED,
+    BAND_CHANGED,
+} band_change;
 
 typedef struct band_job {
     frame_band band;
     wm_rect rect;
 } band_job;
 
-static bool band_needs_paint(const decorations *decorations, const decor_paint *paint,
-                             const band_job *job);
+static band_change band_change_for(const decorations *decorations, const decor_paint *paint,
+                                   const band_job *job);
 static bool shows_icon(const wm_decor_layout *layout, const wm_rect *band);
 static bool shows_title(const wm_decor_layout *layout, const wm_rect *band);
 static bool title_changed(const decorations *decorations, const decor_paint *paint);
+static bool same_phase(int a, int b, double scale);
 static void remember_title(decorations *decorations, const char *title);
+static void remember_icon(decorations *decorations, cairo_surface_t *icon);
 static bool same_ops_in_band(const wm_decor_layout *a, const wm_decor_layout *b,
                              const wm_rect *band);
 static size_t next_op_in_band(const wm_decor_layout *layout, const wm_rect *band, size_t start);
 static size_t op_limit(const wm_decor_layout *layout);
 static bool op_touches(const wm_paint_op *op, const wm_rect *band);
-static void paint_band(decorations *decorations, const decor_paint *paint, const band_job *job);
+static void repaint_band(decorations *decorations, const decor_paint *paint, const band_job *job);
+static void realign_band(decorations *decorations, const decor_paint *paint, const band_job *job);
+static void attach_mirror(decorations *decorations, const decor_paint *paint, const band_job *job);
+static bool spare_fits(const band_paint *spare, const decor_paint *paint, const band_job *job);
+static band_paint render_paint(const decorations *decorations, const decor_paint *paint,
+                               const wm_rect *rect, wm_point origin);
+static void release_paint(band_paint *paint);
+static void release_paints(decorations *decorations);
 static bool band_set_create(band_set *set, struct wlr_scene_tree *parent);
 static void band_set_destroy(band_set *set);
 static void band_set_show(band_set *set, bool shown);
@@ -51,7 +75,7 @@ static void band_set_opacity(band_set *set, float opacity);
 static void band_set_attach(band_set *set, frame_band band, struct wlr_buffer *buffer,
                             const wm_rect *rect);
 static cairo_surface_t *render_band(const decorations *decorations, const decor_paint *paint,
-                                    const wm_rect *rect);
+                                    const wm_rect *rect, wm_point origin);
 
 decorations *decorations_create(struct wlr_scene_tree *parent, const compositor_painter *painter)
 {
@@ -71,6 +95,8 @@ void decorations_destroy(decorations *d)
 {
     band_set_destroy(&d->mirror);
     band_set_destroy(&d->main);
+    release_paints(d);
+    remember_icon(d, NULL);
     free(d->painted_title);
     free(d);
 }
@@ -84,12 +110,16 @@ void decorations_paint(decorations *d, const decor_paint *paint)
     frame_bands bands = frame_bands_compute(paint->layout);
     for (int i = 0; i < FRAME_BAND_COUNT; i++) {
         band_job job = {i, bands.rects[i]};
-        if (band_needs_paint(d, paint, &job)) {
-            paint_band(d, paint, &job);
+        band_change change = band_change_for(d, paint, &job);
+        if (change == BAND_CHANGED) {
+            repaint_band(d, paint, &job);
+        } else if (change == BAND_MOVED) {
+            realign_band(d, paint, &job);
         }
     }
     d->painted_layout = *paint->layout;
     remember_title(d, paint->title);
+    remember_icon(d, paint->icon);
     band_set_show(&d->main, true);
     band_set_show(&d->mirror, true);
 }
@@ -97,7 +127,7 @@ void decorations_paint(decorations *d, const decor_paint *paint)
 void decorations_invalidate(decorations *d)
 {
     for (int i = 0; i < FRAME_BAND_COUNT; i++) {
-        d->marks[i].painted = false;
+        d->shown[i].mark.painted = false;
     }
 }
 
@@ -127,20 +157,44 @@ struct wlr_scene_tree *decorations_tree(const decorations *d)
     return d->main.tree;
 }
 
-static bool band_needs_paint(const decorations *d, const decor_paint *paint, const band_job *job)
+bool decorations_same_alignment(wm_point a, wm_point b, double scale)
 {
-    const band_mark *mark = &d->marks[job->band];
-    if (!mark->painted || mark->scale != paint->scale || !wm_rect_equals(&mark->rect, &job->rect)) {
+    return same_phase(a.x, b.x, scale) && same_phase(a.y, b.y, scale);
+}
+
+static bool same_phase(int a, int b, double scale)
+{
+    if (scale == floor(scale)) {
         return true;
     }
-    if (shows_icon(paint->layout, &job->rect) || shows_icon(&d->painted_layout, &job->rect)) {
-        return true;
+    if (a < 0 || b < 0) {
+        return a == b;
+    }
+    double device_a = a * scale;
+    double device_b = b * scale;
+    return device_a - floor(device_a) == device_b - floor(device_b);
+}
+
+static band_change band_change_for(const decorations *d, const decor_paint *paint,
+                                   const band_job *job)
+{
+    const band_mark *mark = &d->shown[job->band].mark;
+    if (!mark->painted || mark->scale != paint->scale || !wm_rect_equals(&mark->rect, &job->rect)) {
+        return BAND_CHANGED;
+    }
+    if ((shows_icon(paint->layout, &job->rect) || shows_icon(&d->painted_layout, &job->rect))
+        && paint->icon != d->painted_icon) {
+        return BAND_CHANGED;
     }
     if ((shows_title(paint->layout, &job->rect) || shows_title(&d->painted_layout, &job->rect))
         && title_changed(d, paint)) {
-        return true;
+        return BAND_CHANGED;
     }
-    return !same_ops_in_band(&d->painted_layout, paint->layout, &job->rect);
+    if (!same_ops_in_band(&d->painted_layout, paint->layout, &job->rect)) {
+        return BAND_CHANGED;
+    }
+    return decorations_same_alignment(mark->origin, paint->origin, paint->scale) ? BAND_SAME
+                                                                                 : BAND_MOVED;
 }
 
 static bool shows_icon(const wm_decor_layout *layout, const wm_rect *band)
@@ -168,6 +222,17 @@ static void remember_title(decorations *d, const char *title)
 {
     free(d->painted_title);
     d->painted_title = strdup(title != NULL ? title : "");
+}
+
+static void remember_icon(decorations *d, cairo_surface_t *icon)
+{
+    if (d->painted_icon == icon) {
+        return;
+    }
+    if (d->painted_icon != NULL) {
+        cairo_surface_destroy(d->painted_icon);
+    }
+    d->painted_icon = icon != NULL ? cairo_surface_reference(icon) : NULL;
 }
 
 static bool same_ops_in_band(const wm_decor_layout *a, const wm_decor_layout *b,
@@ -207,21 +272,78 @@ static bool op_touches(const wm_paint_op *op, const wm_rect *band)
     return wm_rect_intersects(&area, band);
 }
 
-static void paint_band(decorations *d, const decor_paint *paint, const band_job *job)
+static void repaint_band(decorations *d, const decor_paint *paint, const band_job *job)
 {
-    band_mark *mark = &d->marks[job->band];
-    *mark = (band_mark){false, job->rect, paint->scale};
+    release_paint(&d->spare[job->band]);
+    release_paint(&d->shown[job->band]);
+    d->shown[job->band] = render_paint(d, paint, &job->rect, paint->origin);
+    band_set_attach(&d->main, job->band, d->shown[job->band].buffer, &job->rect);
+    attach_mirror(d, paint, job);
+}
+
+static void realign_band(decorations *d, const decor_paint *paint, const band_job *job)
+{
+    band_paint *shown = &d->shown[job->band];
+    band_paint *spare = &d->spare[job->band];
+    band_paint previous = *shown;
+    if (spare_fits(spare, paint, job)) {
+        *shown = *spare;
+    } else {
+        release_paint(spare);
+        *shown = render_paint(d, paint, &job->rect, paint->origin);
+    }
+    *spare = previous;
+    band_set_attach(&d->main, job->band, shown->buffer, &job->rect);
+}
+
+static void attach_mirror(decorations *d, const decor_paint *paint, const band_job *job)
+{
+    wm_point corner = {0, 0};
+    if (d->mirror.tree == NULL) {
+        return;
+    }
+    if (decorations_same_alignment(paint->origin, corner, paint->scale)) {
+        band_set_attach(&d->mirror, job->band, d->shown[job->band].buffer, &job->rect);
+        return;
+    }
+    band_paint mirror = render_paint(d, paint, &job->rect, corner);
+    band_set_attach(&d->mirror, job->band, mirror.buffer, &job->rect);
+    release_paint(&mirror);
+}
+
+static bool spare_fits(const band_paint *spare, const decor_paint *paint, const band_job *job)
+{
+    const band_mark *mark = &spare->mark;
+    return spare->buffer != NULL && mark->scale == paint->scale
+           && wm_rect_equals(&mark->rect, &job->rect)
+           && decorations_same_alignment(mark->origin, paint->origin, paint->scale);
+}
+
+static band_paint render_paint(const decorations *d, const decor_paint *paint,
+                               const wm_rect *rect, wm_point origin)
+{
     cairo_surface_t *surface =
-        wm_rect_is_empty(&job->rect) ? NULL : render_band(d, paint, &job->rect);
+        wm_rect_is_empty(rect) ? NULL : render_band(d, paint, rect, origin);
     struct wlr_buffer *buffer = surface != NULL ? cairo_buffer_create(surface) : NULL;
     if (surface != NULL) {
         cairo_surface_destroy(surface);
     }
-    band_set_attach(&d->main, job->band, buffer, &job->rect);
-    band_set_attach(&d->mirror, job->band, buffer, &job->rect);
-    mark->painted = buffer != NULL;
-    if (buffer != NULL) {
-        wlr_buffer_drop(buffer);
+    return (band_paint){{buffer != NULL, *rect, paint->scale, origin}, buffer};
+}
+
+static void release_paint(band_paint *paint)
+{
+    if (paint->buffer != NULL) {
+        wlr_buffer_drop(paint->buffer);
+    }
+    *paint = (band_paint){0};
+}
+
+static void release_paints(decorations *d)
+{
+    for (int i = 0; i < FRAME_BAND_COUNT; i++) {
+        release_paint(&d->shown[i]);
+        release_paint(&d->spare[i]);
     }
 }
 
@@ -278,7 +400,7 @@ static void band_set_attach(band_set *set, frame_band band, struct wlr_buffer *b
 }
 
 static cairo_surface_t *render_band(const decorations *d, const decor_paint *paint,
-                                    const wm_rect *rect)
+                                    const wm_rect *rect, wm_point origin)
 {
     frame_paint_request request = {
         .layout = paint->layout,
@@ -286,6 +408,7 @@ static cairo_surface_t *render_band(const decorations *d, const decor_paint *pai
         .scale = paint->scale,
         .title = paint->title,
         .icon = paint->icon,
+        .origin = origin,
     };
     return d->painter->paint_frame(d->painter->self, &request);
 }

@@ -30,6 +30,7 @@ typedef struct view_paint_mark {
     bool painted;
     unsigned serial;
     double scale;
+    wm_point origin;
 } view_paint_mark;
 
 struct view {
