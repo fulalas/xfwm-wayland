@@ -86,6 +86,7 @@ typedef struct wm_window_desc {
     bool has_icon;
     bool has_workspace;
     int workspace;
+    const char *launch_id;
 } wm_window_desc;
 
 typedef enum wm_activation_source {
@@ -164,6 +165,14 @@ wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabili
 wm_window *wm_window_map(wm_desktop *desktop, const wm_window_desc *desc);
 void wm_window_unmap(wm_desktop *desktop, wm_window *window);
 wm_window_view wm_window_current_view(const wm_window *window);
+
+enum {
+    WM_LAUNCH_ID_MAX = 128,
+};
+
+void wm_launch_started(wm_desktop *desktop, const char *id);
+void wm_launch_finished(wm_desktop *desktop, const char *id);
+bool wm_window_launched(wm_desktop *desktop, wm_window *window, const char *id);
 
 void wm_window_set_title(wm_desktop *desktop, wm_window *window, const char *title);
 void wm_window_set_app_id(wm_desktop *desktop, wm_window *window, const char *app_id);

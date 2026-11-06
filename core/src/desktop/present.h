@@ -18,6 +18,7 @@ typedef struct present_state {
     bool cursor_reported;
     wm_cursor_shape reported_cursor;
     wm_cursor_shape cursor;
+    bool busy;
 } present_state;
 
 void present_flush(wm_desktop *desktop);

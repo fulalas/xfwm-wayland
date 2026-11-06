@@ -125,6 +125,11 @@ void seat_set_core_cursor(seat *s, wm_cursor_shape shape)
     cursor_image_set_core_shape(s->image, shape);
 }
 
+void seat_set_busy(seat *s, bool busy)
+{
+    cursor_image_set_busy(s->image, busy);
+}
+
 void seat_refresh_cursor(seat *s)
 {
     cursor_image_refresh(s->image);

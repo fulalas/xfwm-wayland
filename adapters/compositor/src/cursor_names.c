@@ -11,6 +11,7 @@ static const cursor_name_list shape_names[] = {
     [WM_CURSOR_RESIZE_BOTTOM_LEFT] = {{"sw-resize", "bottom_left_corner", "default", NULL}},
     [WM_CURSOR_RESIZE_BOTTOM] = {{"s-resize", "bottom_side", "default", NULL}},
     [WM_CURSOR_RESIZE_BOTTOM_RIGHT] = {{"se-resize", "bottom_right_corner", "default", NULL}},
+    [WM_CURSOR_BUSY] = {{"progress", "left_ptr_watch", "watch", "default"}},
 };
 
 cursor_name_list cursor_names_for_shape(wm_cursor_shape shape)

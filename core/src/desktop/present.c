@@ -7,6 +7,7 @@
 #include "desktop_state.h"
 #include "frame.h"
 #include "highlight.h"
+#include "launches.h"
 #include "menu.h"
 #include "size_hints.h"
 #include "timers.h"
@@ -22,6 +23,7 @@ static void flush_workspaces(wm_desktop *desktop);
 static void flush_outline(wm_desktop *desktop);
 static void flush_size(wm_desktop *desktop);
 static void flush_cursor(wm_desktop *desktop);
+static void flush_busy(wm_desktop *desktop);
 
 void present_flush(wm_desktop *desktop)
 {
@@ -37,6 +39,7 @@ void present_flush(wm_desktop *desktop)
     flush_size(desktop);
     zoom_present(desktop);
     flush_cursor(desktop);
+    flush_busy(desktop);
     timers_reschedule(desktop);
 }
 
@@ -189,10 +192,23 @@ static void flush_size(wm_desktop *desktop)
 static void flush_cursor(wm_desktop *desktop)
 {
     present_state *present = &desktop->present;
-    if (present->cursor_reported && present->reported_cursor == present->cursor) {
+    wm_cursor_shape shape = present->cursor;
+    if (shape == WM_CURSOR_DEFAULT && launches_busy(desktop)) {
+        shape = WM_CURSOR_BUSY;
+    }
+    if (present->cursor_reported && present->reported_cursor == shape) {
         return;
     }
     present->cursor_reported = true;
-    present->reported_cursor = present->cursor;
-    desktop->ports.presenter.cursor_changed(desktop->ports.presenter.self, present->cursor);
+    present->reported_cursor = shape;
+    desktop->ports.presenter.cursor_changed(desktop->ports.presenter.self, shape);
+}
+
+static void flush_busy(wm_desktop *desktop)
+{
+    bool busy = launches_busy(desktop);
+    if (busy != desktop->present.busy) {
+        desktop->present.busy = busy;
+        desktop->ports.presenter.busy_changed(desktop->ports.presenter.self, busy);
+    }
 }

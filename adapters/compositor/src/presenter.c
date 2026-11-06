@@ -22,6 +22,7 @@ static void present_size(void *self, const wm_size_view *view);
 static void hide_size(void *self);
 static void present_zoom(void *self, const wm_zoom_view *view);
 static void present_cursor(void *self, wm_cursor_shape shape);
+static void present_busy(void *self, bool busy);
 
 wm_presenter compositor_presenter(compositor *c)
 {
@@ -41,6 +42,7 @@ wm_presenter compositor_presenter(compositor *c)
         .size_hidden = hide_size,
         .zoom_changed = present_zoom,
         .cursor_changed = present_cursor,
+        .busy_changed = present_busy,
     };
     return presenter;
 }
@@ -137,4 +139,10 @@ static void present_cursor(void *self, wm_cursor_shape shape)
 {
     compositor *c = self;
     seat_set_core_cursor(c->seat, shape);
+}
+
+static void present_busy(void *self, bool busy)
+{
+    compositor *c = self;
+    seat_set_busy(c->seat, busy);
 }

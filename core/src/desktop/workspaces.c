@@ -123,6 +123,7 @@ void workspaces_delete(wm_desktop *desktop, int position)
             visibility_set_workspace(desktop, window, window->workspace - 1);
         }
     }
+    launches_workspace_removed(desktop, position);
     remove_id(&desktop->workspaces, position);
     workspaces_change_count(desktop, count - 1);
 }

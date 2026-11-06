@@ -16,6 +16,7 @@ enum {
     TOKEN_NAME_SIZE = TOKEN_BYTES * 2 + 1,
     TOKEN_LIFETIME_MS = 30000,
     CLIENT_TOKENS_MAX = 16,
+    TOKENS_MAX = 64,
 };
 
 struct activation_protocol {
@@ -164,7 +165,8 @@ static void handle_activate(struct wl_client *client, struct wl_resource *resour
         trust = token->trusted ? ACTIVATION_TOKEN_TRUSTED : ACTIVATION_TOKEN_UNTRUSTED;
         drop_token(protocol, token);
     }
-    protocol->handler.activate(protocol->handler.self, wlr_surface_from_resource(surface), trust);
+    protocol->handler.activate(protocol->handler.self, wlr_surface_from_resource(surface), name,
+                               trust);
 }
 
 static void draft_set_serial(struct wl_client *client, struct wl_resource *resource,
@@ -219,6 +221,7 @@ static void draft_commit(struct wl_client *client, struct wl_resource *resource)
         return;
     }
     xdg_activation_token_v1_send_done(resource, token->name);
+    draft->owner->handler.issued(draft->owner->handler.self, token->name);
 }
 
 static void draft_resource_destroy(struct wl_resource *resource)
@@ -275,6 +278,10 @@ static issued_token *issue(activation_protocol *protocol, struct wl_client *clie
                            bool trusted)
 {
     drop_oldest_of(protocol, client);
+    if (wl_list_length(&protocol->issued) >= TOKENS_MAX) {
+        issued_token *oldest = wl_container_of(protocol->issued.next, oldest, link);
+        drop_token(protocol, oldest);
+    }
     issued_token *token = calloc(1, sizeof(*token));
     if (token == NULL || !random_name(token->name)) {
         free(token);
@@ -340,7 +347,9 @@ static void handle_client_destroy(struct wl_listener *listener, void *data)
 {
     (void) data;
     issued_token *token = wl_container_of(listener, token, client_destroy);
-    drop_token(NULL, token);
+    wl_list_remove(&token->client_destroy.link);
+    wl_list_init(&token->client_destroy.link);
+    token->client = NULL;
 }
 
 static bool random_name(char *name)

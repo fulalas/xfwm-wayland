@@ -5,6 +5,7 @@
 #include "frame_buttons.h"
 #include "highlight.h"
 #include "initial_state.h"
+#include "launches.h"
 #include "menu.h"
 #include "moveresize.h"
 #include "placement.h"
@@ -21,10 +22,18 @@ static bool is_managed(const wm_desktop *desktop, const wm_window *window);
 
 wm_window *wm_window_map(wm_desktop *desktop, const wm_window_desc *desc)
 {
-    wm_window *window = attach(desktop, desc);
+    wm_window_desc placed = *desc;
+    int workspace;
+    bool launched = desc->parent == NULL && launches_take(desktop, desc->launch_id, &workspace);
+    if (launched && !desc->has_workspace) {
+        placed.has_workspace = true;
+        placed.workspace = workspace;
+    }
+    wm_window *window = attach(desktop, &placed);
     if (window == NULL) {
         return NULL;
     }
+    window->mapped_ms = timers_now(desktop);
     placement_init_position(desktop, window);
     window->saved = window->client;
     window->pre_fullscreen = window->client;

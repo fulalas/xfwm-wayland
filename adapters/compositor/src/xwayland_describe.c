@@ -3,6 +3,7 @@
 
 #include "icon_convert.h"
 #include "xwayland.h"
+#include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
 
 enum {
@@ -31,6 +32,7 @@ static const type_pair type_pairs[] = {
 
 
 static uint32_t current_states(const struct wlr_xwayland_surface *xsurface);
+static const char *startup_id_of(const xwayland_view *xv);
 static bool surface_is_urgent(const struct wlr_xwayland_surface *xsurface);
 static bool has_position(const struct wlr_xwayland_surface *xsurface);
 static strut_range strut_side(uint32_t size, uint32_t start, uint32_t end);
@@ -54,6 +56,7 @@ wm_window_desc xwayland_view_describe(const xwayland_view *xv)
         .app_id = xs->class,
         .opacity = xs->opacity,
         .activation_allowed = true,
+        .launch_id = startup_id_of(xv),
     };
     return desc;
 }
@@ -105,6 +108,15 @@ wm_size_hints xwayland_view_size_hints(const xwayland_view *xv)
                                      wm_max(size_hints->max_aspect_den, 1)};
     }
     return hints;
+}
+
+static const char *startup_id_of(const xwayland_view *xv)
+{
+    const struct wlr_xwayland_surface *xs = xv->xsurface;
+    if (xs->startup_id != NULL || xv->server->xwayland == NULL) {
+        return xs->startup_id;
+    }
+    return xwayland_shell_take_startup_id(xv->server->xwayland, xs->pid);
 }
 
 wm_window *xwayland_view_parent_window(const xwayland_view *xv)

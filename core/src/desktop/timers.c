@@ -5,6 +5,7 @@
 #include "desktop_state.h"
 #include "click.h"
 #include "focus.h"
+#include "launches.h"
 #include "urgency.h"
 
 enum {
@@ -163,6 +164,9 @@ static void dispatch(wm_desktop *desktop, const timer_entry *entry)
         break;
     case TIMER_CLICK:
         click_on_timeout(desktop);
+        break;
+    case TIMER_LAUNCH:
+        launches_on_timer(desktop);
         break;
     }
 }

@@ -185,6 +185,7 @@ typedef enum wm_cursor_shape {
     WM_CURSOR_RESIZE_BOTTOM_LEFT,
     WM_CURSOR_RESIZE_BOTTOM,
     WM_CURSOR_RESIZE_BOTTOM_RIGHT,
+    WM_CURSOR_BUSY,
 } wm_cursor_shape;
 
 #endif

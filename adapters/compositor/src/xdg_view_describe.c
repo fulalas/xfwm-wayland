@@ -34,6 +34,7 @@ wm_window_desc xdg_view_describe(const xdg_view *xv)
         .opacity = 1.0,
         .activation_allowed = activation_allows_map(xv->server->activation,
                                                     toplevel->base->surface),
+        .launch_id = activation_launch_of(xv->server->activation, toplevel->base->surface),
     };
     return desc;
 }

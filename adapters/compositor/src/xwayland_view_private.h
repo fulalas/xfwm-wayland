@@ -40,6 +40,7 @@ typedef struct xwayland_properties {
     struct wl_listener opacity;
     struct wl_listener icon;
     struct wl_listener ping_timeout;
+    struct wl_listener startup_id;
 } xwayland_properties;
 
 struct xwayland_view {

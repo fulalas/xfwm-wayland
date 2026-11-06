@@ -29,6 +29,7 @@ typedef struct wm_presenter {
     void (*size_hidden)(void *self);
     void (*zoom_changed)(void *self, const wm_zoom_view *view);
     void (*cursor_changed)(void *self, wm_cursor_shape shape);
+    void (*busy_changed)(void *self, bool busy);
 } wm_presenter;
 
 typedef struct wm_commands {

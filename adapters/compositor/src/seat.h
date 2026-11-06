@@ -36,6 +36,7 @@ void seat_focus_refresh(seat *seat);
 void seat_release_pointer_grab(seat *seat);
 
 void seat_set_core_cursor(seat *seat, wm_cursor_shape shape);
+void seat_set_busy(seat *seat, bool busy);
 void seat_refresh_cursor(seat *seat);
 void seat_warp(seat *seat, wm_point point);
 wm_point seat_pointer_position(const seat *seat);

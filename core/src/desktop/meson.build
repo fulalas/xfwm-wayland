@@ -22,6 +22,7 @@ desktop_sources = files(
   'initial_state.c',
   'keybindings.c',
   'keyboard.c',
+  'launches.c',
   'lifecycle.c',
   'maximize.c',
   'menu.c',

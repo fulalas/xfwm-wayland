@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_compositor.h>
 
@@ -10,6 +11,7 @@ typedef struct pending_activation {
     activation *owner;
     struct wlr_surface *surface;
     bool trusted;
+    char launch[WM_LAUNCH_ID_MAX];
     struct wl_listener surface_destroy;
     struct wl_list link;
 } pending_activation;
@@ -21,11 +23,13 @@ struct activation {
     struct wl_listener mapped;
 };
 
-static void handle_request_activate(void *self, struct wlr_surface *surface,
+static void handle_token_issued(void *self, const char *name);
+static void handle_request_activate(void *self, struct wlr_surface *surface, const char *name,
                                     activation_trust trust);
 static void handle_mapped(struct wl_listener *listener, void *data);
 static void handle_surface_destroy(struct wl_listener *listener, void *data);
-static void remember(activation *activation, struct wlr_surface *surface, bool trusted);
+static void remember(activation *activation, struct wlr_surface *surface, const char *name,
+                     bool trusted);
 static pending_activation *find_pending(const activation *activation,
                                         const struct wlr_surface *surface);
 static void forget(pending_activation *pending);
@@ -39,7 +43,8 @@ activation *activation_create(compositor *server)
     a->server = server;
     wl_list_init(&a->pending);
     a->protocol = activation_protocol_create(
-        server->display, &(activation_request_handler){a, handle_request_activate});
+        server->display,
+        &(activation_request_handler){a, handle_token_issued, handle_request_activate});
     if (a->protocol == NULL) {
         free(a);
         return NULL;
@@ -66,7 +71,19 @@ bool activation_allows_map(const activation *a, const struct wlr_surface *surfac
     return pending == NULL || pending->trusted;
 }
 
-static void handle_request_activate(void *self, struct wlr_surface *surface,
+const char *activation_launch_of(const activation *a, const struct wlr_surface *surface)
+{
+    const pending_activation *pending = a != NULL ? find_pending(a, surface) : NULL;
+    return pending != NULL && pending->launch[0] != '\0' ? pending->launch : NULL;
+}
+
+static void handle_token_issued(void *self, const char *name)
+{
+    activation *a = self;
+    wm_launch_started(a->server->desktop, name);
+}
+
+static void handle_request_activate(void *self, struct wlr_surface *surface, const char *name,
                                     activation_trust trust)
 {
     activation *a = self;
@@ -74,8 +91,11 @@ static void handle_request_activate(void *self, struct wlr_surface *surface,
     view *v = views_find_by_surface(a->server, surface);
     if (v == NULL || view_window(v) == NULL) {
         if (trust != ACTIVATION_TOKEN_UNKNOWN) {
-            remember(a, surface, trusted);
+            remember(a, surface, name, trusted);
         }
+        return;
+    }
+    if (wm_window_launched(a->server->desktop, view_window(v), name)) {
         return;
     }
     wm_activation_source source =
@@ -99,7 +119,8 @@ static void handle_surface_destroy(struct wl_listener *listener, void *data)
     forget(pending);
 }
 
-static void remember(activation *a, struct wlr_surface *surface, bool trusted)
+static void remember(activation *a, struct wlr_surface *surface, const char *name,
+                     bool trusted)
 {
     pending_activation *pending = find_pending(a, surface);
     if (pending == NULL) {
@@ -114,6 +135,7 @@ static void remember(activation *a, struct wlr_surface *surface, bool trusted)
         wl_list_insert(&a->pending, &pending->link);
     }
     pending->trusted = trusted;
+    snprintf(pending->launch, sizeof(pending->launch), "%s", name);
 }
 
 static pending_activation *find_pending(const activation *a, const struct wlr_surface *surface)

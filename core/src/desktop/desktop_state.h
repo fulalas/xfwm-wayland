@@ -6,6 +6,7 @@
 #include "focus.h"
 #include "frame_buttons.h"
 #include "keybindings.h"
+#include "launches.h"
 #include "menu.h"
 #include "moveresize.h"
 #include "present.h"
@@ -35,6 +36,7 @@ struct wm_desktop {
     cycle_session cycle;
     menu_session menu;
     zoom_state zoom;
+    launch_set launches;
     wm_window *highlighted;
     wm_point pointer;
     uint32_t modifiers;

@@ -12,6 +12,7 @@ typedef enum timer_kind {
     TIMER_RAISE,
     TIMER_BLINK,
     TIMER_CLICK,
+    TIMER_LAUNCH,
 } timer_kind;
 
 typedef struct timer_entry {

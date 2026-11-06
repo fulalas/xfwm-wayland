@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -25,6 +26,7 @@ enum {
 static bool create_parts(xwayland_shell *shell);
 static void handle_ready(struct wl_listener *listener, void *data);
 static void handle_new_surface(struct wl_listener *listener, void *data);
+static void handle_startup_done(struct wl_listener *listener, void *data);
 static bool handle_x11_event(struct wlr_xwayland *wlr, xcb_generic_event_t *event);
 static void set_default_cursor(xwayland_shell *shell);
 
@@ -38,6 +40,7 @@ xwayland_shell *xwayland_shell_create(compositor *server)
     wl_list_init(&shell->views);
     wl_list_init(&shell->ready.link);
     wl_list_init(&shell->new_surface.link);
+    wl_list_init(&shell->startup_done.link);
     xwayland_restart_init(shell);
     if (!create_parts(shell)) {
         xwayland_shell_destroy(shell);
@@ -76,15 +79,19 @@ bool xwayland_shell_start(xwayland_shell *shell)
     snprintf(shell->display_name, sizeof(shell->display_name), "%s", shell->wlr->display_name);
     listener_connect(&shell->ready, &shell->wlr->events.ready, handle_ready);
     listener_connect(&shell->new_surface, &shell->wlr->events.new_surface, handle_new_surface);
+    listener_connect(&shell->startup_done, &shell->wlr->events.remove_startup_info,
+                     handle_startup_done);
     xwayland_restart_watch(shell);
     return true;
 }
 
 void xwayland_shell_stop(xwayland_shell *shell)
 {
+    memset(shell->startup_ids, 0, sizeof(shell->startup_ids));
     xwayland_restart_unwatch(shell);
     listener_disconnect(&shell->ready);
     listener_disconnect(&shell->new_surface);
+    listener_disconnect(&shell->startup_done);
     shell->link = (x11_link){.wlr = NULL, .ready = false};
     if (shell->wlr != NULL) {
         wlr_xwayland_destroy(shell->wlr);
@@ -161,6 +168,40 @@ static void handle_ready(struct wl_listener *listener, void *data)
     x11_link_attach(&shell->link, shell->wlr);
     xwayland_ewmh_link_ready(shell->ewmh);
     xwayland_xsettings_link_ready(shell->xsettings);
+}
+
+void xwayland_shell_note_startup_id(xwayland_shell *shell, pid_t pid, const char *id)
+{
+    if (pid <= 0 || id == NULL) {
+        return;
+    }
+    startup_id_entry *entry = &shell->startup_ids[shell->next_startup_id];
+    shell->next_startup_id = (shell->next_startup_id + 1) % STARTUP_IDS_MAX;
+    entry->pid = pid;
+    snprintf(entry->id, sizeof(entry->id), "%s", id);
+}
+
+const char *xwayland_shell_take_startup_id(xwayland_shell *shell, pid_t pid)
+{
+    for (size_t i = 0; pid > 0 && i < STARTUP_IDS_MAX; i++) {
+        if (shell->startup_ids[i].pid == pid) {
+            shell->startup_ids[i].pid = 0;
+            return shell->startup_ids[i].id;
+        }
+    }
+    return NULL;
+}
+
+static void handle_startup_done(struct wl_listener *listener, void *data)
+{
+    xwayland_shell *shell = wl_container_of(listener, shell, startup_done);
+    const struct wlr_xwayland_remove_startup_info_event *event = data;
+    char id[WM_LAUNCH_ID_MAX];
+    size_t length = strlen(event->id);
+    bool quoted = length >= 2 && event->id[0] == '"' && event->id[length - 1] == '"';
+    snprintf(id, sizeof(id), "%.*s", (int) (quoted ? length - 2 : length),
+             event->id + (quoted ? 1 : 0));
+    wm_launch_finished(shell->server->desktop, id);
 }
 
 static void handle_new_surface(struct wl_listener *listener, void *data)

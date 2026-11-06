@@ -2,6 +2,7 @@
 
 #include "listener.h"
 #include "output.h"
+#include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
 
 static void handle_title(struct wl_listener *listener, void *data);
@@ -16,6 +17,7 @@ static void handle_geometry(struct wl_listener *listener, void *data);
 static void handle_opacity(struct wl_listener *listener, void *data);
 static void handle_icon(struct wl_listener *listener, void *data);
 static void handle_ping_timeout(struct wl_listener *listener, void *data);
+static void handle_startup_id(struct wl_listener *listener, void *data);
 
 void xwayland_properties_connect(xwayland_view *xv)
 {
@@ -33,6 +35,7 @@ void xwayland_properties_connect(xwayland_view *xv)
     listener_connect(&p->opacity, &xs->events.set_opacity, handle_opacity);
     listener_connect(&p->icon, &xs->events.set_icon, handle_icon);
     listener_connect(&p->ping_timeout, &xs->events.ping_timeout, handle_ping_timeout);
+    listener_connect(&p->startup_id, &xs->events.set_startup_id, handle_startup_id);
 }
 
 void xwayland_properties_disconnect(xwayland_view *xv)
@@ -42,6 +45,7 @@ void xwayland_properties_disconnect(xwayland_view *xv)
         &p->title,       &p->class,       &p->parent,        &p->window_type,
         &p->hints,       &p->size_hints,  &p->decorations,   &p->strut_partial,
         &p->geometry,    &p->opacity,     &p->icon,          &p->ping_timeout,
+        &p->startup_id,
     };
     for (size_t i = 0; i < sizeof(all) / sizeof(all[0]); i++) {
         listener_disconnect(all[i]);
@@ -94,6 +98,20 @@ static void handle_hints(struct wl_listener *listener, void *data)
     (void) data;
     xwayland_view *xv = wl_container_of(listener, xv, properties.hints);
     xwayland_view_report_urgency(xv);
+}
+
+static void handle_startup_id(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    xwayland_view *xv = wl_container_of(listener, xv, properties.startup_id);
+    wm_window *window = xwayland_view_window(xv);
+    if (xv->server->xwayland != NULL) {
+        xwayland_shell_note_startup_id(xv->server->xwayland, xv->xsurface->pid,
+                                       xv->xsurface->startup_id);
+    }
+    if (window != NULL) {
+        wm_window_launched(xv->server->desktop, window, xv->xsurface->startup_id);
+    }
 }
 
 static void handle_size_hints(struct wl_listener *listener, void *data)

@@ -16,7 +16,9 @@ typedef enum activation_trust {
 
 typedef struct activation_request_handler {
     void *self;
-    void (*activate)(void *self, struct wlr_surface *surface, activation_trust trust);
+    void (*issued)(void *self, const char *name);
+    void (*activate)(void *self, struct wlr_surface *surface, const char *name,
+                     activation_trust trust);
 } activation_request_handler;
 
 activation_protocol *activation_protocol_create(struct wl_display *display,

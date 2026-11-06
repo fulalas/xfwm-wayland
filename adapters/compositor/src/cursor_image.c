@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
@@ -30,6 +31,10 @@ struct cursor_image {
     wm_cursor_shape core_shape;
     const char *client_shape;
     bool client_mode;
+    bool busy;
+    bool showing_busy;
+    cursor_surface client;
+    struct wl_listener client_surface_destroy;
     struct wl_listener request_set_cursor;
     struct wl_listener request_set_shape;
 };
@@ -43,6 +48,11 @@ static void refresh_scalable(cursor_image *image, int size, double scale);
 static void close_scalable(cursor_image *image);
 static void apply_current(cursor_image *image);
 static void apply_core_shape(cursor_image *image);
+static void apply_shape(cursor_image *image, wm_cursor_shape shape);
+static void apply_client(cursor_image *image);
+static bool busy_over_client(const cursor_image *image);
+static void remember_surface(cursor_image *image, const cursor_surface *surface);
+static void handle_client_surface_destroy(struct wl_listener *listener, void *data);
 static void apply_client_shape(cursor_image *image);
 static void handle_request_set_cursor(struct wl_listener *listener, void *data);
 static void handle_request_set_shape(struct wl_listener *listener, void *data);
@@ -64,6 +74,7 @@ cursor_image *cursor_image_create(seat *s)
     image->prefs = current_prefs(s);
     image->xcursors = load_theme(&image->prefs);
     wl_list_init(&image->request_set_shape.link);
+    wl_list_init(&image->client_surface_destroy.link);
     listener_connect(&image->request_set_cursor, &s->wlr_seat->events.request_set_cursor,
                      handle_request_set_cursor);
     struct wlr_cursor_shape_manager_v1 *shapes = s->server->globals.cursor_shape;
@@ -79,6 +90,7 @@ void cursor_image_destroy(cursor_image *image)
 {
     listener_disconnect(&image->request_set_cursor);
     listener_disconnect(&image->request_set_shape);
+    listener_disconnect(&image->client_surface_destroy);
     cursor_sprite_destroy(image->sprite);
     close_scalable(image);
     if (image->xcursors != NULL) {
@@ -100,11 +112,13 @@ void cursor_image_reload(cursor_image *image)
         wlr_xcursor_manager_destroy(image->xcursors);
     }
     image->xcursors = load_theme(&image->prefs);
+    image->showing_busy = false;
     apply_current(image);
 }
 
 void cursor_image_refresh(cursor_image *image)
 {
+    image->showing_busy = false;
     apply_current(image);
 }
 
@@ -112,9 +126,8 @@ void cursor_image_set_surface(cursor_image *image, const cursor_surface *surface
 {
     image->client_mode = true;
     image->client_shape = NULL;
-    cursor_sprite_stop(image->sprite);
-    wlr_cursor_set_surface(image->seat->cursor, surface->surface, surface->hotspot_x,
-                           surface->hotspot_y);
+    remember_surface(image, surface);
+    apply_client(image);
 }
 
 void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape)
@@ -130,6 +143,16 @@ void cursor_image_use_core(cursor_image *image)
     if (image->client_mode && !drag_active(image)) {
         image->client_mode = false;
         apply_core_shape(image);
+    }
+}
+
+void cursor_image_set_busy(cursor_image *image, bool busy)
+{
+    if (image->busy != busy) {
+        image->busy = busy;
+        if (image->client_mode) {
+            apply_client(image);
+        }
     }
 }
 
@@ -215,9 +238,7 @@ static void close_scalable(cursor_image *image)
 static void apply_current(cursor_image *image)
 {
     if (image->client_mode) {
-        if (image->client_shape != NULL) {
-            apply_client_shape(image);
-        }
+        apply_client(image);
     } else if (!drag_active(image)) {
         apply_core_shape(image);
     }
@@ -225,8 +246,61 @@ static void apply_current(cursor_image *image)
 
 static void apply_core_shape(cursor_image *image)
 {
+    apply_shape(image, image->core_shape);
+}
+
+static void apply_client(cursor_image *image)
+{
+    if (busy_over_client(image)) {
+        if (!image->showing_busy) {
+            apply_shape(image, WM_CURSOR_BUSY);
+        }
+        return;
+    }
+    if (image->client_shape != NULL) {
+        apply_client_shape(image);
+        return;
+    }
+    image->showing_busy = false;
+    cursor_sprite_stop(image->sprite);
+    wlr_cursor_set_surface(image->seat->cursor, image->client.surface, image->client.hotspot_x,
+                           image->client.hotspot_y);
+}
+
+static bool busy_over_client(const cursor_image *image)
+{
+    if (!image->busy || drag_active(image)) {
+        return false;
+    }
+    if (image->client_shape != NULL) {
+        return strcmp(image->client_shape, "default") == 0;
+    }
+    return image->client.surface != NULL;
+}
+
+static void remember_surface(cursor_image *image, const cursor_surface *surface)
+{
+    listener_disconnect(&image->client_surface_destroy);
+    image->client = *surface;
+    if (surface->surface != NULL) {
+        listener_connect(&image->client_surface_destroy, &surface->surface->events.destroy,
+                         handle_client_surface_destroy);
+    }
+}
+
+static void handle_client_surface_destroy(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    cursor_image *image = wl_container_of(listener, image, client_surface_destroy);
+    listener_disconnect(&image->client_surface_destroy);
+    image->client.surface = NULL;
+}
+
+static void apply_shape(cursor_image *image, wm_cursor_shape shape)
+{
+    image->showing_busy = shape == WM_CURSOR_BUSY;
     cursor_theme_view view = theme_view(image);
-    cursor_name_list names = cursor_names_for_shape(image->core_shape);
+    cursor_name_list names = cursor_names_for_shape(shape);
     for (int i = 0; i < CURSOR_NAME_CHOICES && names.names[i] != NULL; i++) {
         if (cursor_sprite_show(image->sprite, &view, names.names[i])) {
             return;
@@ -252,12 +326,13 @@ static void handle_request_set_shape(struct wl_listener *listener, void *data)
     if (accepts_request(image, event->seat_client)) {
         image->client_mode = true;
         image->client_shape = wlr_cursor_shape_v1_name(event->shape);
-        apply_client_shape(image);
+        apply_client(image);
     }
 }
 
 static void apply_client_shape(cursor_image *image)
 {
+    image->showing_busy = false;
     cursor_theme_view view = theme_view(image);
     cursor_sprite_show(image->sprite, &view, image->client_shape);
 }

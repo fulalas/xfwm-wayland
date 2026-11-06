@@ -137,6 +137,125 @@ static void test_size_commit_keeps_right_edge_on_left_resize(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_launch_shows_busy_until_timeout(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_launch_started(desktop, "token-a");
+    CHECK(!world.busy);
+    fake_advance(&world, desktop, 150);
+    CHECK(world.busy);
+    CHECK_INT_EQ(WM_CURSOR_BUSY, world.cursor);
+    fake_advance(&world, desktop, 9850);
+    CHECK(!world.busy);
+    CHECK_INT_EQ(WM_CURSOR_DEFAULT, world.cursor);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_launched_window_opens_on_launch_workspace(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_launch_started(desktop, "token-a");
+    fake_advance(&world, desktop, 200);
+    wm_desktop_switch_workspace(desktop, 2);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 300});
+    desc.launch_id = "token-a";
+    wm_window *window = wm_window_map(desktop, &desc);
+    CHECK_INT_EQ(0, wm_window_current_view(window).workspace);
+    CHECK(!world.busy);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_finished_launch_stops_busy(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_launch_started(desktop, "token-a");
+    wm_launch_started(desktop, "token-b");
+    fake_advance(&world, desktop, 200);
+    wm_launch_finished(desktop, "token-a");
+    CHECK(world.busy);
+    wm_launch_finished(desktop, "token-b");
+    CHECK(!world.busy);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_finished_launch_still_places_window(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_launch_started(desktop, "token-a");
+    fake_advance(&world, desktop, 200);
+    wm_desktop_switch_workspace(desktop, 2);
+    wm_launch_finished(desktop, "token-a");
+    CHECK(!world.busy);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 300});
+    desc.launch_id = "token-a";
+    fake_advance(&world, desktop, 500);
+    wm_window *window = wm_window_map(desktop, &desc);
+    CHECK_INT_EQ(0, wm_window_current_view(window).workspace);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_launch_follows_removed_workspace(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_desktop_switch_workspace(desktop, 3);
+    wm_launch_started(desktop, "token-a");
+    wm_desktop_remove_workspace(desktop, 1);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 300});
+    desc.launch_id = "token-a";
+    wm_window *window = wm_window_map(desktop, &desc);
+    CHECK_INT_EQ(2, wm_window_current_view(window).workspace);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_late_launch_id_moves_new_window(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_launch_started(desktop, "token-a");
+    fake_advance(&world, desktop, 200);
+    wm_desktop_switch_workspace(desktop, 1);
+    wm_window *window = fake_map(desktop, 1, (wm_rect) {0, 0, 400, 300});
+    CHECK_INT_EQ(1, wm_window_current_view(window).workspace);
+    CHECK(world.busy);
+    CHECK(wm_window_launched(desktop, window, "token-a"));
+    CHECK_INT_EQ(0, wm_window_current_view(window).workspace);
+    CHECK(!world.busy);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_old_window_keeps_its_workspace(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_desktop_switch_workspace(desktop, 1);
+    wm_window *window = fake_map(desktop, 1, (wm_rect) {0, 0, 400, 300});
+    fake_advance(&world, desktop, 5000);
+    wm_desktop_switch_workspace(desktop, 0);
+    wm_launch_started(desktop, "token-a");
+    wm_window_launched(desktop, window, "token-a");
+    CHECK_INT_EQ(1, wm_window_current_view(window).workspace);
+    wm_desktop_destroy(desktop);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -149,6 +268,14 @@ int main(void)
         {"margins_reduce_work_area", test_margins_reduce_work_area},
         {"transient_follows_parent_workspace", test_transient_follows_parent_workspace},
         {"unmap_reports_stacking", test_unmap_reports_stacking},
+        {"launch_shows_busy_until_timeout", test_launch_shows_busy_until_timeout},
+        {"launched_window_opens_on_launch_workspace",
+         test_launched_window_opens_on_launch_workspace},
+        {"finished_launch_stops_busy", test_finished_launch_stops_busy},
+        {"finished_launch_still_places_window", test_finished_launch_still_places_window},
+        {"launch_follows_removed_workspace", test_launch_follows_removed_workspace},
+        {"late_launch_id_moves_new_window", test_late_launch_id_moves_new_window},
+        {"old_window_keeps_its_workspace", test_old_window_keeps_its_workspace},
         {"size_commit_keeps_right_edge_on_left_resize",
          test_size_commit_keeps_right_edge_on_left_resize},
     };

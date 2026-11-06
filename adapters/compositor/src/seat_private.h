@@ -109,6 +109,7 @@ void cursor_image_set_surface(cursor_image *image, const cursor_surface *surface
 void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape);
 void cursor_image_use_core(cursor_image *image);
 void cursor_image_use_client(cursor_image *image);
+void cursor_image_set_busy(cursor_image *image, bool busy);
 struct wlr_xcursor_manager *cursor_image_xcursors(const cursor_image *image);
 
 touch_input *touch_input_create(seat *seat);

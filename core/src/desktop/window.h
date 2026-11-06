@@ -39,6 +39,7 @@ struct wm_window {
     uint32_t states;
     uint32_t flags;
     unsigned long serial;
+    uint32_t mapped_ms;
     wm_rect client;
     wm_rect saved;
     wm_rect pre_fullscreen;
