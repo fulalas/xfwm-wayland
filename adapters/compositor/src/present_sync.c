@@ -78,6 +78,17 @@ bool present_surface_on_output(struct wlr_surface *surface, const struct wlr_out
     return false;
 }
 
+bool present_surface_on_screen(const present_sync *sync, struct wlr_surface *surface)
+{
+    struct wlr_surface_output *entry;
+    wl_list_for_each(entry, &surface->current_outputs, link) {
+        if (present_sync_clock(sync, entry->output) != NULL) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void present_surface_schedule_frames(struct wlr_surface *surface)
 {
     struct wlr_surface_output *entry;

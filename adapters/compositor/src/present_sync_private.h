@@ -39,6 +39,7 @@ bool commit_timing_global_create(present_sync *sync);
 void commit_timing_output_frame(present_sync *sync, struct wlr_output *output);
 
 bool present_surface_on_output(struct wlr_surface *surface, const struct wlr_output *output);
+bool present_surface_on_screen(const present_sync *sync, struct wlr_surface *surface);
 void present_surface_schedule_frames(struct wlr_surface *surface);
 
 #endif

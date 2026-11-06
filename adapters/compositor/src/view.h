@@ -32,6 +32,7 @@ void view_map(view *view, const wm_window_desc *desc);
 
 struct wlr_scene_tree *view_content_tree(const view *view);
 struct wlr_scene_tree *view_popup_tree(const view *view);
+wm_rect view_shown_frame(const view *view);
 wm_window *view_window(const view *view);
 struct wlr_surface *view_surface(const view *view);
 cairo_surface_t *view_icon(const view *view);
@@ -52,6 +53,7 @@ void view_focus(view *view);
 void view_unfocus(view *view);
 void views_stack(void *const *windows, size_t count);
 void view_present(view *view, const wm_window_view *state);
+struct wlr_scene_tree *view_mirror_frame(view *view, struct wlr_scene_tree *parent);
 void view_committed(view *view, wm_size size);
 void view_configure_settled(view *view);
 void view_request_state(view *view, const wm_state_change *change);

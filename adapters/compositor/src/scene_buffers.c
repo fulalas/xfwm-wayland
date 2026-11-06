@@ -1,3 +1,4 @@
+#include <time.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "scene_buffers.h"
@@ -32,4 +33,11 @@ static void set_buffer_opacity(struct wlr_scene_buffer *buffer, int sx, int sy, 
     (void) sy;
     const float *opacity = data;
     wlr_scene_buffer_set_opacity(buffer, *opacity);
+}
+
+void scene_output_send_frame_done_now(struct wlr_scene_output *scene_output)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    wlr_scene_output_send_frame_done(scene_output, &now);
 }

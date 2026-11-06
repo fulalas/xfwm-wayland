@@ -23,6 +23,7 @@ void decorations_paint(decorations *decorations, const decor_paint *paint);
 void decorations_invalidate(decorations *decorations);
 void decorations_hide(decorations *decorations);
 void decorations_set_opacity(decorations *decorations, float opacity);
+struct wlr_scene_tree *decorations_mirror(decorations *decorations, struct wlr_scene_tree *parent);
 struct wlr_scene_tree *decorations_tree(const decorations *decorations);
 
 #endif

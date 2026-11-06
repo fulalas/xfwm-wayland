@@ -269,6 +269,7 @@ compositor_sources = files(
   'src/view_present.c',
   'src/view_query.c',
   'src/virtual_input.c',
+  'src/window_capture_source.c',
   'src/workspace_protocol.c',
   'src/x11_atoms.c',
   'src/x11_gravity.c',

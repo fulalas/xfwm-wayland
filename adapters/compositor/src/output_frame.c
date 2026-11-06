@@ -1,4 +1,3 @@
-#include <time.h>
 #include <wayland-protocols/tearing-control-v1-enum.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
@@ -7,6 +6,7 @@
 #include "output_brightness.h"
 #include "output_private.h"
 #include "output_repaint.h"
+#include "scene_buffers.h"
 #include "seat.h"
 #include "view.h"
 #include "zoom.h"
@@ -37,9 +37,7 @@ void output_send_frame_done(output *o)
     if (o->scene_output == NULL) {
         return;
     }
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    wlr_scene_output_send_frame_done(o->scene_output, &now);
+    scene_output_send_frame_done_now(o->scene_output);
 }
 
 void output_tell_scene_color(const output *o, struct wlr_output_state *state)

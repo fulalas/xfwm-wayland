@@ -11,6 +11,11 @@ struct wlr_scene_tree *view_popup_tree(const view *v)
     return v->popups;
 }
 
+wm_rect view_shown_frame(const view *v)
+{
+    return v->shown_frame;
+}
+
 wm_window *view_window(const view *v)
 {
     return v->window;

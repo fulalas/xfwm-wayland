@@ -126,7 +126,7 @@ static void handle_client_commit(struct wl_listener *listener, void *data)
     fifo_surface *fs = wl_container_of(listener, fs, client_commit);
     bool wait = fs->wait_barrier;
     fs->wait_barrier = false;
-    if (wl_list_empty(&fs->surface->current_outputs)) {
+    if (!present_surface_on_screen(fs->sync, fs->surface)) {
         fs->counters.barrier = false;
     } else if (wait && !is_synchronized(fs->surface) && fifo_must_wait(&fs->counters)) {
         queue_waiter(fs);

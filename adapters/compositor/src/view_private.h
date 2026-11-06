@@ -45,6 +45,7 @@ struct view {
     decorations *decor;
     shadow *shadow;
     view_target target;
+    wm_rect shown_frame;
     bool presented;
     view_handshake handshake;
     view_paint_mark paint_mark;

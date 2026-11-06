@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_scene.h>
 
 #include "cairo_buffer.h"
@@ -12,10 +13,16 @@ typedef struct band_mark {
     double scale;
 } band_mark;
 
-struct decorations {
-    const compositor_painter *painter;
+typedef struct band_set {
     struct wlr_scene_tree *tree;
     struct wlr_scene_buffer *bands[FRAME_BAND_COUNT];
+} band_set;
+
+struct decorations {
+    const compositor_painter *painter;
+    band_set main;
+    band_set mirror;
+    float opacity;
     band_mark marks[FRAME_BAND_COUNT];
     wm_decor_layout painted_layout;
     char *painted_title;
@@ -38,6 +45,12 @@ static size_t next_op_in_band(const wm_decor_layout *layout, const wm_rect *band
 static size_t op_limit(const wm_decor_layout *layout);
 static bool op_touches(const wm_paint_op *op, const wm_rect *band);
 static void paint_band(decorations *decorations, const decor_paint *paint, const band_job *job);
+static bool band_set_create(band_set *set, struct wlr_scene_tree *parent);
+static void band_set_destroy(band_set *set);
+static void band_set_show(band_set *set, bool shown);
+static void band_set_opacity(band_set *set, float opacity);
+static void band_set_attach(band_set *set, frame_band band, struct wlr_buffer *buffer,
+                            const wm_rect *rect);
 static cairo_surface_t *render_band(const decorations *decorations, const decor_paint *paint,
                                     const wm_rect *rect);
 
@@ -48,21 +61,18 @@ decorations *decorations_create(struct wlr_scene_tree *parent, const compositor_
         return NULL;
     }
     d->painter = painter;
-    d->tree = wlr_scene_tree_create(parent);
-    for (int i = 0; i < FRAME_BAND_COUNT && d->tree != NULL; i++) {
-        d->bands[i] = wlr_scene_buffer_create(d->tree, NULL);
-    }
-    if (d->tree == NULL) {
+    d->opacity = 1.0f;
+    if (!band_set_create(&d->main, parent)) {
         free(d);
         return NULL;
     }
-    wlr_scene_node_set_enabled(&d->tree->node, false);
     return d;
 }
 
 void decorations_destroy(decorations *d)
 {
-    wlr_scene_node_destroy(&d->tree->node);
+    band_set_destroy(&d->mirror);
+    band_set_destroy(&d->main);
     free(d->painted_title);
     free(d);
 }
@@ -82,7 +92,8 @@ void decorations_paint(decorations *d, const decor_paint *paint)
     }
     d->painted_layout = *paint->layout;
     remember_title(d, paint->title);
-    wlr_scene_node_set_enabled(&d->tree->node, true);
+    band_set_show(&d->main, true);
+    band_set_show(&d->mirror, true);
 }
 
 void decorations_invalidate(decorations *d)
@@ -94,21 +105,31 @@ void decorations_invalidate(decorations *d)
 
 void decorations_hide(decorations *d)
 {
-    wlr_scene_node_set_enabled(&d->tree->node, false);
+    band_set_show(&d->main, false);
+    band_set_show(&d->mirror, false);
 }
 
 void decorations_set_opacity(decorations *d, float opacity)
 {
-    for (int i = 0; i < FRAME_BAND_COUNT; i++) {
-        if (d->bands[i] != NULL) {
-            wlr_scene_buffer_set_opacity(d->bands[i], opacity);
-        }
+    d->opacity = opacity;
+    band_set_opacity(&d->main, opacity);
+    band_set_opacity(&d->mirror, opacity);
+}
+
+struct wlr_scene_tree *decorations_mirror(decorations *d, struct wlr_scene_tree *parent)
+{
+    band_set_destroy(&d->mirror);
+    if (parent == NULL || !band_set_create(&d->mirror, parent)) {
+        return NULL;
     }
+    band_set_opacity(&d->mirror, d->opacity);
+    decorations_invalidate(d);
+    return d->mirror.tree;
 }
 
 struct wlr_scene_tree *decorations_tree(const decorations *d)
 {
-    return d->tree;
+    return d->main.tree;
 }
 
 static bool band_needs_paint(const decorations *d, const decor_paint *paint, const band_job *job)
@@ -199,21 +220,72 @@ static bool op_touches(const wm_paint_op *op, const wm_rect *band)
 
 static void paint_band(decorations *d, const decor_paint *paint, const band_job *job)
 {
-    struct wlr_scene_buffer *node = d->bands[job->band];
+    band_mark *mark = &d->marks[job->band];
+    *mark = (band_mark){false, job->rect, paint->scale};
+    cairo_surface_t *surface =
+        wm_rect_is_empty(&job->rect) ? NULL : render_band(d, paint, &job->rect);
+    struct wlr_buffer *buffer = surface != NULL ? cairo_buffer_create(surface) : NULL;
+    if (surface != NULL) {
+        cairo_surface_destroy(surface);
+    }
+    band_set_attach(&d->main, job->band, buffer, &job->rect);
+    band_set_attach(&d->mirror, job->band, buffer, &job->rect);
+    mark->painted = buffer != NULL;
+    if (buffer != NULL) {
+        wlr_buffer_drop(buffer);
+    }
+}
+
+static bool band_set_create(band_set *set, struct wlr_scene_tree *parent)
+{
+    set->tree = wlr_scene_tree_create(parent);
+    if (set->tree == NULL) {
+        return false;
+    }
+    for (int i = 0; i < FRAME_BAND_COUNT; i++) {
+        set->bands[i] = wlr_scene_buffer_create(set->tree, NULL);
+    }
+    wlr_scene_node_set_enabled(&set->tree->node, false);
+    return true;
+}
+
+static void band_set_destroy(band_set *set)
+{
+    if (set->tree != NULL) {
+        wlr_scene_node_destroy(&set->tree->node);
+    }
+    *set = (band_set){0};
+}
+
+static void band_set_show(band_set *set, bool shown)
+{
+    if (set->tree != NULL) {
+        wlr_scene_node_set_enabled(&set->tree->node, shown);
+    }
+}
+
+static void band_set_opacity(band_set *set, float opacity)
+{
+    for (int i = 0; i < FRAME_BAND_COUNT; i++) {
+        if (set->bands[i] != NULL) {
+            wlr_scene_buffer_set_opacity(set->bands[i], opacity);
+        }
+    }
+}
+
+static void band_set_attach(band_set *set, frame_band band, struct wlr_buffer *buffer,
+                            const wm_rect *rect)
+{
+    struct wlr_scene_buffer *node = set->bands[band];
     if (node == NULL) {
         return;
     }
-    band_mark *mark = &d->marks[job->band];
-    *mark = (band_mark){false, job->rect, paint->scale};
-    if (wm_rect_is_empty(&job->rect)) {
-        wlr_scene_node_set_enabled(&node->node, false);
-        return;
+    wlr_scene_buffer_set_buffer(node, buffer);
+    if (buffer != NULL) {
+        wlr_scene_buffer_set_dest_size(node, rect->width, rect->height);
+        wlr_scene_node_set_position(&node->node, rect->x, rect->y);
     }
-    cairo_surface_t *surface = render_band(d, paint, &job->rect);
-    wm_size size = {job->rect.width, job->rect.height};
-    mark->painted = cairo_buffer_attach_sized(node, surface, size);
-    wlr_scene_node_set_position(&node->node, job->rect.x, job->rect.y);
-    wlr_scene_node_set_enabled(&node->node, mark->painted);
+    wlr_scene_node_set_enabled(&node->node, buffer != NULL);
 }
 
 static cairo_surface_t *render_band(const decorations *d, const decor_paint *paint,

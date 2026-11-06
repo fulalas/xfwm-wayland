@@ -42,7 +42,20 @@ void view_apply_geometry(view *v)
     wlr_scene_node_set_position(&v->popups->node, content_x, content_y);
     apply_decorations(v);
     apply_shadow(v);
+    v->shown_frame = s->frame;
     v->presented = true;
+}
+
+struct wlr_scene_tree *view_mirror_frame(view *v, struct wlr_scene_tree *parent)
+{
+    struct wlr_scene_tree *mirror = decorations_mirror(v->decor, parent);
+    if (mirror != NULL) {
+        v->paint_mark.painted = false;
+        if (v->presented) {
+            apply_decorations(v);
+        }
+    }
+    return mirror;
 }
 
 void view_apply_content_opacity(view *v)
