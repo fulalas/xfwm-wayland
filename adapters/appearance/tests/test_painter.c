@@ -77,6 +77,36 @@ static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
     return ((const uint32_t *) (const void *) (data + y * stride))[x];
 }
 
+static const char right_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
+                                       "\"8 3 2 1\",\n\". c #FF0000\",\n\"# c #0000FF\",\n"
+                                       "\".......#\",\".......#\",\".......#\"};\n";
+
+static void test_right_corner_keeps_its_outer_column(void)
+{
+    char *dir = fixture_dir_create();
+    g_free(fixture_write(dir, "themerc", ""));
+    g_free(fixture_write(dir, "top-right-active.xpm", right_corner_xpm));
+    appearance *appearance = appearance_create();
+    ui_style style = appearance_fallback_style();
+    theme_request theme = { dir, "Sans 9", 1.5, &style };
+    CHECK(appearance_load(appearance, &theme));
+    compositor_painter painter = appearance_painter(appearance);
+    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
+    layout.ops[0] = (wm_paint_op) {
+        .pixmap = { WM_PIXMAP_CORNER, WM_CORNER_TOP_RIGHT, WM_FRAME_ACTIVE },
+        .dest = { 0, 0, 5, 2 },
+        .mode = WM_FILL_PLAIN,
+        .clip = { 0, 0, 5, 2 },
+    };
+    frame_paint_request request = { &layout, { 0, 0, 5, 2 }, 1.5, NULL, NULL };
+    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+
+    CHECK_INT_EQ(0xff0000ff, pixel_at(surface, 6, 1));
+    cairo_surface_destroy(surface);
+    appearance_destroy(appearance);
+    fixture_dir_remove(dir);
+}
+
 static const char dark_light_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
                                           "\"2 2 2 1\",\n\". c #000000\",\n\"# c #FFFFFF\",\n"
                                           "\".#\",\".#\"};\n";
@@ -292,6 +322,7 @@ int main(void)
     static const check_case cases[] = {
         { "frame_surface_uses_scaled_band", test_frame_surface_uses_scaled_band },
         { "band_edge_stays_opaque", test_band_edge_stays_opaque },
+        { "right_corner_keeps_its_outer_column", test_right_corner_keeps_its_outer_column },
         { "tiled_edge_does_not_wrap", test_tiled_edge_does_not_wrap },
         { "tile_starts_at_its_origin", test_tile_starts_at_its_origin },
         { "title_measure_grows_with_text", test_title_measure_grows_with_text },
