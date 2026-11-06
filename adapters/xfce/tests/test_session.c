@@ -58,6 +58,7 @@ static void test_argv_exports_desktop_variables(void)
     CHECK(g_strv_contains((const char *const *) argv, "DESKTOP_SESSION"));
     CHECK(g_strv_contains((const char *const *) argv, "XDG_MENU_PREFIX"));
     CHECK(g_strv_contains((const char *const *) argv, "DISPLAY"));
+    CHECK(g_strv_contains((const char *const *) argv, "QT_QPA_PLATFORM"));
     g_strfreev(argv);
 }
 
@@ -77,6 +78,7 @@ static void test_defaults_describe_an_xfce_session(void)
     CHECK(strcmp(default_of("XDG_SESSION_DESKTOP"), "xfce") == 0);
     CHECK(strcmp(default_of("DESKTOP_SESSION"), "xfce") == 0);
     CHECK(strcmp(default_of("XDG_MENU_PREFIX"), "xfce-") == 0);
+    CHECK(strcmp(default_of("QT_QPA_PLATFORM"), "wayland;xcb") == 0);
     CHECK(default_of("WAYLAND_DISPLAY") == NULL);
 }
 

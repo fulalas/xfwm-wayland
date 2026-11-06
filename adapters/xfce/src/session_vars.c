@@ -8,6 +8,7 @@ const session_variable session_vars_defaults[] = {
     { "XDG_SESSION_DESKTOP", "xfce" },
     { "DESKTOP_SESSION", "xfce" },
     { "XDG_MENU_PREFIX", "xfce-" },
+    { "QT_QPA_PLATFORM", "wayland;xcb" },
     { NULL, NULL },
 };
 
@@ -21,6 +22,7 @@ static const char *const exported_names[] = {
     "XDG_MENU_PREFIX",
     "XDG_CONFIG_DIRS",
     "XDG_DATA_DIRS",
+    "QT_QPA_PLATFORM",
     NULL,
 };
 
