@@ -115,9 +115,9 @@ Windows
 * Window sessions use the Wayland protocol instead of the X11 session manager:
   programs that support it get their size, position, state and workspace back.
   They are kept in `~/.local/state/xfwm-wayland/sessions` for 90 days.
-* Themes made only of SVG images (an `.svg` for every image) scale with the
-  screen and stay sharp; the title font scales with them. Other themes are
-  drawn pixel for pixel, like X11.
+* Themes with SVG images scale with the screen and stay sharp, like
+  `xfwm4-gl`; the title font scales with them. An SVG image wins over a bitmap
+  of the same name. Other themes are drawn pixel for pixel, like X11.
 * X11 programs look blurry on scaled screens: `wlroots` 0.20 can't scale
   `XWayland` sharply (see
   [wlroots !2064](https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/2064)).

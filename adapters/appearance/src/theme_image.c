@@ -8,9 +8,7 @@
 #include "mysvg.h"
 
 static const char *const overlay_extensions[] = { "svg", "png", "gif", "jpg", "bmp" };
-static const char *const bitmap_extensions[] = { "xpm", "png", "gif", "jpg", "bmp" };
 static const char svg_extension[] = "svg";
-static const char xpm_extension[] = "xpm";
 
 enum {
     OPAQUE = 0xFF,
@@ -24,7 +22,6 @@ enum {
     ALPHA_CHANNEL = 3,
 };
 
-static bool has_svg_twin(const char *dir, const char *file);
 static cairo_surface_t *load_bitmap(const theme_image_source *source, const char *name);
 static cairo_surface_t *load_svg(const theme_image_source *source, const char *name);
 static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols);
@@ -41,20 +38,15 @@ bool appearance_theme_images_scalable(const char *dir)
 {
     GDir *entries = g_dir_open(dir, 0, NULL);
     bool has_svg = false;
-    bool scalable = entries != NULL;
 
-    for (const char *file; scalable && entries != NULL && (file = g_dir_read_name(entries));) {
+    for (const char *file; !has_svg && entries != NULL && (file = g_dir_read_name(entries));) {
         const char *dot = strrchr(file, '.');
-        if (dot == NULL) {
-            continue;
-        }
-        has_svg = has_svg || strcmp(dot + 1, svg_extension) == 0;
-        scalable = strcmp(dot + 1, xpm_extension) != 0 && has_svg_twin(dir, file);
+        has_svg = dot != NULL && strcmp(dot + 1, svg_extension) == 0;
     }
     if (entries != NULL) {
         g_dir_close(entries);
     }
-    return scalable && has_svg;
+    return has_svg;
 }
 
 cairo_surface_t *appearance_theme_image_load(const theme_image_source *source, const char *name)
@@ -62,25 +54,6 @@ cairo_surface_t *appearance_theme_image_load(const theme_image_source *source, c
     cairo_surface_t *svg = source->scale > 0.0 ? load_svg(source, name) : NULL;
 
     return svg != NULL ? svg : load_bitmap(source, name);
-}
-
-static bool has_svg_twin(const char *dir, const char *file)
-{
-    const char *dot = strrchr(file, '.');
-    bool bitmap = false;
-
-    for (size_t i = 0; i < G_N_ELEMENTS(bitmap_extensions); i++) {
-        bitmap = bitmap || strcmp(dot + 1, bitmap_extensions[i]) == 0;
-    }
-    if (!bitmap) {
-        return true;
-    }
-    char *svg = g_strdup_printf("%.*s.%s", (int) (dot - file), file, svg_extension);
-    char *path = g_build_filename(dir, svg, NULL);
-    bool found = g_file_test(path, G_FILE_TEST_IS_REGULAR);
-    g_free(path);
-    g_free(svg);
-    return found;
 }
 
 static cairo_surface_t *load_bitmap(const theme_image_source *source, const char *name)
