@@ -1,6 +1,8 @@
 #ifndef COMPOSITOR_ZOOM_MATH_H
 #define COMPOSITOR_ZOOM_MATH_H
 
+#include <stdbool.h>
+
 #include "wm/geometry.h"
 
 typedef struct zoom_box {
@@ -17,5 +19,6 @@ typedef struct zoom_request {
 } zoom_request;
 
 zoom_box zoom_source_box(const zoom_request *request);
+bool zoom_smooths(double level);
 
 #endif

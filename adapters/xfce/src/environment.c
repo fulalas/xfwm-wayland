@@ -169,6 +169,18 @@ compositor_services xfce_environment_services(xfce_environment *environment)
     };
 }
 
+void xfce_environment_store_workspace_rows(xfce_environment *environment, int rows)
+{
+    settings_store_workspace_rows(channels_get(environment->channels, CHANNEL_XFWM4), rows);
+}
+
+void xfce_environment_store_workspace_names(xfce_environment *environment,
+                                            const char *const *names, size_t count)
+{
+    settings_store_workspace_names(channels_get(environment->channels, CHANNEL_XFWM4), names,
+                                   count);
+}
+
 void xfce_environment_store_workspace_count(xfce_environment *environment, int count)
 {
     settings_store_workspace_count(channels_get(environment->channels, CHANNEL_XFWM4), count);

@@ -40,6 +40,14 @@ static void test_center_outside_is_clamped(void)
     CHECK_DOUBLE_NEAR(400.0, box.y, TOLERANCE);
 }
 
+static void test_high_zoom_is_sharp(void)
+{
+    CHECK(zoom_smooths(2.0));
+    CHECK(zoom_smooths(3.9));
+    CHECK(!zoom_smooths(4.0));
+    CHECK(!zoom_smooths(8.0));
+}
+
 int main(void)
 {
     const check_case cases[] = {
@@ -47,6 +55,7 @@ int main(void)
         {"center_stays_fixed", test_center_stays_fixed},
         {"corner_center_keeps_box_inside", test_corner_center_keeps_box_inside},
         {"center_outside_is_clamped", test_center_outside_is_clamped},
+        {"high_zoom_is_sharp", test_high_zoom_is_sharp},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

@@ -44,7 +44,7 @@ static void test_names_are_nul_separated(void)
 
 static void test_workarea_of_single_output_is_usable_area(void)
 {
-    wm_output_info outputs[] = {{{0, 0, 1920, 1080}, {0, 30, 1920, 1050}}};
+    wm_output_info outputs[] = {{{0, 0, 1920, 1080}, {0, 30, 1920, 1050}, false}};
     ewmh_screen screen = {{0, 0, 1920, 1080}, outputs, 1};
     CHECK_RECT_EQ(((wm_rect){0, 30, 1920, 1050}), ewmh_workarea(&screen));
 }
@@ -52,8 +52,8 @@ static void test_workarea_of_single_output_is_usable_area(void)
 static void test_workarea_keeps_panels_of_every_screen_edge(void)
 {
     wm_output_info outputs[] = {
-        {{0, 0, 1920, 1080}, {0, 30, 1920, 1050}},
-        {{1920, 0, 1280, 1024}, {1920, 0, 1230, 1024}},
+        {{0, 0, 1920, 1080}, {0, 30, 1920, 1050}, false},
+        {{1920, 0, 1280, 1024}, {1920, 0, 1230, 1024}, false},
     };
     ewmh_screen screen = {{0, 0, 3200, 1080}, outputs, 2};
     CHECK_RECT_EQ(((wm_rect){0, 30, 3150, 1050}), ewmh_workarea(&screen));
@@ -62,16 +62,27 @@ static void test_workarea_keeps_panels_of_every_screen_edge(void)
 static void test_inner_panel_does_not_shrink_workarea(void)
 {
     wm_output_info outputs[] = {
-        {{0, 0, 1920, 1080}, {0, 0, 1880, 1080}},
-        {{1920, 0, 1920, 1080}, {1920, 0, 1920, 1080}},
+        {{0, 0, 1920, 1080}, {0, 0, 1880, 1080}, false},
+        {{1920, 0, 1920, 1080}, {1920, 0, 1920, 1080}, false},
     };
     ewmh_screen screen = {{0, 0, 3840, 1080}, outputs, 2};
     CHECK_RECT_EQ(((wm_rect){0, 0, 3840, 1080}), ewmh_workarea(&screen));
 }
 
+static void test_names_split_on_nul(void)
+{
+    const char bytes[] = "Web\0Mail\0Code";
+    const char *names[4];
+    size_t count = ewmh_split_names(bytes, sizeof(bytes) - 1, names, 4);
+    CHECK_INT_EQ(3, (long) count);
+    CHECK(strcmp(names[1], "Mail") == 0);
+    CHECK(strcmp(names[2], "Code") == 0);
+}
+
 int main(void)
 {
     const check_case cases[] = {
+        {"names_split_on_nul", test_names_split_on_nul},
         {"sticky_window_is_on_all_desktops", test_sticky_window_is_on_all_desktops},
         {"window_desktop_is_its_workspace", test_window_desktop_is_its_workspace},
         {"frame_extents_order_and_clamp", test_frame_extents_order_and_clamp},

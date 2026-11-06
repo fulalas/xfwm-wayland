@@ -75,6 +75,13 @@ wm_rect appearance_tabwin_text_rect(const wm_cycle_view *view, const wm_rect *ce
                        cell->width - left - ROW_TEXT_SPACING, label_height };
 }
 
+wm_rect appearance_tabwin_name_rect(const wm_cycle_view *view, const wm_rect *cell,
+                                    int label_height)
+{
+    return (wm_rect) { cell->x + ICON_BORDER, cell->y + ICON_BORDER + view->item_size,
+                       cell->width - 2 * ICON_BORDER, label_height };
+}
+
 wm_rect appearance_tabwin_label_rect(wm_size size, int label_height)
 {
     return (wm_rect) { TABWIN_INSET, size.height - TABWIN_INSET - label_height,

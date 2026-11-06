@@ -91,6 +91,8 @@ typedef struct wm_workspaces_view {
 typedef struct wm_cycle_item {
     void *window;
     const char *title;
+    const char *app_name;
+    int workspace;
     bool minimized;
 } wm_cycle_item;
 
@@ -103,6 +105,8 @@ typedef struct wm_cycle_view {
     wm_rect monitor;
     size_t count;
     size_t selected;
+    int hovered;
+    bool show_workspace;
     wm_cycle_item items[WM_CYCLE_ITEM_MAX];
 } wm_cycle_view;
 
@@ -153,6 +157,7 @@ typedef struct wm_menu_level {
     wm_point anchor;
     size_t count;
     int selected;
+    bool mnemonics;
     wm_menu_item items[WM_MENU_ITEM_MAX];
 } wm_menu_level;
 

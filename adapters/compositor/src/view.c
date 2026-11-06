@@ -2,6 +2,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 
+#include "surface_opacity.h"
 #include "input_mapping.h"
 #include "osd.h"
 #include "scene_layers.h"
@@ -97,6 +98,10 @@ void view_committed(view *v, wm_size size)
     h->committed = size;
     if (changed && v->window != NULL) {
         wm_window_content_drawn(v->server->desktop, v->window, size);
+    }
+    if (v->window != NULL) {
+        wm_window_set_opaque(v->server->desktop, v->window,
+                             surface_is_opaque(v->impl->surface(v->self)));
     }
     if (changed && !h->awaiting) {
         report_committed_size(v, size);

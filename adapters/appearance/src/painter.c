@@ -1,5 +1,6 @@
 #include "appearance_internal.h"
 #include "label_painter.h"
+#include "menu_labels.h"
 #include "menu_layout.h"
 #include "menu_painter.h"
 #include "shadow.h"
@@ -11,6 +12,7 @@ static wm_size measure_title(void *self, const char *title);
 static shadow_template make_shadow_template(void *self, double opacity);
 static menu_layout layout_menu(void *self, const wm_menu_level *level);
 static cairo_surface_t *paint_menu(void *self, const menu_paint_request *request);
+static uint32_t menu_mnemonic(void *self, const wm_menu_level *level, size_t index);
 static cycle_layout layout_cycle(void *self, const wm_cycle_view *view);
 static cairo_surface_t *paint_cycle(void *self, const cycle_paint_request *request);
 static wm_size layout_label(void *self, const char *text);
@@ -27,6 +29,7 @@ compositor_painter appearance_painter(appearance *appearance)
             .self = appearance,
             .layout_menu = layout_menu,
             .paint_menu = paint_menu,
+            .menu_mnemonic = menu_mnemonic,
             .layout_cycle = layout_cycle,
             .paint_cycle = paint_cycle,
             .layout_label = layout_label,
@@ -65,6 +68,12 @@ static cairo_surface_t *paint_menu(void *self, const menu_paint_request *request
     ui_text ui = appearance_ui_text(self);
 
     return appearance_menu_paint(&ui, request);
+}
+
+static uint32_t menu_mnemonic(void *self, const wm_menu_level *level, size_t index)
+{
+    (void) self;
+    return appearance_menu_item_mnemonic(level, index);
 }
 
 static cycle_layout layout_cycle(void *self, const wm_cycle_view *view)

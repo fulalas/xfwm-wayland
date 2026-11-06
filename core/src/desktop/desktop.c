@@ -88,6 +88,43 @@ void wm_desktop_add_workspace(wm_desktop *desktop)
     present_flush(desktop);
 }
 
+void wm_desktop_set_workspace_count(wm_desktop *desktop, int count)
+{
+    workspaces_change_count(desktop, count);
+    present_flush(desktop);
+}
+
+void wm_desktop_rename_workspaces(wm_desktop *desktop, const char *const *names, size_t count)
+{
+    const wm_workspace_config *config = &desktop->config.workspaces;
+    const char *merged[WM_WORKSPACE_MAX];
+    size_t merged_count = 0;
+    bool changed = false;
+    for (size_t i = 0; i < WM_WORKSPACE_MAX; i++) {
+        merged[i] = i < count ? names[i] : config->names[i];
+        if (*merged[i] != '\0') {
+            merged_count = i + 1;
+        }
+        changed |= strncmp(config->names[i], merged[i], WM_WORKSPACE_NAME_MAX) != 0;
+    }
+    if (changed) {
+        const wm_commands *commands = &desktop->ports.commands;
+        commands->store_workspace_names(commands->self, merged, merged_count);
+    }
+}
+
+void wm_desktop_set_workspace_layout(wm_desktop *desktop, int rows, int columns)
+{
+    int count = desktop->workspaces.count;
+    if (rows <= 0 && columns > 0) {
+        rows = (count + columns - 1) / columns;
+    }
+    if (rows > 0 && rows != desktop->config.workspaces.rows) {
+        const wm_commands *commands = &desktop->ports.commands;
+        commands->store_workspace_rows(commands->self, rows);
+    }
+}
+
 void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace)
 {
     workspaces_delete(desktop, workspace);

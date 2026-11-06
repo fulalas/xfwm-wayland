@@ -179,7 +179,8 @@ static struct wlr_render_texture_options texture_options(const zoom *z, const ou
     return (struct wlr_render_texture_options){
         .src_box = {box.x, box.y, box.width, box.height},
         .dst_box = {0, 0, zp->target->width, zp->target->height},
-        .filter_mode = WLR_SCALE_FILTER_BILINEAR,
+        .filter_mode = zoom_smooths(z->view.level) ? WLR_SCALE_FILTER_BILINEAR
+                                                   : WLR_SCALE_FILTER_NEAREST,
         .blend_mode = WLR_RENDER_BLEND_MODE_NONE,
         .wait_timeline = zp->wait_timeline,
         .wait_point = zp->wait_point,

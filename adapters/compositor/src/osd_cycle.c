@@ -22,6 +22,7 @@ struct osd_cycle {
     osd_preview *previews[WM_CYCLE_ITEM_MAX];
     wm_cycle_view view;
     char titles[WM_CYCLE_ITEM_MAX][CYCLE_TITLE_MAX];
+    char app_names[WM_CYCLE_ITEM_MAX][CYCLE_TITLE_MAX];
     cycle_layout layout;
     wm_point origin;
     bool shown;
@@ -155,6 +156,8 @@ static void store_view(osd_cycle *cycle, const wm_cycle_view *view)
     for (size_t i = 0; i < count; i++) {
         utf8_copy(cycle->titles[i], CYCLE_TITLE_MAX, view->items[i].title);
         cycle->view.items[i].title = cycle->titles[i];
+        utf8_copy(cycle->app_names[i], CYCLE_TITLE_MAX, view->items[i].app_name);
+        cycle->view.items[i].app_name = cycle->app_names[i];
     }
 }
 

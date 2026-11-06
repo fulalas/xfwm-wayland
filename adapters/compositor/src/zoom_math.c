@@ -1,5 +1,9 @@
 #include "zoom_math.h"
 
+enum {
+    SHARP_ZOOM_LEVEL = 4,
+};
+
 static double clamp_double(double value, double low, double high);
 
 zoom_box zoom_source_box(const zoom_request *request)
@@ -25,4 +29,9 @@ static double clamp_double(double value, double low, double high)
         return low;
     }
     return value > high ? high : value;
+}
+
+bool zoom_smooths(double level)
+{
+    return level > 1.0 && level < SHARP_ZOOM_LEVEL;
 }

@@ -242,6 +242,7 @@ static void fill_horizontally(wm_desktop *desktop, wm_window *window)
 static void popup_menu(wm_desktop *desktop, wm_window *window)
 {
     menu_show(desktop, window, (wm_point) {window->client.x, window->client.y});
+    menu_show_mnemonics(desktop);
 }
 
 static void carry_to_next(wm_desktop *desktop, wm_window *window)

@@ -163,6 +163,9 @@ void wm_desktop_handle_timer(wm_desktop *desktop);
 void wm_desktop_switch_workspace(wm_desktop *desktop, int workspace);
 void wm_desktop_add_workspace(wm_desktop *desktop);
 void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace);
+void wm_desktop_set_workspace_count(wm_desktop *desktop, int count);
+void wm_desktop_rename_workspaces(wm_desktop *desktop, const char *const *names, size_t count);
+void wm_desktop_set_workspace_layout(wm_desktop *desktop, int rows, int columns);
 wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabilities);
 wm_size wm_desktop_client_bounds(const wm_desktop *desktop, uint32_t capabilities);
 
@@ -185,6 +188,7 @@ void wm_window_set_capabilities(wm_desktop *desktop, wm_window *window, uint32_t
 void wm_window_set_size_hints(wm_desktop *desktop, wm_window *window, const wm_size_hints *hints);
 void wm_window_set_parent(wm_desktop *desktop, wm_window *window, wm_window *parent);
 void wm_window_set_opacity(wm_desktop *desktop, wm_window *window, double opacity);
+void wm_window_set_opaque(wm_desktop *desktop, wm_window *window, bool opaque);
 void wm_window_size_committed(wm_desktop *desktop, wm_window *window, wm_size size);
 void wm_window_content_drawn(wm_desktop *desktop, wm_window *window, wm_size size);
 void wm_window_demand_attention(wm_desktop *desktop, wm_window *window);

@@ -37,6 +37,22 @@ static void test_popup_key_builds_menu(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_letter_picks_its_item(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    fake_key(desktop, FAKE_KEY_SPACE, WM_MOD_ALT);
+    CHECK(world.menu.main.mnemonics);
+    fake_key(desktop, FAKE_KEY_C, WM_MOD_CTRL);
+    CHECK(world.menu_visible);
+    fake_key(desktop, FAKE_KEY_C, 0);
+    CHECK(!world.menu_visible);
+    CHECK(world.closed == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_keyboard_navigation_activates_above(void)
 {
     fake_world world;
@@ -168,6 +184,7 @@ int main(void)
 {
     static const check_case cases[] = {
         {"popup_key_builds_menu", test_popup_key_builds_menu},
+        {"letter_picks_its_item", test_letter_picks_its_item},
         {"keyboard_navigation_activates_above", test_keyboard_navigation_activates_above},
         {"workspace_submenu_moves_window", test_workspace_submenu_moves_window},
         {"monitor_submenu_moves_to_neighbour", test_monitor_submenu_moves_to_neighbour},

@@ -45,6 +45,19 @@ wm_rect monitors_full_at(const wm_desktop *desktop, wm_point point)
     return monitors_full_rect(desktop, monitors_index_at(desktop, point));
 }
 
+bool monitors_primary_full(const wm_desktop *desktop, wm_rect *full)
+{
+    size_t count = monitors_count(desktop);
+    for (size_t i = 0; i < count; i++) {
+        wm_output_info info = output_at(desktop, i);
+        if (info.primary) {
+            *full = info.full;
+            return true;
+        }
+    }
+    return false;
+}
+
 wm_rect monitors_work_area_at(const wm_desktop *desktop, wm_point point)
 {
     if (monitors_count(desktop) == 0) {

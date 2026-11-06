@@ -40,6 +40,7 @@ typedef enum x11_atom_id {
     ATOM_NET_WM_MOVERESIZE,
     ATOM_NET_WM_FULLSCREEN_MONITORS,
     ATOM_NET_WM_STRUT,
+    ATOM_NET_DESKTOP_LAYOUT,
     ATOM_COUNT,
 } x11_atom_id;
 

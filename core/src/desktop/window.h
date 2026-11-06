@@ -72,6 +72,7 @@ struct wm_window {
     bool activation_allowed;
     bool skip_initial_focus;
     bool opacity_locked;
+    bool opaque;
     bool has_position;
     bool close_requested;
     bool title_measured;

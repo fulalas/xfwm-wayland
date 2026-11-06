@@ -75,7 +75,12 @@ static void test_mouse_selects_and_activates(void)
     fake_key(desktop, WM_KEYSYM_TAB, WM_MOD_ALT);
     wm_pointer_event motion = {{10, 10}, 0, WM_MOD_ALT, {WM_TARGET_CYCLE, NULL, 2}};
     wm_pointer_motion(desktop, &motion);
-    CHECK_INT_EQ(2, world.cycle.selected);
+    CHECK_INT_EQ(1, world.cycle.selected);
+    CHECK_INT_EQ(2, world.cycle.hovered);
+    wm_pointer_event away = {{10, 10}, 0, WM_MOD_ALT, {WM_TARGET_CYCLE, NULL, -1}};
+    wm_pointer_motion(desktop, &away);
+    CHECK_INT_EQ(-1, world.cycle.hovered);
+    wm_pointer_motion(desktop, &motion);
     wm_button_event press = {motion, WM_MOUSE_LEFT, true};
     CHECK_INT_EQ(WM_CONSUMED, wm_pointer_button(desktop, &press));
     CHECK(world.focused == fake_handle(1));
@@ -142,9 +147,25 @@ static void test_arrow_keys_move_in_grid(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_switcher_uses_primary_monitor(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = create_with_three(&world, &config);
+    wm_rect second = {1920, 0, 1280, 1024};
+    fake_world_add_output(&world, second, second);
+    world.outputs[world.output_count - 1].primary = true;
+    fake_key(desktop, WM_KEYSYM_TAB, WM_MOD_ALT);
+    CHECK_RECT_EQ(second, world.cycle.monitor);
+    CHECK(!world.cycle.show_workspace);
+    CHECK_INT_EQ(-1, world.cycle.hovered);
+    wm_desktop_destroy(desktop);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
+        {"switcher_uses_primary_monitor", test_switcher_uses_primary_monitor},
         {"cycle_lists_windows_in_focus_order", test_cycle_lists_windows_in_focus_order},
         {"releasing_modifier_activates_selection", test_releasing_modifier_activates_selection},
         {"reverse_cycle_selects_last", test_reverse_cycle_selects_last},

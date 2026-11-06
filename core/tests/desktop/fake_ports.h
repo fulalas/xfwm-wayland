@@ -63,6 +63,8 @@ typedef struct fake_world {
     int app_shortcut_releases;
     int logout_calls;
     int stored_workspace_count;
+    int stored_name_count;
+    int stored_rows;
     int store_calls;
     bool timer_pending;
     uint32_t timer_deadline_ms;

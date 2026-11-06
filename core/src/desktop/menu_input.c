@@ -12,6 +12,7 @@ static void activate_main(wm_desktop *desktop, int index);
 static void activate_submenu(wm_desktop *desktop, int index);
 static void hover_main(wm_desktop *desktop, int index);
 static void handle_navigation(wm_desktop *desktop, uint32_t keysym);
+static bool handle_mnemonic(wm_desktop *desktop, uint32_t keysym);
 
 wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event)
 {
@@ -22,6 +23,11 @@ wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event)
         } else {
             menu_close(desktop);
         }
+        return WM_CONSUMED;
+    }
+    menu_show_mnemonics(desktop);
+    if ((event->modifiers & (WM_MOD_CTRL | WM_MOD_SUPER)) == 0
+        && handle_mnemonic(desktop, event->keysym)) {
         return WM_CONSUMED;
     }
     if (keysym_is_return(event->keysym)) {
@@ -109,6 +115,7 @@ static void open_submenu(wm_desktop *desktop)
         return;
     }
     menu_build_submenu(desktop, menu->view.main.items[index].label, &menu->view.submenu);
+    menu->view.submenu.mnemonics = menu->view.main.mnemonics;
     menu->view.submenu_open = true;
     menu->dirty = true;
 }
@@ -181,4 +188,46 @@ static void handle_navigation(wm_desktop *desktop, uint32_t keysym)
     } else if (keybindings_is_key_of(keys, WM_ACTION_LEFT, keysym) && menu->view.submenu_open) {
         close_submenu(menu);
     }
+}
+
+void menu_show_mnemonics(wm_desktop *desktop)
+{
+    menu_session *menu = &desktop->menu;
+    if (!menu->view.main.mnemonics) {
+        menu->view.main.mnemonics = true;
+        menu->view.submenu.mnemonics = true;
+        menu->dirty = true;
+    }
+}
+
+static bool handle_mnemonic(wm_desktop *desktop, uint32_t keysym)
+{
+    menu_session *menu = &desktop->menu;
+    const wm_environment *environment = &desktop->ports.environment;
+    wm_menu_level *level = active_level(menu);
+    int count = (int) level->count;
+    int first = -1;
+    int matches = 0;
+    for (int step = 1; step <= count; step++) {
+        int index = (level->selected + step) % count;
+        const wm_menu_item *item = &level->items[index];
+        if (is_selectable(item)
+            && environment->menu_item_matches_key(environment->self, level, (size_t) index,
+                                                  keysym)) {
+            first = first < 0 ? index : first;
+            matches++;
+        }
+    }
+    if (matches == 0) {
+        return false;
+    }
+    if (matches > 1) {
+        level->selected = first;
+        menu->dirty = true;
+    } else if (menu->view.submenu_open) {
+        activate_submenu(desktop, first);
+    } else {
+        activate_main(desktop, first);
+    }
+    return true;
 }

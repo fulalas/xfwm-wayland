@@ -43,6 +43,7 @@ static const char *const atom_names[ATOM_COUNT] = {
     [ATOM_NET_WM_MOVERESIZE] = "_NET_WM_MOVERESIZE",
     [ATOM_NET_WM_FULLSCREEN_MONITORS] = "_NET_WM_FULLSCREEN_MONITORS",
     [ATOM_NET_WM_STRUT] = "_NET_WM_STRUT",
+    [ATOM_NET_DESKTOP_LAYOUT] = "_NET_DESKTOP_LAYOUT",
 };
 
 bool x11_atoms_intern(x11_atoms *atoms, xcb_connection_t *connection)

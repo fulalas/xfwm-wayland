@@ -170,6 +170,7 @@ static bool painter_is_complete(const compositor_painter *p)
 {
     return p->paint_frame != NULL && p->measure_title != NULL && p->shadow_template != NULL &&
            p->osd.layout_menu != NULL && p->osd.paint_menu != NULL &&
+           p->osd.menu_mnemonic != NULL &&
            p->osd.layout_cycle != NULL && p->osd.paint_cycle != NULL &&
            p->osd.layout_label != NULL && p->osd.paint_label != NULL;
 }

@@ -26,5 +26,6 @@ void menu_perform(wm_desktop *desktop, wm_window *window, const wm_menu_item *it
 wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event);
 wm_dispatch menu_motion(wm_desktop *desktop, const wm_pointer_event *event);
 wm_dispatch menu_button(wm_desktop *desktop, const wm_button_event *event);
+void menu_show_mnemonics(wm_desktop *desktop);
 
 #endif

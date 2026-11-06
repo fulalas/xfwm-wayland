@@ -11,6 +11,7 @@
 typedef struct wm_output_info {
     wm_rect full;
     wm_rect usable;
+    bool primary;
 } wm_output_info;
 
 typedef struct wm_presenter {
@@ -42,6 +43,8 @@ typedef struct wm_commands {
     void (*app_shortcut)(void *self, uint32_t id, bool pressed, uint32_t time_ms);
     void (*logout)(void *self);
     void (*store_workspace_count)(void *self, int count);
+    void (*store_workspace_names)(void *self, const char *const *names, size_t count);
+    void (*store_workspace_rows)(void *self, int rows);
     void (*schedule_timer)(void *self, uint32_t delay_ms);
 } wm_commands;
 
@@ -52,6 +55,8 @@ typedef struct wm_environment {
     wm_point (*pointer_position)(void *self);
     uint32_t (*now_ms)(void *self);
     wm_size (*measure_title)(void *self, const char *text);
+    bool (*menu_item_matches_key)(void *self, const wm_menu_level *level, size_t index,
+                                  uint32_t keysym);
 } wm_environment;
 
 typedef struct wm_ports {

@@ -82,6 +82,9 @@ int xfce_environment_font_dpi(xfce_environment *environment);
 compositor_services xfce_environment_services(xfce_environment *environment);
 
 void xfce_environment_store_workspace_count(xfce_environment *environment, int count);
+void xfce_environment_store_workspace_rows(xfce_environment *environment, int rows);
+void xfce_environment_store_workspace_names(xfce_environment *environment,
+                                            const char *const *names, size_t count);
 void xfce_environment_spawn(xfce_environment *environment, const char *command);
 void xfce_environment_logout(xfce_environment *environment);
 int xfce_environment_session_exit_code(const xfce_environment *environment);

@@ -8,6 +8,8 @@ static void spawn(void *self, const char *command);
 static void app_shortcut(void *self, uint32_t id, bool pressed, uint32_t time_ms);
 static void logout(void *self);
 static void store_workspace_count(void *self, int count);
+static void store_workspace_names(void *self, const char *const *names, size_t count);
+static void store_workspace_rows(void *self, int rows);
 static void schedule_timer(void *self, uint32_t delay_ms);
 
 wm_commands app_commands(app *app)
@@ -22,6 +24,8 @@ wm_commands app_commands(app *app)
         .app_shortcut = app_shortcut,
         .logout = logout,
         .store_workspace_count = store_workspace_count,
+        .store_workspace_names = store_workspace_names,
+        .store_workspace_rows = store_workspace_rows,
         .schedule_timer = schedule_timer,
     };
 }
@@ -80,6 +84,20 @@ static void store_workspace_count(void *self, int count)
     app *app = self;
 
     xfce_environment_store_workspace_count(app->xfce, count);
+}
+
+static void store_workspace_names(void *self, const char *const *names, size_t count)
+{
+    app *app = self;
+
+    xfce_environment_store_workspace_names(app->xfce, names, count);
+}
+
+static void store_workspace_rows(void *self, int rows)
+{
+    app *app = self;
+
+    xfce_environment_store_workspace_rows(app->xfce, rows);
 }
 
 static void schedule_timer(void *self, uint32_t delay_ms)

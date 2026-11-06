@@ -1,3 +1,4 @@
+#include <string.h>
 #include <wlr/xwayland/xwayland.h>
 
 #include "ewmh_payload.h"
@@ -15,6 +16,9 @@ enum {
     MOVERESIZE_SIZE_KEYBOARD = 9,
     MOVERESIZE_MOVE_KEYBOARD = 10,
     FULLSCREEN_MONITOR_SIDES = 4,
+    LAYOUT_WORDS = 4,
+    LAYOUT_COLUMNS = 1,
+    LAYOUT_ROWS = 2,
 };
 
 typedef void (*message_handler)(xwayland_shell *shell, const xcb_client_message_event_t *message);
@@ -33,6 +37,10 @@ static void close_window(xwayland_shell *shell, const xcb_client_message_event_t
 static void set_fullscreen_monitors(xwayland_shell *shell,
                                     const xcb_client_message_event_t *message);
 static bool keyboard_move_resize(xwayland_shell *shell, const xcb_client_message_event_t *message);
+static void set_desktop_count(xwayland_shell *shell, const xcb_client_message_event_t *message);
+static void root_property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event);
+static void read_desktop_names(xwayland_shell *shell, xcb_window_t root);
+static void read_desktop_layout(xwayland_shell *shell, xcb_window_t root);
 static xwayland_view *find_view(const xwayland_shell *shell, xcb_window_t window);
 static wm_window *find_window(const xwayland_shell *shell, xcb_window_t window);
 
@@ -44,11 +52,20 @@ static const message_route routes[] = {
     {ATOM_GTK_SHOW_WINDOW_MENU, show_window_menu},
     {ATOM_NET_CLOSE_WINDOW, close_window},
     {ATOM_NET_WM_FULLSCREEN_MONITORS, set_fullscreen_monitors},
+    {ATOM_NET_NUMBER_OF_DESKTOPS, set_desktop_count},
 };
 
 bool xwayland_messages_handle(xwayland_shell *shell, xcb_generic_event_t *event)
 {
-    if ((event->response_type & EVENT_TYPE_MASK) != XCB_CLIENT_MESSAGE || !shell->link.ready) {
+    uint8_t type = event->response_type & EVENT_TYPE_MASK;
+    if (!shell->link.ready) {
+        return false;
+    }
+    if (type == XCB_PROPERTY_NOTIFY) {
+        root_property_changed(shell, (const xcb_property_notify_event_t *) event);
+        return false;
+    }
+    if (type != XCB_CLIENT_MESSAGE) {
         return false;
     }
     const xcb_client_message_event_t *message = (const xcb_client_message_event_t *) event;
@@ -175,6 +192,53 @@ static bool keyboard_move_resize(xwayland_shell *shell, const xcb_client_message
         wm_request_keyboard_resize(shell->server->desktop, window);
     }
     return true;
+}
+
+static void set_desktop_count(xwayland_shell *shell, const xcb_client_message_event_t *message)
+{
+    if (message->format == MESSAGE_FORMAT && message->data.data32[0] > 0) {
+        wm_desktop_set_workspace_count(shell->server->desktop, (int) message->data.data32[0]);
+    }
+}
+
+static void root_property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event)
+{
+    xcb_connection_t *connection = x11_link_connection(&shell->link);
+    if (connection == NULL || event->window != x11_link_root(connection)) {
+        return;
+    }
+    if (event->atom == x11_link_atom(&shell->link, ATOM_NET_DESKTOP_NAMES)) {
+        read_desktop_names(shell, event->window);
+    } else if (event->atom == x11_link_atom(&shell->link, ATOM_NET_DESKTOP_LAYOUT)) {
+        read_desktop_layout(shell, event->window);
+    }
+}
+
+static void read_desktop_names(xwayland_shell *shell, xcb_window_t root)
+{
+    char text[EWMH_NAMES_MAX + 1];
+    x11_read read = {{root, x11_link_atom(&shell->link, ATOM_NET_DESKTOP_NAMES),
+                      x11_link_atom(&shell->link, ATOM_UTF8_STRING)},
+                     X11_READ_TEXT, text, sizeof(text), 0};
+    x11_link_read(&shell->link, &read, 1);
+    const char *names[WM_WORKSPACE_MAX];
+    size_t count = ewmh_split_names(text, read.count, names, WM_WORKSPACE_MAX);
+    if (count > 0) {
+        wm_desktop_rename_workspaces(shell->server->desktop, names, count);
+    }
+}
+
+static void read_desktop_layout(xwayland_shell *shell, xcb_window_t root)
+{
+    uint32_t layout[LAYOUT_WORDS] = {0};
+    x11_read read = {{root, x11_link_atom(&shell->link, ATOM_NET_DESKTOP_LAYOUT), XCB_ATOM_ANY},
+                     X11_READ_CARDINALS, layout, LAYOUT_WORDS, 0};
+    x11_link_read(&shell->link, &read, 1);
+    if (read.count < LAYOUT_ROWS + 1) {
+        return;
+    }
+    wm_desktop_set_workspace_layout(shell->server->desktop, (int) layout[LAYOUT_ROWS],
+                                    (int) layout[LAYOUT_COLUMNS]);
 }
 
 static xwayland_view *find_view(const xwayland_shell *shell, xcb_window_t window)

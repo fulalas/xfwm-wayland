@@ -39,6 +39,7 @@ uint32_t ewmh_window_desktop(const wm_window_view *view);
 ewmh_frame_extents ewmh_frame_extents_from(const wm_extents *extents);
 ewmh_action_list ewmh_actions(uint32_t allowed_actions);
 ewmh_desktop_names ewmh_names(const wm_workspaces_view *view);
+size_t ewmh_split_names(const char *bytes, size_t length, const char **names, size_t max);
 wm_rect ewmh_workarea(const ewmh_screen *screen);
 
 #endif

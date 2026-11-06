@@ -1,5 +1,7 @@
 #include "tabwin_painter.h"
 
+#include <string.h>
+
 #include "canvas.h"
 #include "tabwin_layout.h"
 
@@ -21,7 +23,10 @@ static void paint_background(cairo_t *cr, const ui_style *style, wm_size size);
 static void paint_cell(cairo_t *cr, const tabwin_paint *paint, size_t index);
 static void paint_highlight(cairo_t *cr, const tabwin_paint *paint, size_t index);
 static void paint_row_text(cairo_t *cr, const tabwin_paint *paint, size_t index);
-static void paint_label(cairo_t *cr, const tabwin_paint *paint);
+static void paint_label(cairo_t *cr, const tabwin_paint *paint, size_t index);
+static void paint_app_name(cairo_t *cr, const tabwin_paint *paint, size_t index);
+static size_t shown_index(const wm_cycle_view *view);
+static char *pretty_app_name(const char *app_id);
 static cairo_surface_t *icon_of(const cycle_paint_request *request, size_t index);
 
 cairo_surface_t *appearance_tabwin_paint(const ui_text *ui, const cycle_paint_request *request)
@@ -35,8 +40,10 @@ cairo_surface_t *appearance_tabwin_paint(const ui_text *ui, const cycle_paint_re
     for (size_t i = 0; i < count; i++) {
         paint_cell(canvas.cr, &paint, i);
     }
-    if (request->view->mode != WM_TABWIN_LIST) {
-        paint_label(canvas.cr, &paint);
+    if (request->view->mode != WM_TABWIN_LIST && count > 0) {
+        size_t shown = shown_index(request->view);
+        paint_app_name(canvas.cr, &paint, shown);
+        paint_label(canvas.cr, &paint, shown);
     }
     return appearance_canvas_finish(&canvas);
 }
@@ -102,20 +109,61 @@ static void paint_row_text(cairo_t *cr, const tabwin_paint *paint, size_t index)
     appearance_ui_text_draw(cr, paint->ui, &box);
 }
 
-static void paint_label(cairo_t *cr, const tabwin_paint *paint)
+static void paint_label(cairo_t *cr, const tabwin_paint *paint, size_t index)
 {
     const wm_cycle_view *view = paint->request->view;
-
-    if (view->selected >= appearance_tabwin_item_count(view)) {
-        return;
-    }
+    const wm_cycle_item *item = &view->items[index];
+    const char *title = item->title != NULL ? item->title : "";
+    char *text = view->show_workspace ? g_strdup_printf("[%d] - %s", item->workspace + 1, title)
+                                      : g_strdup(title);
     text_box box = {
-        .text = view->items[view->selected].title,
+        .text = text,
         .rect = appearance_tabwin_label_rect(paint->request->layout->size, paint->label_height),
         .color = &paint->ui->style->foreground,
         .alignment = PANGO_ALIGN_CENTER,
     };
     appearance_ui_text_draw(cr, paint->ui, &box);
+    g_free(text);
+}
+
+static void paint_app_name(cairo_t *cr, const tabwin_paint *paint, size_t index)
+{
+    const wm_cycle_view *view = paint->request->view;
+    char *name = pretty_app_name(view->items[index].app_name);
+    text_box box = {
+        .text = name,
+        .rect = appearance_tabwin_name_rect(view, &paint->request->layout->items[index],
+                                            paint->label_height),
+        .color = index == view->selected ? &paint->ui->style->selected_foreground
+                                         : &paint->ui->style->foreground,
+        .alignment = PANGO_ALIGN_CENTER,
+    };
+    appearance_ui_text_draw(cr, paint->ui, &box);
+    g_free(name);
+}
+
+static size_t shown_index(const wm_cycle_view *view)
+{
+    size_t count = appearance_tabwin_item_count(view);
+    if (view->hovered >= 0 && (size_t) view->hovered < count) {
+        return (size_t) view->hovered;
+    }
+    return view->selected < count ? view->selected : 0;
+}
+
+static char *pretty_app_name(const char *app_id)
+{
+    if (app_id == NULL || *app_id == '\0') {
+        return g_strdup("...");
+    }
+    const char *first_dot = strchr(app_id, '.');
+    const char *last_part = strrchr(app_id, '.');
+    bool reverse_dns = last_part != first_dot && last_part[1] != '\0';
+    char *name = g_strdup(reverse_dns ? last_part + 1 : app_id);
+    g_strcanon(name, "[]()0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", ' ');
+    g_strstrip(name);
+    name[0] = g_ascii_toupper(name[0]);
+    return name;
 }
 
 static cairo_surface_t *icon_of(const cycle_paint_request *request, size_t index)

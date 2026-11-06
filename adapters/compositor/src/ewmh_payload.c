@@ -107,3 +107,13 @@ static wm_extents widest(wm_extents a, wm_extents b)
     return (wm_extents){wm_max(a.left, b.left), wm_max(a.right, b.right),
                         wm_max(a.top, b.top), wm_max(a.bottom, b.bottom)};
 }
+
+size_t ewmh_split_names(const char *bytes, size_t length, const char **names, size_t max)
+{
+    size_t count = 0;
+    for (size_t at = 0; at < length && count < max; count++) {
+        names[count] = bytes + at;
+        at += strnlen(bytes + at, length - at) + 1;
+    }
+    return count;
+}

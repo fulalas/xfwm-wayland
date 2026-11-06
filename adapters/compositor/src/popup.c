@@ -8,6 +8,7 @@
 #include "popup.h"
 #include "scene_buffers.h"
 #include "shadow.h"
+#include "surface_opacity.h"
 
 typedef struct popup {
     compositor *server;
@@ -128,7 +129,8 @@ static void unconstrain(popup *p)
 static void update_shadow(popup *p)
 {
     const wm_compositing_config *config = &p->server->config.compositing;
-    if (p->shadow == NULL || !config->show_popup_shadow) {
+    if (p->shadow == NULL || !config->show_popup_shadow ||
+        !surface_is_opaque(p->xdg_popup->base->surface)) {
         if (p->shadow != NULL) {
             shadow_hide(p->shadow);
         }

@@ -53,7 +53,9 @@ tabwin_grid tabwin_compute(const wm_desktop *desktop, size_t count)
     tabwin_grid grid;
     grid.mode = desktop->config.cycle.tabwin_mode;
     grid.preview = desktop->config.cycle.preview && effects_enabled(desktop);
-    grid.monitor = monitors_full_at(desktop, monitors_pointer(desktop));
+    if (!monitors_primary_full(desktop, &grid.monitor)) {
+        grid.monitor = monitors_full_at(desktop, monitors_pointer(desktop));
+    }
     if (grid.mode == WM_TABWIN_GRID) {
         compute_icon_grid(&grid, count, label_height(desktop));
     } else {

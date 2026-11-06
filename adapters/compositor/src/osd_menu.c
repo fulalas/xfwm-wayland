@@ -131,7 +131,8 @@ static bool panel_init(menu_panel *panel, struct wlr_scene_tree *tree)
 static bool panel_holds(const menu_panel *panel, const wm_menu_level *level)
 {
     const wm_menu_level *held = &panel->level;
-    if (!panel->shown || held->selected != level->selected || held->anchor.x != level->anchor.x ||
+    if (!panel->shown || held->selected != level->selected || held->mnemonics != level->mnemonics ||
+        held->anchor.x != level->anchor.x ||
         held->anchor.y != level->anchor.y || held->count != item_count(level)) {
         return false;
     }

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <wlr/types/wlr_output_layout.h>
 
 #include "ewmh_payload.h"
@@ -29,6 +30,7 @@ static const x11_atom_id supported[] = {
     ATOM_NET_WM_ACTION_BELOW,         ATOM_NET_CLOSE_WINDOW,
     ATOM_NET_WM_FULLSCREEN_MONITORS,  ATOM_NET_WM_USER_TIME,
     ATOM_NET_WM_USER_TIME_WINDOW,     ATOM_NET_WM_STRUT,
+    ATOM_NET_DESKTOP_LAYOUT,
 };
 
 typedef struct screen_state {
@@ -43,6 +45,7 @@ struct xwayland_ewmh {
     uint32_t count;
     uint32_t current;
     ewmh_desktop_names names;
+    bool names_published;
     xcb_atom_t desktop_workareas[WM_WORKSPACE_MAX];
     bool outputs_published;
     screen_state published;
@@ -80,6 +83,7 @@ void xwayland_ewmh_link_ready(xwayland_ewmh *ewmh)
     }
     intern_desktop_workareas(ewmh, connection);
     ewmh->outputs_published = false;
+    ewmh->names_published = false;
     x11_property property = root_property(ewmh, ATOM_NET_SUPPORTED, XCB_ATOM_ATOM);
     uint32_t count = sizeof(supported) / sizeof(supported[0]);
     x11_link_append_atoms(ewmh->link, &property, (x11_atom_list){supported, count});
@@ -94,7 +98,12 @@ void xwayland_ewmh_publish_workspaces(xwayland_ewmh *ewmh, const wm_workspaces_v
     ewmh->has_workspaces = true;
     ewmh->count = (uint32_t) view->count;
     ewmh->current = (uint32_t) view->current;
-    ewmh->names = ewmh_names(view);
+    ewmh_desktop_names names = ewmh_names(view);
+    if (names.length != ewmh->names.length ||
+        memcmp(names.bytes, ewmh->names.bytes, names.length) != 0) {
+        ewmh->names = names;
+        ewmh->names_published = false;
+    }
     publish_desktops(ewmh);
     if (previous_count != ewmh->count) {
         ewmh->outputs_published = false;
@@ -149,10 +158,14 @@ static void publish_desktops(xwayland_ewmh *ewmh)
     x11_link_set_cardinals(ewmh->link, &count, (x11_values){&ewmh->count, 1});
     x11_property current = root_property(ewmh, ATOM_NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL);
     x11_link_set_cardinals(ewmh->link, &current, (x11_values){&ewmh->current, 1});
+    if (ewmh->names_published) {
+        return;
+    }
     xcb_atom_t utf8 = x11_link_atom(ewmh->link, ATOM_UTF8_STRING);
     x11_property names = root_property(ewmh, ATOM_NET_DESKTOP_NAMES, utf8);
     x11_bytes bytes = {ewmh->names.bytes, (uint32_t) ewmh->names.length};
     x11_link_set_bytes(ewmh->link, &names, bytes);
+    ewmh->names_published = x11_link_connection(ewmh->link) != NULL;
 }
 
 static void publish_workareas(xwayland_ewmh *ewmh, const screen_state *state)
@@ -201,7 +214,7 @@ static void read_screen(const compositor *server, screen_state *state)
     count = count < OUTPUT_MAX ? count : OUTPUT_MAX;
     for (size_t i = 0; i < count; i++) {
         output *o = outputs_at_index(server->outputs, i);
-        state->outputs[i] = (wm_output_info){output_full(o), output_usable(o)};
+        state->outputs[i] = (wm_output_info){output_full(o), output_usable(o), false};
     }
     state->screen = (ewmh_screen){{box.x, box.y, box.width, box.height}, state->outputs, count};
 }

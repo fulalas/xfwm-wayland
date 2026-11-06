@@ -13,6 +13,8 @@ typedef struct text_box {
     wm_rect rect;
     const ui_color *color;
     PangoAlignment alignment;
+    bool underline;
+    int underline_at;
 } text_box;
 
 void appearance_ui_text_draw(cairo_t *cr, const ui_text *ui, const text_box *box);

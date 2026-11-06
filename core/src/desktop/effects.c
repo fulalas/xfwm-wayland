@@ -41,7 +41,7 @@ bool effects_has_shadow(const wm_desktop *desktop, const wm_window *window)
         return config->show_dock_shadow;
     }
     return config->show_frame_shadow && !window_is_maximized(window)
-           && frame_is_shown(desktop, window);
+           && (frame_is_shown(desktop, window) || window->opaque);
 }
 
 wm_rect effects_shadow_rect(const wm_desktop *desktop, const wm_window *window)

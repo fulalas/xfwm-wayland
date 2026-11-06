@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "check.h"
@@ -189,6 +190,28 @@ static void test_move_window_down_a_row(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_pager_renames_and_resizes(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.workspaces.count = 4;
+    snprintf(config.workspaces.names[2], WM_WORKSPACE_NAME_MAX, "Code");
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    const char *names[] = {"Web", "Mail"};
+    wm_desktop_rename_workspaces(desktop, names, 2);
+    CHECK_INT_EQ(3, world.stored_name_count);
+    world.stored_name_count = 0;
+    const char *none[] = {""};
+    wm_desktop_rename_workspaces(desktop, none, 1);
+    CHECK_INT_EQ(0, world.stored_name_count);
+    wm_desktop_set_workspace_count(desktop, 6);
+    CHECK_INT_EQ(6, world.workspaces.count);
+    CHECK_INT_EQ(6, world.stored_workspace_count);
+    wm_desktop_set_workspace_layout(desktop, 0, 3);
+    CHECK_INT_EQ(2, world.stored_rows);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_toggle_returns_to_previous(void)
 {
     fake_world world;
@@ -305,6 +328,7 @@ int main(void)
         {"changing_rows_republishes_layout", test_changing_rows_republishes_layout},
         {"rows_stop_at_edges_without_wrap", test_rows_stop_at_edges_without_wrap},
         {"move_window_down_a_row", test_move_window_down_a_row},
+        {"pager_renames_and_resizes", test_pager_renames_and_resizes},
         {"toggle_returns_to_previous", test_toggle_returns_to_previous},
         {"switch_out_of_range_without_wrap_cycle", test_switch_out_of_range_without_wrap_cycle},
         {"add_and_delete_active_workspace", test_add_and_delete_active_workspace},

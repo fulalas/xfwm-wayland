@@ -60,6 +60,16 @@ void cycle_select(wm_desktop *desktop, size_t index)
     highlight_selected(desktop);
 }
 
+void cycle_hover(wm_desktop *desktop, int index)
+{
+    cycle_session *cycle = &desktop->cycle;
+    int hovered = index >= 0 && (size_t) index < cycle->count ? index : -1;
+    if (hovered != cycle->hovered) {
+        cycle->hovered = hovered;
+        cycle->dirty = true;
+    }
+}
+
 void cycle_end(wm_desktop *desktop)
 {
     cycle_session *cycle = &desktop->cycle;
@@ -138,6 +148,7 @@ static void open_session(wm_desktop *desktop, size_t selected, uint32_t modifier
     cycle_session *cycle = &desktop->cycle;
     cycle->active = true;
     cycle->selected = selected;
+    cycle->hovered = -1;
     cycle->modifiers = modifiers;
     cycle->grid = tabwin_compute(desktop, cycle->count);
     highlight_selected(desktop);
@@ -186,10 +197,12 @@ static void build_view(wm_desktop *desktop)
     view->monitor = cycle->grid.monitor;
     view->count = cycle->count;
     view->selected = cycle->selected;
+    view->hovered = cycle->hovered;
+    view->show_workspace = desktop->config.cycle.workspaces;
     for (size_t i = 0; i < cycle->count; i++) {
         const wm_window *window = cycle->items[i];
-        view->items[i] = (wm_cycle_item) {window->handle, window->title,
-                                          window_is_minimized(window)};
+        view->items[i] = (wm_cycle_item) {window->handle, window->title, window->app_id,
+                                          window->workspace, window_is_minimized(window)};
     }
 }
 
@@ -199,6 +212,7 @@ static void remove_item(cycle_session *cycle, size_t index)
         cycle->items[i] = cycle->items[i + 1];
     }
     cycle->count--;
+    cycle->hovered = -1;
     if (cycle->selected > index) {
         cycle->selected--;
     } else if (cycle->selected >= cycle->count) {

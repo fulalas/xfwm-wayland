@@ -43,12 +43,15 @@ static void paint_item(cairo_t *cr, const menu_paint *paint, size_t index)
     if (is_hovered(paint->level, index)) {
         appearance_ui_fill_rect(cr, item, &paint->ui->style->selected_background);
     }
-    char *text = appearance_menu_item_text(paint->level, index);
+    int mnemonic_at;
+    char *text = appearance_menu_item_text_with_mnemonic(paint->level, index, &mnemonic_at);
     text_box box = {
         .text = text,
         .rect = appearance_menu_label_rect(&paint->columns, item),
         .color = item_color(paint, index),
         .alignment = PANGO_ALIGN_LEFT,
+        .underline = paint->level->mnemonics,
+        .underline_at = mnemonic_at,
     };
     appearance_ui_text_draw(cr, paint->ui, &box);
     g_free(text);

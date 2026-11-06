@@ -28,12 +28,16 @@ static void spawn(void *self, const char *command);
 static void app_shortcut(void *self, uint32_t id, bool pressed, uint32_t time_ms);
 static void logout(void *self);
 static void store_workspace_count(void *self, int count);
+static void store_workspace_names(void *self, const char *const *names, size_t count);
+static void store_workspace_rows(void *self, int rows);
 static void schedule_timer(void *self, uint32_t delay_ms);
 static size_t output_count(void *self);
 static wm_output_info output_at_index(void *self, size_t index);
 static wm_point pointer_position(void *self);
 static uint32_t now_ms(void *self);
 static wm_size measure_title(void *self, const char *text);
+static bool menu_item_matches_key(void *self, const wm_menu_level *level, size_t index,
+                                  uint32_t keysym);
 static void set_all_states(wm_size sizes[WM_FRAME_STATE_COUNT], wm_size size);
 
 void fake_world_init(fake_world *world)
@@ -46,10 +50,12 @@ void fake_world_init(fake_world *world)
     };
     world->ports.commands = (wm_commands) {
         world, configure, close_window, ask_terminate, warp_pointer, spawn, app_shortcut,
-        logout, store_workspace_count, schedule_timer,
+        logout, store_workspace_count, store_workspace_names, store_workspace_rows,
+        schedule_timer,
     };
     world->ports.environment = (wm_environment) {
         world, output_count, output_at_index, pointer_position, now_ms, measure_title,
+        menu_item_matches_key,
     };
     world->now_ms = 1000;
     wm_rect screen = {0, 0, FAKE_SCREEN_WIDTH, FAKE_SCREEN_HEIGHT};
@@ -58,7 +64,7 @@ void fake_world_init(fake_world *world)
 
 void fake_world_add_output(fake_world *world, wm_rect full, wm_rect usable)
 {
-    world->outputs[world->output_count++] = (wm_output_info) {full, usable};
+    world->outputs[world->output_count++] = (wm_output_info) {full, usable, false};
 }
 
 wm_config fake_config(void)
@@ -328,6 +334,17 @@ static void store_workspace_count(void *self, int count)
     world_of(self)->store_calls++;
 }
 
+static void store_workspace_names(void *self, const char *const *names, size_t count)
+{
+    (void) names;
+    world_of(self)->stored_name_count = (int) count;
+}
+
+static void store_workspace_rows(void *self, int rows)
+{
+    world_of(self)->stored_rows = rows;
+}
+
 static void schedule_timer(void *self, uint32_t delay_ms)
 {
     fake_world *world = world_of(self);
@@ -359,6 +376,13 @@ static wm_size measure_title(void *self, const char *text)
 {
     (void) self;
     return (wm_size) {(int) strlen(text) * 6, 10};
+}
+
+static bool menu_item_matches_key(void *self, const wm_menu_level *level, size_t index,
+                                  uint32_t keysym)
+{
+    (void) self;
+    return level->items[index].label == WM_MENU_CLOSE && keysym == 'c';
 }
 
 static void set_all_states(wm_size sizes[WM_FRAME_STATE_COUNT], wm_size size)

@@ -58,6 +58,7 @@ typedef struct compositor_osd_painter {
     void *self;
     menu_layout (*layout_menu)(void *self, const wm_menu_level *level);
     cairo_surface_t *(*paint_menu)(void *self, const menu_paint_request *request);
+    uint32_t (*menu_mnemonic)(void *self, const wm_menu_level *level, size_t index);
     cycle_layout (*layout_cycle)(void *self, const wm_cycle_view *view);
     cairo_surface_t *(*paint_cycle)(void *self, const cycle_paint_request *request);
     wm_size (*layout_label)(void *self, const char *text);

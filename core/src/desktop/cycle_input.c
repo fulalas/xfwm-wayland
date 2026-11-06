@@ -53,9 +53,7 @@ void cycle_modifiers_changed(wm_desktop *desktop, uint32_t modifiers)
 
 wm_dispatch cycle_motion(wm_desktop *desktop, const wm_pointer_event *event)
 {
-    if (event->target.kind == WM_TARGET_CYCLE && event->target.item >= 0) {
-        cycle_select(desktop, (size_t) event->target.item);
-    }
+    cycle_hover(desktop, event->target.kind == WM_TARGET_CYCLE ? event->target.item : -1);
     return WM_CONSUMED;
 }
 

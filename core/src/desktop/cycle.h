@@ -14,6 +14,7 @@ typedef struct cycle_session {
     wm_window *items[WM_CYCLE_ITEM_MAX];
     size_t count;
     size_t selected;
+    int hovered;
     uint32_t modifiers;
     tabwin_grid grid;
     wm_cycle_view view;
@@ -22,6 +23,7 @@ typedef struct cycle_session {
 void cycle_start(wm_desktop *desktop, wm_action action);
 bool cycle_is_active(const wm_desktop *desktop);
 void cycle_select(wm_desktop *desktop, size_t index);
+void cycle_hover(wm_desktop *desktop, int index);
 void cycle_end(wm_desktop *desktop);
 void cycle_abort(wm_desktop *desktop);
 void cycle_window_gone(wm_desktop *desktop, const wm_window *window);

@@ -32,13 +32,27 @@ static void test_msgids_match_xfwm4(void)
 
 static void test_mnemonics_are_removed(void)
 {
-    char *plain = appearance_strip_mnemonics("Ma_ximize");
-    char *escaped = appearance_strip_mnemonics("a__b_");
+    int plain_at;
+    int escaped_at;
+    char *plain = appearance_strip_mnemonics("Ma_ximize", &plain_at);
+    char *escaped = appearance_strip_mnemonics("a__b_", &escaped_at);
 
     CHECK(strcmp(plain, "Maximize") == 0);
+    CHECK_INT_EQ(2, plain_at);
     CHECK(strcmp(escaped, "a_b_") == 0);
+    CHECK_INT_EQ(-1, escaped_at);
     g_free(plain);
     g_free(escaped);
+}
+
+static void test_items_know_their_letter(void)
+{
+    wm_menu_level level = { .count = 2 };
+
+    level.items[0] = (wm_menu_item) { .label = WM_MENU_CLOSE, .sensitive = true };
+    level.items[1] = (wm_menu_item) { .label = WM_MENU_SHADE, .sensitive = true };
+    CHECK_INT_EQ('c', appearance_menu_item_mnemonic(&level, 0));
+    CHECK_INT_EQ(0, appearance_menu_item_mnemonic(&level, 1));
 }
 
 static void test_item_text_is_translated_label(void)
@@ -56,11 +70,13 @@ static void test_workspace_entries(void)
     wm_menu_level level = { .count = 3 };
 
     level.items[0] = (wm_menu_item) { .label = WM_MENU_WORKSPACE_ENTRY };
-    level.items[1] = (wm_menu_item) { .label = WM_MENU_WORKSPACE_ENTRY, .text = "_2 (Mail)" };
-    level.items[2] = (wm_menu_item) { .label = WM_MENU_WORKSPACE_ENTRY };
-    CHECK(text_is(&level, 0, "Workspace 1"));
+    level.items[1] = (wm_menu_item) { .label = WM_MENU_WORKSPACE_ENTRY, .text = "Mail" };
+    level.items[2] = (wm_menu_item) { .label = WM_MENU_WORKSPACE_ENTRY, .text = "a_b" };
+    CHECK(text_is(&level, 0, "1"));
     CHECK(text_is(&level, 1, "2 (Mail)"));
-    CHECK(text_is(&level, 2, "Workspace 3"));
+    CHECK(text_is(&level, 2, "3 (a_b)"));
+    CHECK_INT_EQ('2', appearance_menu_item_mnemonic(&level, 1));
+    CHECK_INT_EQ(0, appearance_menu_item_mnemonic(&level, 2));
 }
 
 int main(void)
@@ -68,6 +84,7 @@ int main(void)
     static const check_case cases[] = {
         { "msgids_match_xfwm4", test_msgids_match_xfwm4 },
         { "mnemonics_are_removed", test_mnemonics_are_removed },
+        { "items_know_their_letter", test_items_know_their_letter },
         { "item_text_is_translated_label", test_item_text_is_translated_label },
         { "workspace_entries", test_workspace_entries },
     };

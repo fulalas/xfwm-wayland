@@ -28,6 +28,7 @@ app *app_create(const app_options *options)
     app *app = calloc(1, sizeof(*app));
 
     app->startup_command = g_strdup(options->startup_command);
+    app->overrides = options->overrides;
     app->max_output_scale = 1.0;
     app->loop = g_main_loop_new(NULL, FALSE);
     if (!create_adapters(app) || !create_compositor(app) || !create_desktop(app)) {

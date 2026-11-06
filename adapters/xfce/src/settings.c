@@ -68,6 +68,28 @@ void settings_store_workspace_count(XfconfChannel *xfwm4, int count)
     }
 }
 
+void settings_store_workspace_rows(XfconfChannel *xfwm4, int rows)
+{
+    if (xfwm4 && !xfconf_channel_set_int(xfwm4, "/general/workspace_nrows", rows)) {
+        g_warning("Cannot store the workspace rows %d in xfconf", rows);
+    }
+}
+
+void settings_store_workspace_names(XfconfChannel *xfwm4, const char *const *names, size_t count)
+{
+    GPtrArray *list = g_ptr_array_new();
+
+    for (size_t i = 0; i < count; i++) {
+        g_ptr_array_add(list, (char *) names[i]);
+    }
+    g_ptr_array_add(list, NULL);
+    if (xfwm4 && !xfconf_channel_set_string_list(xfwm4, workspace_names_property,
+                                                 (const char *const *) list->pdata)) {
+        g_warning("Cannot store the workspace names in xfconf");
+    }
+    g_ptr_array_free(list, TRUE);
+}
+
 static void apply_workspace_names(wm_config *config, XfconfChannel *xfwm4)
 {
     char **names;

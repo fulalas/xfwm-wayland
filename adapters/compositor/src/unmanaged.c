@@ -1,12 +1,15 @@
 #include <stdlib.h>
+#include <string.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/xwayland/xwayland.h>
 
 #include "node_owner.h"
+#include "output.h"
 #include "popup.h"
 #include "scene_layers.h"
 #include "seat.h"
 #include "shadow.h"
+#include "surface_opacity.h"
 #include "unmanaged.h"
 
 static const enum wlr_xwayland_net_wm_window_type popup_types[] = {
@@ -14,6 +17,12 @@ static const enum wlr_xwayland_net_wm_window_type popup_types[] = {
     WLR_XWAYLAND_NET_WM_WINDOW_TYPE_POPUP_MENU,    WLR_XWAYLAND_NET_WM_WINDOW_TYPE_TOOLTIP,
     WLR_XWAYLAND_NET_WM_WINDOW_TYPE_COMBO,
 };
+
+typedef struct shadow_inputs {
+    wm_compositing_config config;
+    wm_rect geometry;
+    bool opaque;
+} shadow_inputs;
 
 struct unmanaged {
     compositor *server;
@@ -24,6 +33,8 @@ struct unmanaged {
     node_owner owner;
     bool popup_style;
     bool focused;
+    bool styled;
+    shadow_inputs styled_for;
 };
 
 static bool build_scene(unmanaged *unmanaged);
@@ -99,14 +110,37 @@ static bool is_popup(const struct wlr_xwayland_surface *xsurface)
     return false;
 }
 
+static bool covers_output(const unmanaged *u)
+{
+    const struct wlr_xwayland_surface *xs = u->xsurface;
+    wm_rect window = {xs->x, xs->y, xs->width, xs->height};
+    output *o = outputs_near_point(u->server->outputs, wm_rect_center(&window));
+    if (o == NULL) {
+        return false;
+    }
+    wm_rect full = output_full(o);
+    wm_rect covered = wm_rect_intersection(&window, &full);
+    return wm_rect_equals(&covered, &full);
+}
+
 static void apply_style(unmanaged *u)
 {
     const wm_compositing_config *config = &u->server->config.compositing;
-    if (!u->popup_style) {
+    if (u->popup_style) {
+        popup_style_buffers(u->server, u->surface_tree);
+    }
+    const struct wlr_xwayland_surface *xs = u->xsurface;
+    shadow_inputs inputs;
+    memset(&inputs, 0, sizeof(inputs));
+    inputs.config = *config;
+    inputs.geometry = (wm_rect){xs->x, xs->y, xs->width, xs->height};
+    inputs.opaque = surface_is_opaque(xs->surface);
+    if (u->styled && memcmp(&inputs, &u->styled_for, sizeof(inputs)) == 0) {
         return;
     }
-    popup_style_buffers(u->server, u->surface_tree);
-    if (!config->show_popup_shadow) {
+    u->styled = true;
+    u->styled_for = inputs;
+    if (!config->show_popup_shadow || !inputs.opaque || covers_output(u)) {
         shadow_hide(u->shadow);
         return;
     }

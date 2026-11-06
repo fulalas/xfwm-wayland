@@ -53,6 +53,15 @@ void wm_window_set_parent(wm_desktop *desktop, wm_window *window, wm_window *par
     present_flush(desktop);
 }
 
+void wm_window_set_opaque(wm_desktop *desktop, wm_window *window, bool opaque)
+{
+    if (window->opaque != opaque) {
+        window->opaque = opaque;
+        window_mark_dirty(window);
+        present_flush(desktop);
+    }
+}
+
 void wm_window_set_opacity(wm_desktop *desktop, wm_window *window, double opacity)
 {
     window->opacity = window_opacity_from_double(opacity);

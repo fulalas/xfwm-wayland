@@ -164,6 +164,20 @@ static void test_locked_opacity_ignores_settings(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_opaque_undecorated_window_has_shadow(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc desc = fake_desc(1, small);
+    desc.capabilities &= ~(uint32_t) WM_CAP_DECORATED;
+    wm_window *window = wm_window_map(desktop, &desc);
+    CHECK(!view_of(window).has_shadow);
+    wm_window_set_opaque(desktop, window, true);
+    CHECK(view_of(window).has_shadow);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_compositing_disabled_is_opaque(void)
 {
     fake_world world;
@@ -204,6 +218,7 @@ int main(void)
         {"minimize_hides_transients", test_minimize_hides_transients},
         {"sticky_window_visible_everywhere", test_sticky_window_visible_everywhere},
         {"inactive_opacity_and_shadow", test_inactive_opacity_and_shadow},
+        {"opaque_undecorated_window_has_shadow", test_opaque_undecorated_window_has_shadow},
         {"locked_opacity_ignores_settings", test_locked_opacity_ignores_settings},
         {"fullscreen_uses_requested_area", test_fullscreen_uses_requested_area},
         {"compositing_disabled_is_opaque", test_compositing_disabled_is_opaque},
