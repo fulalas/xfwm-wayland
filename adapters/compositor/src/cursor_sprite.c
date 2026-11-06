@@ -11,6 +11,8 @@
 #include "scalable_layout.h"
 #include "xcursor_resize.h"
 
+static const float SOURCE_OVERSAMPLE = 1.5f;
+
 struct cursor_sprite {
     struct wlr_cursor *cursor;
     struct wl_event_source *timer;
@@ -18,6 +20,7 @@ struct cursor_sprite {
     struct wlr_xcursor *xcursor;
     size_t frame;
     float scale;
+    float source_scale;
     int size;
     struct wlr_buffer **resized;
     size_t resized_count;
@@ -36,6 +39,8 @@ static struct wlr_buffer *resized_frame(cursor_sprite *sprite, size_t frame,
 static struct wlr_buffer *resize_image(const struct wlr_xcursor_image *image,
                                        const scalable_layout *layout);
 static void drop_resized(cursor_sprite *sprite);
+static bool shrink_into(cairo_surface_t *target, const struct wlr_xcursor_image *image);
+static void enlarge_into(cairo_surface_t *target, const struct wlr_xcursor_image *image);
 
 cursor_sprite *cursor_sprite_create(struct wlr_cursor *cursor, struct wl_event_loop *loop)
 {
@@ -105,21 +110,23 @@ static bool show_scalable(cursor_sprite *sprite, const cursor_theme_view *theme,
 
 static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, const char *name)
 {
-    if (theme->manager == NULL || !wlr_xcursor_manager_load(theme->manager, theme->scale)) {
+    float scale = theme->scale > 0.0f ? theme->scale : 1.0f;
+    float source_scale = scale * SOURCE_OVERSAMPLE;
+    if (theme->manager == NULL || !wlr_xcursor_manager_load(theme->manager, source_scale)) {
         return false;
     }
     struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(theme->manager, name,
-                                                                  theme->scale);
+                                                                  source_scale);
     if (xcursor == NULL || xcursor->image_count == 0) {
         return false;
     }
-    float scale = theme->scale > 0.0f ? theme->scale : 1.0f;
     if (xcursor != sprite->xcursor || scale != sprite->scale || theme->size != sprite->size) {
         drop_resized(sprite);
     }
     sprite->animation = NULL;
     sprite->xcursor = xcursor;
     sprite->scale = scale;
+    sprite->source_scale = source_scale;
     sprite->size = theme->size;
     show_frame(sprite, 0);
     return true;
@@ -165,9 +172,9 @@ static void show_xcursor_frame(cursor_sprite *sprite, size_t frame)
                               layout.buffer_scale);
     } else {
         wlr_cursor_set_buffer(sprite->cursor, wlr_xcursor_image_get_buffer(image),
-                              (int32_t) lroundf((float) image->hotspot_x / sprite->scale),
-                              (int32_t) lroundf((float) image->hotspot_y / sprite->scale),
-                              sprite->scale);
+                              (int32_t) lroundf((float) image->hotspot_x / sprite->source_scale),
+                              (int32_t) lroundf((float) image->hotspot_y / sprite->source_scale),
+                              sprite->source_scale);
     }
     schedule_next(sprite, image->delay);
 }
@@ -199,14 +206,49 @@ static struct wlr_buffer *resize_image(const struct wlr_xcursor_image *image,
         cairo_surface_destroy(surface);
         return NULL;
     }
-    cairo_surface_flush(surface);
-    xcursor_pixels source = {(const uint32_t *) image->buffer, (int) image->width,
-                             (int) image->height};
-    xcursor_resize(&source, (uint32_t *) cairo_image_surface_get_data(surface), width, height);
-    cairo_surface_mark_dirty(surface);
+    if ((int) image->width > width) {
+        if (!shrink_into(surface, image)) {
+            cairo_surface_destroy(surface);
+            return NULL;
+        }
+    } else {
+        enlarge_into(surface, image);
+    }
     struct wlr_buffer *buffer = cairo_buffer_create(surface);
     cairo_surface_destroy(surface);
     return buffer;
+}
+
+static bool shrink_into(cairo_surface_t *target, const struct wlr_xcursor_image *image)
+{
+    cairo_surface_t *source = cairo_image_surface_create_for_data(
+        image->buffer, CAIRO_FORMAT_ARGB32, (int) image->width, (int) image->height,
+        (int) image->width * 4);
+    if (cairo_surface_status(source) != CAIRO_STATUS_SUCCESS) {
+        cairo_surface_destroy(source);
+        return false;
+    }
+    cairo_t *cr = cairo_create(target);
+    cairo_scale(cr, (double) cairo_image_surface_get_width(target) / image->width,
+                (double) cairo_image_surface_get_height(target) / image->height);
+    cairo_set_source_surface(cr, source, 0, 0);
+    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
+    cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+    cairo_surface_destroy(source);
+    cairo_surface_flush(target);
+    return true;
+}
+
+static void enlarge_into(cairo_surface_t *target, const struct wlr_xcursor_image *image)
+{
+    cairo_surface_flush(target);
+    xcursor_pixels source = {(const uint32_t *) image->buffer, (int) image->width,
+                             (int) image->height};
+    xcursor_resize(&source, (uint32_t *) cairo_image_surface_get_data(target),
+                   cairo_image_surface_get_width(target), cairo_image_surface_get_height(target));
+    cairo_surface_mark_dirty(target);
 }
 
 static void drop_resized(cursor_sprite *sprite)
