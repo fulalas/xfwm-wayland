@@ -142,12 +142,11 @@ Other
 ## Scaling
 
 Unlike X11, Wayland programs stay sharp when scaled in the Display settings.
-There's no font DPI setting: everything is scaled together with this setting:
-
-![Display settings](...)
-
 Icons in xfdesktop, thunar and the panel may look bigger than on X11 with a
-similar font DPI. That's expected.
+similar font DPI. That's expected. There's no font DPI setting, so everything
+is scaled together with this setting:
+
+<img width="1083" height="740" alt="display" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
 
 ## Issues and possible solutions
 
