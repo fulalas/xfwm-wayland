@@ -88,69 +88,56 @@ Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) 
 
 Screen
 
-* **Use the GPU for compositing**: takes effect at the next login. Compositing
-  itself can't be turned off; turning it off removes shadows, transparency,
-  zoom and Alt+Tab previews.
-* `vblank_mode`: `auto`, `adaptive` for variable refresh rate, or `off` to
-  show every frame right away (lowest input lag, but moving images can tear).
-  Fullscreen applications that ask for tearing get it even with `auto`. `glx`
-  and `xpresent` act as `auto`.
+* **Use the GPU for compositing** applies at the next login. Compositing can't
+  be fully off: turning it off only removes shadows, transparency, zoom and
+  Alt+Tab previews.
+* `vblank_mode`: `auto`, `adaptive` (variable refresh rate) or `off` (no wait
+  for the refresh: lowest input lag, but may tear). Fullscreen programs that
+  ask for tearing get it even with `auto`. `glx` and `xpresent` act as `auto`.
 * `max_render_time` (new): draws as late as possible before each refresh to
-  lower input lag. `auto` (default) measures the drawing time (OpenGL renderer
-  only), a number keeps that many milliseconds, `off` draws right away.
-* `ten_bit_color` (new): 10 bits per color, falling back to 8 bits.
-* **Enable HDR** (new): HDR10 on monitors that support it. It switches to the
-  Vulkan renderer (the screen may blink), or stays off if Vulkan can't drive
-  the screens. Programs started before the switch may need a restart. Normal
-  content is shown at 203 nits; **HDR brightness** (50% to 200%) scales the
-  whole picture, HDR videos included. Night-light programs override it while
-  they run.
-* A monitor seen for the first time gets a scale guessed from its size (1 to
-  3); TVs get 1.
+  lower input lag. `auto` (default, OpenGL only) measures it, a number sets the
+  milliseconds, `off` draws right away.
+* `ten_bit_color` (new): 10-bit color, falling back to 8-bit.
+* **Enable HDR** (new): HDR10 on monitors that support it. Switches to Vulkan
+  (the screen may blink), or stays off if Vulkan can't drive the screens.
+  Running programs may need a restart. Normal content is shown at 203 nits;
+  **HDR brightness** (50% to 200%) scales everything, HDR videos included.
+  Night-light programs override it while running.
+* New monitors get a scale guessed from their size (1 to 3); TVs get 1.
 
 Input
 
-* The cursor is drawn at exactly the size set. Cursor themes with scalable
-  (SVG) cursors stay smooth at any size; other themes have their nearest size
-  scaled without smoothing, like X11.
+* The cursor is drawn at the exact size set. SVG cursor themes stay smooth;
+  others scale their nearest size without smoothing, like X11.
 * Touchscreen and tablet calibration uses `libinput_Calibration_Matrix`
-  instead of X11's `Coordinate_Transformation_Matrix`.
-* Programs register global shortcuts through the GlobalShortcuts portal
-  (`xdg-desktop-portal`), since Wayland has no global key grabs. Only function,
-  media and other special keys, or keys pressed with Ctrl, Alt or Super, can be
-  global. Your own Xfce shortcuts win over them.
-* When xfce4-power-manager is not running, displays still switch off after the
-  display sleep or switch-off time from its settings (10 minutes by default),
-  like X11's built-in timer. Battery times apply when UPower reports battery.
-* Video players and browsers keep the screen on through Wayland's idle inhibit
-  or `org.freedesktop.ScreenSaver`, which xfwm-wayland provides when no
-  screensaver program does. X11 programs can't use X11's own screensaver calls,
-  because Xwayland doesn't support them.
-* X11 programs that grab keys globally (for example Audacious's hotkeys) still
-  get those same keys when a Wayland window has focus. Typed text is not
-  shared.
+  instead of `Coordinate_Transformation_Matrix`.
+* Programs get global shortcuts through the GlobalShortcuts portal. Only
+  special keys (function, media, etc.) or keys with Ctrl, Alt or Super can be
+  global. Xfce shortcuts win over them.
+* Without xfce4-power-manager running, displays still turn off after its
+  display sleep and off times (10 minutes by default). Battery times apply on
+  battery.
+* Programs keep the screen on through Wayland's idle inhibit or
+  `org.freedesktop.ScreenSaver` (provided when no screensaver does). X11's own
+  screensaver calls don't work through `XWayland`.
+* X11 programs with global hotkeys (e.g. Audacious) still get those keys when
+  a Wayland window has focus. Typed text isn't shared.
 
 Windows
 
-* Window sessions use the Wayland protocol instead of the X11 session manager:
-  programs that support it get their size, position, state and workspace back.
-  They are kept in `~/.local/state/xfwm-wayland/sessions` for 90 days.
-* Themes with SVG images scale with the screen and stay sharp, like
-  `xfwm4-gl`. An SVG image wins over a bitmap of the same name. Other themes
-  are drawn pixel for pixel, like X11.
-* X11 programs look blurry on scaled screens: `wlroots` 0.20 can't scale
-  `XWayland` sharply (see
-  [wlroots !2064](https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/2064)).
+* Sessions use the Wayland protocol instead of the X11 session manager:
+  programs that support it get their size, position, state and workspace
+  back. They're kept 90 days in `~/.local/state/xfwm-wayland/sessions`.
+* SVG theme images scale sharply, like `xfwm4-gl`, and win over a bitmap of
+  the same name. Other themes are drawn pixel for pixel, like X11.
 
 Other
 
 * `xfwm-wayland-realtime` gives the compositor realtime priority so the screen
-  keeps up under load. It needs `cap_sys_nice`: the package sets it; after
-  installing from source, run
-  `sudo setcap cap_sys_nice+ep /usr/local/libexec/xfwm-wayland-realtime`.
-* `--compositor on|off|auto` and `--vblank` work like in `xfwm4`: they override
-  the settings until those are changed or the next login. `--replace` is
-  accepted and ignored.
+  keeps up under load. It needs `cap_sys_nice`: the package sets it; from
+  source, run `sudo setcap cap_sys_nice+ep /usr/local/libexec/xfwm-wayland-realtime`.
+* `--compositor on|off|auto` and `--vblank` override the settings until they
+  change or the next login, like `xfwm4`. `--replace` is ignored.
 
 ## Scaling
 
@@ -164,7 +151,8 @@ similar font DPI. That's expected.
 
 ## Issues and possible solutions
 
-* X11 programs are blurry when scaled (fix planned)
+* X11 programs are blurry when scaled: `wlroots` 0.20 can't scale `XWayland`
+  sharply (fix planned, see [wlroots !2064](https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/2064))
 * Many programs that support Wayland still use `XWayland` by default, so they
   look blurry when scaled. Set these to make them use Wayland when they can:
   ```sh
