@@ -1,5 +1,5 @@
 #include "check.h"
-#include "find_cursor_rings.h"
+#include "osd/find_cursor_rings.h"
 
 static const double TOLERANCE = 0.01;
 

@@ -206,23 +206,24 @@ static void test_decor_serial_changes_only_with_inputs(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"maximize_key_and_restore", test_maximize_key_and_restore},
+    {"maximize_keeps_borders_without_borderless",
+     test_maximize_keeps_borders_without_borderless},
+    {"vertical_maximize", test_vertical_maximize},
+    {"fullscreen_covers_output_without_frame", test_fullscreen_covers_output_without_frame},
+    {"shade_keeps_only_title_and_bottom", test_shade_keeps_only_title_and_bottom},
+    {"minimize_hides_transients", test_minimize_hides_transients},
+    {"sticky_window_visible_everywhere", test_sticky_window_visible_everywhere},
+    {"inactive_opacity_and_shadow", test_inactive_opacity_and_shadow},
+    {"opaque_undecorated_window_has_shadow", test_opaque_undecorated_window_has_shadow},
+    {"locked_opacity_ignores_settings", test_locked_opacity_ignores_settings},
+    {"fullscreen_uses_requested_area", test_fullscreen_uses_requested_area},
+    {"compositing_disabled_is_opaque", test_compositing_disabled_is_opaque},
+    {"decor_serial_changes_only_with_inputs", test_decor_serial_changes_only_with_inputs},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"maximize_key_and_restore", test_maximize_key_and_restore},
-        {"maximize_keeps_borders_without_borderless",
-         test_maximize_keeps_borders_without_borderless},
-        {"vertical_maximize", test_vertical_maximize},
-        {"fullscreen_covers_output_without_frame", test_fullscreen_covers_output_without_frame},
-        {"shade_keeps_only_title_and_bottom", test_shade_keeps_only_title_and_bottom},
-        {"minimize_hides_transients", test_minimize_hides_transients},
-        {"sticky_window_visible_everywhere", test_sticky_window_visible_everywhere},
-        {"inactive_opacity_and_shadow", test_inactive_opacity_and_shadow},
-        {"opaque_undecorated_window_has_shadow", test_opaque_undecorated_window_has_shadow},
-        {"locked_opacity_ignores_settings", test_locked_opacity_ignores_settings},
-        {"fullscreen_uses_requested_area", test_fullscreen_uses_requested_area},
-        {"compositing_disabled_is_opaque", test_compositing_disabled_is_opaque},
-        {"decor_serial_changes_only_with_inputs", test_decor_serial_changes_only_with_inputs},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

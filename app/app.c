@@ -5,6 +5,7 @@
 #include "app.h"
 
 static bool create_adapters(app *app);
+static xfce_listener xfce_listener_for(app *app);
 static bool create_compositor(app *app);
 static bool create_desktop(app *app);
 static void connect_signals(app *app);
@@ -74,7 +75,22 @@ int app_run(app *app)
 
 static bool create_adapters(app *app)
 {
-    xfce_listener listener = {
+    xfce_listener listener = xfce_listener_for(app);
+
+    app->xfce = xfce_environment_create(&listener);
+    app->appearance = appearance_create();
+    if (!app->xfce || !app->appearance) {
+        return false;
+    }
+    app->painter = appearance_painter(app->appearance);
+    app->services = xfce_environment_services(app->xfce);
+    app_load_appearance(app);
+    return true;
+}
+
+static xfce_listener xfce_listener_for(app *app)
+{
+    return (xfce_listener) {
         .self = app,
         .theme_changed = on_theme_changed,
         .settings_changed = on_settings_changed,
@@ -87,16 +103,6 @@ static bool create_adapters(app *app)
         .style_changed = on_style_changed,
         .session_ended = on_quit_requested,
     };
-
-    app->xfce = xfce_environment_create(&listener);
-    app->appearance = appearance_create();
-    if (!app->xfce || !app->appearance) {
-        return false;
-    }
-    app->painter = appearance_painter(app->appearance);
-    app->services = xfce_environment_services(app->xfce);
-    app_load_appearance(app);
-    return true;
 }
 
 static bool create_compositor(app *app)

@@ -1,5 +1,5 @@
 #include "check.h"
-#include "frame_bands.h"
+#include "decor/frame_bands.h"
 
 static wm_decor_layout layout_with(wm_extents extents, wm_size frame)
 {

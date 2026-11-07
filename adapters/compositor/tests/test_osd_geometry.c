@@ -1,5 +1,5 @@
 #include "check.h"
-#include "osd_geometry.h"
+#include "osd/osd_geometry.h"
 
 static const wm_rect monitor = {0, 0, 1920, 1080};
 

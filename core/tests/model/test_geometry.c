@@ -74,10 +74,10 @@ static void test_shrink_and_grow_are_inverse(void)
 
 static void test_segments_touching_do_not_overlap(void)
 {
-    CHECK(!wm_segments_overlap(0, 10, 10, 20));
-    CHECK(wm_segments_overlap(0, 10, 9, 20));
-    CHECK(wm_segments_overlap(5, 6, 0, 20));
-    CHECK(!wm_segments_overlap(0, 0, 0, 10));
+    CHECK(!wm_segments_overlap((wm_segment) {0, 10}, (wm_segment) {10, 20}));
+    CHECK(wm_segments_overlap((wm_segment) {0, 10}, (wm_segment) {9, 20}));
+    CHECK(wm_segments_overlap((wm_segment) {5, 6}, (wm_segment) {0, 20}));
+    CHECK(!wm_segments_overlap((wm_segment) {0, 0}, (wm_segment) {0, 10}));
 }
 
 static void test_clamp_limits_value_to_range(void)
@@ -134,27 +134,28 @@ static void test_size_with_zero_or_negative_side_is_empty(void)
     CHECK(!wm_size_is_empty((wm_size) {1, 1}));
 }
 
+static const check_case CASES[] = {
+    {"rect_with_zero_or_negative_size_is_empty", test_rect_with_zero_or_negative_size_is_empty},
+    {"contains_excludes_right_and_bottom_edges", test_contains_excludes_right_and_bottom_edges},
+    {"empty_rect_contains_nothing", test_empty_rect_contains_nothing},
+    {"touching_rects_do_not_intersect", test_touching_rects_do_not_intersect},
+    {"equals_compares_all_fields", test_equals_compares_all_fields},
+    {"right_and_bottom_are_exclusive_ends", test_right_and_bottom_are_exclusive_ends},
+    {"overlap_area_is_intersection_size", test_overlap_area_is_intersection_size},
+    {"center_rounds_down", test_center_rounds_down},
+    {"shrink_and_grow_are_inverse", test_shrink_and_grow_are_inverse},
+    {"segments_touching_do_not_overlap", test_segments_touching_do_not_overlap},
+    {"clamp_limits_value_to_range", test_clamp_limits_value_to_range},
+    {"clamp_with_inverted_range_prefers_max", test_clamp_with_inverted_range_prefers_max},
+    {"intersection_of_overlapping_rects", test_intersection_of_overlapping_rects},
+    {"intersection_of_disjoint_rects_is_empty", test_intersection_of_disjoint_rects_is_empty},
+    {"union_covers_both_rects", test_union_covers_both_rects},
+    {"min_and_max_pick_smaller_and_larger", test_min_and_max_pick_smaller_and_larger},
+    {"size_equals_compares_both_fields", test_size_equals_compares_both_fields},
+    {"size_with_zero_or_negative_side_is_empty", test_size_with_zero_or_negative_side_is_empty},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"rect_with_zero_or_negative_size_is_empty", test_rect_with_zero_or_negative_size_is_empty},
-        {"contains_excludes_right_and_bottom_edges", test_contains_excludes_right_and_bottom_edges},
-        {"empty_rect_contains_nothing", test_empty_rect_contains_nothing},
-        {"touching_rects_do_not_intersect", test_touching_rects_do_not_intersect},
-        {"equals_compares_all_fields", test_equals_compares_all_fields},
-        {"right_and_bottom_are_exclusive_ends", test_right_and_bottom_are_exclusive_ends},
-        {"overlap_area_is_intersection_size", test_overlap_area_is_intersection_size},
-        {"center_rounds_down", test_center_rounds_down},
-        {"shrink_and_grow_are_inverse", test_shrink_and_grow_are_inverse},
-        {"segments_touching_do_not_overlap", test_segments_touching_do_not_overlap},
-        {"clamp_limits_value_to_range", test_clamp_limits_value_to_range},
-        {"clamp_with_inverted_range_prefers_max", test_clamp_with_inverted_range_prefers_max},
-        {"intersection_of_overlapping_rects", test_intersection_of_overlapping_rects},
-        {"intersection_of_disjoint_rects_is_empty", test_intersection_of_disjoint_rects_is_empty},
-        {"union_covers_both_rects", test_union_covers_both_rects},
-        {"min_and_max_pick_smaller_and_larger", test_min_and_max_pick_smaller_and_larger},
-        {"size_equals_compares_both_fields", test_size_equals_compares_both_fields},
-        {"size_with_zero_or_negative_side_is_empty", test_size_with_zero_or_negative_side_is_empty},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

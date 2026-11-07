@@ -13,6 +13,7 @@ typedef struct menu_paint {
 } menu_paint;
 
 static void paint_item(cairo_t *cr, const menu_paint *paint, size_t index);
+static void paint_label(cairo_t *cr, const menu_paint *paint, size_t index);
 static void paint_separator(cairo_t *cr, const menu_paint *paint, size_t index);
 static const ui_color *item_color(const menu_paint *paint, size_t index);
 static void paint_decorations(cairo_t *cr, const menu_paint *paint, size_t index);
@@ -25,7 +26,7 @@ cairo_surface_t *appearance_menu_paint(const ui_text *ui, const menu_paint_reque
     canvas canvas = appearance_canvas_create(layout->size, request->scale);
     size_t count = MIN(layout->count, appearance_menu_item_count(request->level));
 
-    appearance_ui_panel(canvas.cr, ui->style, layout->size, MENU_BORDER);
+    appearance_ui_panel(canvas.cr, ui->style, layout->size);
     for (size_t i = 0; i < count; i++) {
         paint_item(canvas.cr, &paint, i);
     }
@@ -43,11 +44,17 @@ static void paint_item(cairo_t *cr, const menu_paint *paint, size_t index)
     if (is_hovered(paint->level, index)) {
         appearance_ui_fill_rect(cr, item, &paint->ui->style->selected_background);
     }
+    paint_label(cr, paint, index);
+    paint_decorations(cr, paint, index);
+}
+
+static void paint_label(cairo_t *cr, const menu_paint *paint, size_t index)
+{
     int mnemonic_at;
     char *text = appearance_menu_item_text_with_mnemonic(paint->level, index, &mnemonic_at);
     text_box box = {
         .text = text,
-        .rect = appearance_menu_label_rect(&paint->columns, item),
+        .rect = appearance_menu_label_rect(&paint->columns, &paint->layout->items[index]),
         .color = item_color(paint, index),
         .alignment = PANGO_ALIGN_LEFT,
         .underline = paint->level->mnemonics,
@@ -55,7 +62,6 @@ static void paint_item(cairo_t *cr, const menu_paint *paint, size_t index)
     };
     appearance_ui_text_draw(cr, paint->ui, &box);
     g_free(text);
-    paint_decorations(cr, paint, index);
 }
 
 static void paint_separator(cairo_t *cr, const menu_paint *paint, size_t index)

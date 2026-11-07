@@ -127,24 +127,25 @@ static void test_missing_image_paints_nothing_but_keeps_hit_area(void)
     CHECK(fixture_find_op(&layout, WM_PIXMAP_BUTTON, WM_BUTTON_CLOSE) == NULL);
 }
 
+static const check_case CASES[] = {
+    {"normal_button_uses_state_image", test_normal_button_uses_state_image},
+    {"hover_uses_prelight_when_available", test_hover_uses_prelight_when_available},
+    {"press_uses_pressed_when_available", test_press_uses_pressed_when_available},
+    {"inactive_hover_uses_inactive_prelight", test_inactive_hover_uses_inactive_prelight},
+    {"inactive_press_is_never_pressed", test_inactive_press_is_never_pressed},
+    {"maximized_window_uses_toggled_maximize", test_maximized_window_uses_toggled_maximize},
+    {"shaded_window_uses_toggled_shade", test_shaded_window_uses_toggled_shade},
+    {"sticky_window_uses_toggled_stick", test_sticky_window_uses_toggled_stick},
+    {"toggle_does_not_apply_to_other_buttons", test_toggle_does_not_apply_to_other_buttons},
+    {"toggled_hover_uses_toggled_prelight", test_toggled_hover_uses_toggled_prelight},
+    {"toggled_hover_falls_back_to_plain_prelight",
+     test_toggled_hover_falls_back_to_plain_prelight},
+    {"toggled_press_without_toggled_pressed_uses_pressed",
+     test_toggled_press_without_toggled_pressed_uses_pressed},
+    {"missing_image_paints_nothing", test_missing_image_paints_nothing_but_keeps_hit_area},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"normal_button_uses_state_image", test_normal_button_uses_state_image},
-        {"hover_uses_prelight_when_available", test_hover_uses_prelight_when_available},
-        {"press_uses_pressed_when_available", test_press_uses_pressed_when_available},
-        {"inactive_hover_uses_inactive_prelight", test_inactive_hover_uses_inactive_prelight},
-        {"inactive_press_is_never_pressed", test_inactive_press_is_never_pressed},
-        {"maximized_window_uses_toggled_maximize", test_maximized_window_uses_toggled_maximize},
-        {"shaded_window_uses_toggled_shade", test_shaded_window_uses_toggled_shade},
-        {"sticky_window_uses_toggled_stick", test_sticky_window_uses_toggled_stick},
-        {"toggle_does_not_apply_to_other_buttons", test_toggle_does_not_apply_to_other_buttons},
-        {"toggled_hover_uses_toggled_prelight", test_toggled_hover_uses_toggled_prelight},
-        {"toggled_hover_falls_back_to_plain_prelight",
-         test_toggled_hover_falls_back_to_plain_prelight},
-        {"toggled_press_without_toggled_pressed_uses_pressed",
-         test_toggled_press_without_toggled_pressed_uses_pressed},
-        {"missing_image_paints_nothing", test_missing_image_paints_nothing_but_keeps_hit_area},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

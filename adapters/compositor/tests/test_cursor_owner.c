@@ -1,5 +1,5 @@
 #include "check.h"
-#include "cursor_owner.h"
+#include "cursor/cursor_owner.h"
 
 static const int source_client = 1;
 static const int target_client = 2;

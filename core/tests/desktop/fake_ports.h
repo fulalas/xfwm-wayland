@@ -26,6 +26,7 @@ typedef struct fake_configure {
 
 typedef struct fake_world {
     wm_ports ports;
+    wm_desktop *desktop;
     wm_output_info outputs[FAKE_OUTPUT_MAX];
     size_t output_count;
     wm_point pointer;
@@ -78,6 +79,8 @@ wm_desktop *fake_desktop_create(fake_world *world, const wm_config *config);
 void *fake_handle(int id);
 wm_window_desc fake_desc(int id, wm_rect geometry);
 wm_window *fake_map(wm_desktop *desktop, int id, wm_rect geometry);
+wm_window *fake_map_with_hints(wm_desktop *desktop, wm_rect geometry,
+                               const wm_size_hints *hints);
 wm_window_desc fake_dialog_desc(int id, wm_window *parent);
 wm_window *fake_map_dialog(wm_desktop *desktop, int id, wm_window *parent);
 wm_rect fake_client_of(const wm_window *window);

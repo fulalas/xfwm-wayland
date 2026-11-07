@@ -7,6 +7,7 @@ typedef struct size_limits {
     int max;
     int base;
     int step;
+    bool unbounded;
 } size_limits;
 
 typedef struct ratio_side {
@@ -20,12 +21,12 @@ typedef struct ratio_side {
     int shrink_min;
 } ratio_side;
 
-static size_limits width_limits(const wm_size_hints *hints);
-static size_limits height_limits(const wm_size_hints *hints);
-static int check_size(const wm_desktop *desktop, const wm_window *window, int size,
-                      size_limits limits, bool by_user);
+static size_limits width_limits(const wm_desktop *desktop, const wm_window *window);
+static size_limits height_limits(const wm_desktop *desktop, const wm_window *window);
+static int checked_size(int size, const size_limits *limits);
+static int user_size(int size, const size_limits *limits);
 static void keep_ratio(const wm_size_hints *hints, uint32_t edges, wm_rect *client);
-static void fix_ratio(const ratio_side *side, bool from_side);
+static void fix_ratio(const ratio_side *side);
 static bool off_ratio(const ratio_side *side);
 static void grow_to_ratio(const ratio_side *side);
 static int multiple(long long value, int step);
@@ -41,21 +42,24 @@ void size_hints_normalize(wm_size_hints *hints)
 
 int size_hints_check_width(const wm_desktop *desktop, const wm_window *window, int width)
 {
-    return check_size(desktop, window, width, width_limits(&window->hints), false);
+    size_limits limits = width_limits(desktop, window);
+    return checked_size(width, &limits);
 }
 
 int size_hints_check_height(const wm_desktop *desktop, const wm_window *window, int height)
 {
-    return check_size(desktop, window, height, height_limits(&window->hints), false);
+    size_limits limits = height_limits(desktop, window);
+    return checked_size(height, &limits);
 }
 
-void size_hints_fit_user(const wm_desktop *desktop, const wm_window *window, uint32_t edges,
-                         wm_rect *client)
+void size_hints_fit_user(const wm_desktop *desktop, wm_window *window, uint32_t edges)
 {
-    const wm_size_hints *hints = &window->hints;
-    keep_ratio(hints, edges, client);
-    client->width = check_size(desktop, window, client->width, width_limits(hints), true);
-    client->height = check_size(desktop, window, client->height, height_limits(hints), true);
+    wm_rect *client = &window->client;
+    keep_ratio(&window->hints, edges, client);
+    size_limits width = width_limits(desktop, window);
+    size_limits height = height_limits(desktop, window);
+    client->width = user_size(client->width, &width);
+    client->height = user_size(client->height, &height);
 }
 
 bool size_hints_allow(const wm_window *window, wm_size size)
@@ -86,33 +90,37 @@ wm_point size_hints_key_steps(const wm_window *window, int nominal)
     return (wm_point) {key_step(hints->step.width, nominal), key_step(hints->step.height, nominal)};
 }
 
-static size_limits width_limits(const wm_size_hints *hints)
+static size_limits width_limits(const wm_desktop *desktop, const wm_window *window)
 {
+    const wm_size_hints *hints = &window->hints;
     return (size_limits) {hints->min.width, hints->max.width, hints->base.width,
-                          hints->step.width};
+                          hints->step.width, bypasses_max(desktop, window)};
 }
 
-static size_limits height_limits(const wm_size_hints *hints)
+static size_limits height_limits(const wm_desktop *desktop, const wm_window *window)
 {
+    const wm_size_hints *hints = &window->hints;
     return (size_limits) {hints->min.height, hints->max.height, hints->base.height,
-                          hints->step.height};
+                          hints->step.height, bypasses_max(desktop, window)};
 }
 
-static int check_size(const wm_desktop *desktop, const wm_window *window, int size,
-                      size_limits limits, bool by_user)
+static int checked_size(int size, const size_limits *limits)
 {
-    if (!bypasses_max(desktop, window)) {
-        if (by_user) {
-            size = limits.base + multiple(size - limits.base, limits.step);
-        }
-        if (!fits_max(limits.max, size)) {
-            size = limits.max;
-        }
+    if (!limits->unbounded && !fits_max(limits->max, size)) {
+        size = limits->max;
     }
-    if (size < limits.min) {
-        size = limits.min;
+    if (size < limits->min) {
+        size = limits->min;
     }
     return size < 1 ? 1 : size;
+}
+
+static int user_size(int size, const size_limits *limits)
+{
+    if (!limits->unbounded) {
+        size = limits->base + multiple(size - limits->base, limits->step);
+    }
+    return checked_size(size, limits);
 }
 
 static void keep_ratio(const wm_size_hints *hints, uint32_t edges, wm_rect *client)
@@ -126,18 +134,18 @@ static void keep_ratio(const wm_size_hints *hints, uint32_t edges, wm_rect *clie
     ratio_side narrow = {hints->max_aspect.height, hints->max_aspect.width, &client->height,
                          &client->width, hints->step.height, hints->step.width,
                          hints->max.height, wm_max(hints->min.width, 1)};
-    fix_ratio(&widen, edges == WM_EDGE_TOP || edges == WM_EDGE_BOTTOM);
-    fix_ratio(&narrow, edges == WM_EDGE_LEFT || edges == WM_EDGE_RIGHT);
+    if (edges == WM_EDGE_TOP || edges == WM_EDGE_BOTTOM) {
+        grow_to_ratio(&widen);
+    }
+    fix_ratio(&widen);
+    if (edges == WM_EDGE_LEFT || edges == WM_EDGE_RIGHT) {
+        grow_to_ratio(&narrow);
+    }
+    fix_ratio(&narrow);
 }
 
-static void fix_ratio(const ratio_side *side, bool from_side)
+static void fix_ratio(const ratio_side *side)
 {
-    if (!off_ratio(side)) {
-        return;
-    }
-    if (from_side) {
-        grow_to_ratio(side);
-    }
     if (!off_ratio(side)) {
         return;
     }
@@ -156,6 +164,9 @@ static bool off_ratio(const ratio_side *side)
 
 static void grow_to_ratio(const ratio_side *side)
 {
+    if (!off_ratio(side)) {
+        return;
+    }
     int delta = multiple(side->num * *side->shrink / side->den - *side->grow, side->grow_step);
     if (fits_max(side->grow_max, *side->grow + delta)) {
         *side->grow += delta;

@@ -3,7 +3,7 @@
 #include "desktop_state.h"
 
 enum {
-    BLINK_TIMEOUT_MS = 500,
+    BLINK_MS = 500,
     MAX_BLINK_ITERATIONS = 5,
     BLINK_TOGGLES = 2 * MAX_BLINK_ITERATIONS,
 };
@@ -92,5 +92,5 @@ static void keep_inactive_look(wm_desktop *desktop, wm_window *window)
 
 static void restart(wm_desktop *desktop, wm_window *window)
 {
-    timers_start(desktop, TIMER_BLINK, window, BLINK_TIMEOUT_MS);
+    timers_start(desktop, &(timer_request) {TIMER_BLINK, window, BLINK_MS});
 }

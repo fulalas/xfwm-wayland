@@ -37,19 +37,20 @@ void app_shortcuts_destroy(app_shortcuts *shortcuts)
 }
 
 void app_shortcuts_bind(app_shortcuts *shortcuts, const char *session,
-                        const app_shortcut_request *requests, size_t count)
+                        app_shortcut_requests requests)
 {
     remove_session(shortcuts, session);
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < requests.count; i++) {
+        const app_shortcut_request *request = &requests.items[i];
         app_shortcut_entry *entry = g_new0(app_shortcut_entry, 1);
         entry->id = shortcuts->next_id++;
         entry->session = g_strdup(session);
-        entry->shortcut_id = g_strdup(requests[i].id);
-        const char *description = requests[i].description;
+        entry->shortcut_id = g_strdup(request->id);
+        const char *description = request->description;
         entry->description = g_strdup(description != NULL ? description : "");
-        entry->usable = accelerator_parse_trigger(requests[i].trigger, &entry->key)
+        entry->usable = accelerator_parse_trigger(request->trigger, &entry->key)
                         && wm_key_is_global(&entry->key);
-        entry->trigger = g_strdup(entry->usable ? requests[i].trigger : "");
+        entry->trigger = g_strdup(entry->usable ? request->trigger : "");
         g_ptr_array_add(shortcuts->entries, entry);
     }
     rebuild_keymap(shortcuts);

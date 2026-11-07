@@ -1,5 +1,5 @@
 #include "check.h"
-#include "zoom_math.h"
+#include "output/zoom_math.h"
 
 static const double TOLERANCE = 1e-9;
 

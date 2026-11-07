@@ -1,5 +1,5 @@
 #include "check.h"
-#include "restart_policy.h"
+#include "server/restart_policy.h"
 
 static void test_first_crash_restarts_after_a_second(void)
 {

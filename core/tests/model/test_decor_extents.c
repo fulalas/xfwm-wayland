@@ -139,28 +139,29 @@ static void test_shaded_frame_is_title_and_bottom_only(void)
     check_extents((wm_extents) {4, 4, 20, 4}, layout.extents);
 }
 
+static const check_case CASES[] = {
+    {"normal_window_has_theme_borders", test_normal_window_has_theme_borders},
+    {"title_height_comes_from_middle_title_part",
+     test_title_height_comes_from_middle_title_part},
+    {"title_height_prefers_title_stretch", test_title_height_prefers_title_stretch},
+    {"side_stretch_sets_border_width", test_side_stretch_sets_border_width},
+    {"maximized_borderless_keeps_only_title", test_maximized_borderless_keeps_only_title},
+    {"maximized_borderless_title_loses_border_top",
+     test_maximized_borderless_title_loses_border_top},
+    {"half_maximized_keeps_borders", test_half_maximized_keeps_borders},
+    {"maximized_without_borderless_keeps_borders",
+     test_maximized_without_borderless_keeps_borders},
+    {"fullscreen_has_no_frame", test_fullscreen_has_no_frame},
+    {"borderless_window_has_no_frame", test_borderless_window_has_no_frame},
+    {"titleless_maximize_removes_frame", test_titleless_maximize_removes_frame},
+    {"hide_titlebar_hint_removes_frame_when_maximized",
+     test_hide_titlebar_hint_removes_frame_when_maximized},
+    {"shaded_titleless_maximized_keeps_frame", test_shaded_titleless_maximized_keeps_frame},
+    {"frame_size_adds_extents", test_frame_size_adds_extents},
+    {"shaded_frame_is_title_and_bottom_only", test_shaded_frame_is_title_and_bottom_only},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"normal_window_has_theme_borders", test_normal_window_has_theme_borders},
-        {"title_height_comes_from_middle_title_part",
-         test_title_height_comes_from_middle_title_part},
-        {"title_height_prefers_title_stretch", test_title_height_prefers_title_stretch},
-        {"side_stretch_sets_border_width", test_side_stretch_sets_border_width},
-        {"maximized_borderless_keeps_only_title", test_maximized_borderless_keeps_only_title},
-        {"maximized_borderless_title_loses_border_top",
-         test_maximized_borderless_title_loses_border_top},
-        {"half_maximized_keeps_borders", test_half_maximized_keeps_borders},
-        {"maximized_without_borderless_keeps_borders",
-         test_maximized_without_borderless_keeps_borders},
-        {"fullscreen_has_no_frame", test_fullscreen_has_no_frame},
-        {"borderless_window_has_no_frame", test_borderless_window_has_no_frame},
-        {"titleless_maximize_removes_frame", test_titleless_maximize_removes_frame},
-        {"hide_titlebar_hint_removes_frame_when_maximized",
-         test_hide_titlebar_hint_removes_frame_when_maximized},
-        {"shaded_titleless_maximized_keeps_frame", test_shaded_titleless_maximized_keeps_frame},
-        {"frame_size_adds_extents", test_frame_size_adds_extents},
-        {"shaded_frame_is_title_and_bottom_only", test_shaded_frame_is_title_and_bottom_only},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

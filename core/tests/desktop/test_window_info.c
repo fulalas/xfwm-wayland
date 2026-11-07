@@ -30,13 +30,6 @@ static wm_window *map_child(wm_desktop *desktop, int id, wm_window *parent)
     return wm_window_map(desktop, &desc);
 }
 
-static wm_window *map_with_hints(wm_desktop *desktop, int id, wm_size_hints hints)
-{
-    wm_window_desc desc = fake_desc(id, small);
-    desc.size_hints = hints;
-    return wm_window_map(desktop, &desc);
-}
-
 static bool starts_resize(wm_desktop *desktop, wm_window *window)
 {
     wm_request_resize(desktop, window, WM_EDGE_RIGHT);
@@ -165,8 +158,8 @@ static void test_fixed_size_is_not_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window =
-        map_with_hints(desktop, 1, (wm_size_hints) {.min = {400, 300}, .max = {400, 300}});
+    wm_size_hints hints = {.min = {400, 300}, .max = {400, 300}};
+    wm_window *window = fake_map_with_hints(desktop, small, &hints);
     CHECK(!starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -175,8 +168,8 @@ static void test_one_free_dimension_is_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window =
-        map_with_hints(desktop, 1, (wm_size_hints) {.min = {400, 300}, .max = {800, 300}});
+    wm_size_hints hints = {.min = {400, 300}, .max = {800, 300}};
+    wm_window *window = fake_map_with_hints(desktop, small, &hints);
     CHECK(starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -185,8 +178,8 @@ static void test_min_above_max_is_not_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window =
-        map_with_hints(desktop, 1, (wm_size_hints) {.min = {500, 400}, .max = {300, 200}});
+    wm_size_hints hints = {.min = {500, 400}, .max = {300, 200}};
+    wm_window *window = fake_map_with_hints(desktop, small, &hints);
     CHECK(!starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -195,8 +188,8 @@ static void test_max_only_is_resizable(void)
 {
     fake_world world;
     wm_desktop *desktop = start(&world);
-    wm_window *window =
-        map_with_hints(desktop, 1, (wm_size_hints) {.min = {0, 0}, .max = {800, 600}});
+    wm_size_hints hints = {.min = {0, 0}, .max = {800, 600}};
+    wm_window *window = fake_map_with_hints(desktop, small, &hints);
     CHECK(starts_resize(desktop, window));
     wm_desktop_destroy(desktop);
 }
@@ -213,24 +206,25 @@ static void test_fixed_size_ignores_initial_maximize(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"normal_window_is_in_taskbar", test_normal_window_is_in_taskbar},
+    {"dialog_with_parent_skips_taskbar", test_dialog_with_parent_skips_taskbar},
+    {"dialog_without_parent_is_in_taskbar", test_dialog_without_parent_is_in_taskbar},
+    {"helper_types_skip_taskbar", test_helper_types_skip_taskbar},
+    {"utility_skips_pager", test_utility_skips_pager},
+    {"explicit_skip_taskbar_is_published", test_explicit_skip_taskbar_is_published},
+    {"untyped_child_becomes_dialog", test_untyped_child_becomes_dialog},
+    {"typed_normal_child_stays_in_taskbar", test_typed_normal_child_stays_in_taskbar},
+    {"later_parent_is_published", test_later_parent_is_published},
+    {"app_id_change_is_published", test_app_id_change_is_published},
+    {"fixed_size_is_not_resizable", test_fixed_size_is_not_resizable},
+    {"one_free_dimension_is_resizable", test_one_free_dimension_is_resizable},
+    {"min_above_max_is_not_resizable", test_min_above_max_is_not_resizable},
+    {"max_only_is_resizable", test_max_only_is_resizable},
+    {"fixed_size_ignores_initial_maximize", test_fixed_size_ignores_initial_maximize},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"normal_window_is_in_taskbar", test_normal_window_is_in_taskbar},
-        {"dialog_with_parent_skips_taskbar", test_dialog_with_parent_skips_taskbar},
-        {"dialog_without_parent_is_in_taskbar", test_dialog_without_parent_is_in_taskbar},
-        {"helper_types_skip_taskbar", test_helper_types_skip_taskbar},
-        {"utility_skips_pager", test_utility_skips_pager},
-        {"explicit_skip_taskbar_is_published", test_explicit_skip_taskbar_is_published},
-        {"untyped_child_becomes_dialog", test_untyped_child_becomes_dialog},
-        {"typed_normal_child_stays_in_taskbar", test_typed_normal_child_stays_in_taskbar},
-        {"later_parent_is_published", test_later_parent_is_published},
-        {"app_id_change_is_published", test_app_id_change_is_published},
-        {"fixed_size_is_not_resizable", test_fixed_size_is_not_resizable},
-        {"one_free_dimension_is_resizable", test_one_free_dimension_is_resizable},
-        {"min_above_max_is_not_resizable", test_min_above_max_is_not_resizable},
-        {"max_only_is_resizable", test_max_only_is_resizable},
-        {"fixed_size_ignores_initial_maximize", test_fixed_size_ignores_initial_maximize},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

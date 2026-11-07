@@ -1,4 +1,4 @@
-#include "brightness_curve.h"
+#include "output/brightness_curve.h"
 #include "check.h"
 
 enum { CURVE_SIZE = 4096 };

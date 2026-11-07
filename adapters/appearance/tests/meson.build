@@ -1,6 +1,7 @@
 appearance_fixture = static_library(
   'appearance_fixture',
   'fixture.c',
+  include_directories: core_inc,
   dependencies: [dependency('gdk-pixbuf-2.0'), dependency('cairo')],
 )
 

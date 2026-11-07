@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "check.h"
-#include "ewmh_payload.h"
+#include "xwayland/ewmh_payload.h"
 
 static void test_sticky_window_is_on_all_desktops(void)
 {
@@ -72,11 +72,10 @@ static void test_inner_panel_does_not_shrink_workarea(void)
 static void test_names_split_on_nul(void)
 {
     const char bytes[] = "Web\0Mail\0Code";
-    const char *names[4];
-    size_t count = ewmh_split_names(bytes, sizeof(bytes) - 1, names, 4);
-    CHECK_INT_EQ(3, (long) count);
-    CHECK(strcmp(names[1], "Mail") == 0);
-    CHECK(strcmp(names[2], "Code") == 0);
+    ewmh_name_list list = ewmh_split_names(bytes, sizeof(bytes) - 1);
+    CHECK_INT_EQ(3, (long) list.count);
+    CHECK(strcmp(list.names[1], "Mail") == 0);
+    CHECK(strcmp(list.names[2], "Code") == 0);
 }
 
 int main(void)

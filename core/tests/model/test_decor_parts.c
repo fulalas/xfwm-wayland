@@ -92,19 +92,20 @@ static void test_frameless_window_has_no_parts(void)
     CHECK_INT_EQ(WM_PART_NONE, part_at(&fixture, 0, 0));
 }
 
+static const check_case CASES[] = {
+    {"buttons_win_over_title_and_top_strip", test_buttons_win_over_title_and_top_strip},
+    {"top_strip_wins_over_title", test_top_strip_wins_over_title},
+    {"corners_cover_frame_corners", test_corners_cover_frame_corners},
+    {"sides_surround_the_client", test_sides_surround_the_client},
+    {"client_area_is_no_part", test_client_area_is_no_part},
+    {"parts_are_listed_by_priority", test_parts_are_listed_by_priority},
+    {"maximized_borderless_has_only_title_and_buttons",
+     test_maximized_borderless_has_only_title_and_buttons},
+    {"shaded_frame_has_no_left_or_right_side", test_shaded_frame_has_no_left_or_right_side},
+    {"frameless_window_has_no_parts", test_frameless_window_has_no_parts},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"buttons_win_over_title_and_top_strip", test_buttons_win_over_title_and_top_strip},
-        {"top_strip_wins_over_title", test_top_strip_wins_over_title},
-        {"corners_cover_frame_corners", test_corners_cover_frame_corners},
-        {"sides_surround_the_client", test_sides_surround_the_client},
-        {"client_area_is_no_part", test_client_area_is_no_part},
-        {"parts_are_listed_by_priority", test_parts_are_listed_by_priority},
-        {"maximized_borderless_has_only_title_and_buttons",
-         test_maximized_borderless_has_only_title_and_buttons},
-        {"shaded_frame_has_no_left_or_right_side", test_shaded_frame_has_no_left_or_right_side},
-        {"frameless_window_has_no_parts", test_frameless_window_has_no_parts},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

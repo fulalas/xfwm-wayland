@@ -43,10 +43,11 @@ static const menu_op MENU_OPS[] = {
     {WM_MENU_CLOSE, window_ops_close},
 };
 
-void menu_perform(wm_desktop *desktop, wm_window *window, const wm_menu_item *item, int index)
+void menu_perform(wm_desktop *desktop, const menu_choice *choice)
 {
+    const wm_menu_item *item = &choice->item;
     if (item->label == WM_MENU_WORKSPACE_ENTRY) {
-        visibility_set_workspace(desktop, window, index);
+        visibility_set_workspace(desktop, choice->window, choice->index);
         return;
     }
     if (item->mark == WM_MENU_MARK_RADIO_ON) {
@@ -54,7 +55,7 @@ void menu_perform(wm_desktop *desktop, wm_window *window, const wm_menu_item *it
     }
     for (size_t i = 0; i < sizeof(MENU_OPS) / sizeof(MENU_OPS[0]); i++) {
         if (MENU_OPS[i].label == item->label) {
-            MENU_OPS[i].run(desktop, window);
+            MENU_OPS[i].run(desktop, choice->window);
             return;
         }
     }

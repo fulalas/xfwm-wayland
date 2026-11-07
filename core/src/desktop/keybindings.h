@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "direction.h"
 #include "wm/desktop.h"
 
 typedef struct keybindings {
@@ -23,6 +24,7 @@ const char *keybindings_command_for(const keybindings *keys, const wm_key_event 
 const wm_app_shortcut *keybindings_app_shortcut_for(const keybindings *keys,
                                                      const wm_key_event *event);
 bool keybindings_is_key_of(const keybindings *keys, wm_action action, uint32_t keysym);
+move_direction keybindings_direction_of(const keybindings *keys, uint32_t keysym);
 uint32_t keybindings_modifiers_of(const keybindings *keys, wm_action action);
 bool keysym_is_modifier(uint32_t keysym);
 bool keysym_is_return(uint32_t keysym);

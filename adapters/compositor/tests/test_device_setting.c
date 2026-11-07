@@ -1,5 +1,5 @@
 #include "check.h"
-#include "device_settings.h"
+#include "input/device_settings.h"
 
 static void test_choice_orders_words(void)
 {

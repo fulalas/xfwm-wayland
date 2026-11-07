@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "check.h"
-#include "session_book.h"
+#include "session/session_book.h"
 
 static session_record record(const char *name, long seen)
 {

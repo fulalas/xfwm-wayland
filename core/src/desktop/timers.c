@@ -13,6 +13,8 @@ enum {
     TIMERS_GROWTH_FACTOR = 2,
 };
 
+static void add_timer(wm_desktop *desktop, timer_entry entry);
+static uint32_t deadline_after(const wm_desktop *desktop, int delay_ms);
 static bool is_due(uint32_t deadline_ms, uint32_t now_ms);
 static bool find_due(const timer_set *timers, uint32_t now_ms, timer_entry *due);
 static void remove_at(timer_set *timers, size_t index);
@@ -28,15 +30,25 @@ void timers_free(timer_set *timers)
     timers->capacity = 0;
 }
 
-void timers_start(wm_desktop *desktop, timer_kind kind, wm_window *window, int delay_ms)
+void timers_start(wm_desktop *desktop, const timer_request *request)
+{
+    uint32_t deadline = deadline_after(desktop, request->delay_ms);
+    add_timer(desktop, (timer_entry) {request->kind, request->window, deadline});
+}
+
+static void add_timer(wm_desktop *desktop, timer_entry entry)
 {
     timer_set *timers = &desktop->timers;
-    timers_cancel(desktop, kind, window);
-    if (!grow(timers)) {
-        return;
+    timers_cancel(desktop, entry.kind, entry.window);
+    if (grow(timers)) {
+        timers->entries[timers->count++] = entry;
     }
+}
+
+static uint32_t deadline_after(const wm_desktop *desktop, int delay_ms)
+{
     uint32_t delay = delay_ms > 0 ? (uint32_t) delay_ms : 0;
-    timers->entries[timers->count++] = (timer_entry) {kind, window, timers_now(desktop) + delay};
+    return timers_now(desktop) + delay;
 }
 
 void timers_cancel(wm_desktop *desktop, timer_kind kind, wm_window *window)

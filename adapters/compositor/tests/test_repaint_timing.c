@@ -1,5 +1,5 @@
 #include "check.h"
-#include "repaint_timing.h"
+#include "render/repaint_timing.h"
 
 enum {
     MS = 1000000,

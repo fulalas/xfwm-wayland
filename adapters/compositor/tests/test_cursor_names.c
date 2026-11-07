@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "check.h"
-#include "cursor_names.h"
+#include "cursor/cursor_names.h"
 
 static bool ends_with_default(cursor_name_list list)
 {

@@ -1,5 +1,5 @@
 #include "check.h"
-#include "scale_guess.h"
+#include "output/scale_guess.h"
 
 static double guess(wm_size pixels, wm_size millimeters)
 {

@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "check.h"
-#include "session_record.h"
+#include "session/session_record.h"
 #include "wm/desktop.h"
 
 static session_record sample(const char *name)

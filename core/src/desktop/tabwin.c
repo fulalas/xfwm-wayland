@@ -40,7 +40,7 @@ static grid_cell wrap_columns(grid_cell cell, grid_layout layout, int delta);
 static grid_cell wrap_rows(grid_cell cell, grid_layout layout, int delta);
 typedef struct missing_fix {
     grid_layout layout;
-    grid_move move;
+    wm_point move;
     int count;
 } missing_fix;
 
@@ -64,15 +64,17 @@ tabwin_grid tabwin_compute(const wm_desktop *desktop, size_t count)
     return grid;
 }
 
-size_t tabwin_select_delta(const tabwin_grid *grid, size_t count, size_t current, grid_move move)
+size_t tabwin_select_delta(const tabwin_grid *grid, grid_selection selection, wm_point move)
 {
+    size_t count = selection.count;
+    size_t current = selection.current;
     if (count == 0) {
         return 0;
     }
     grid_layout layout = layout_for(grid, (int) count);
     grid_cell cell = cell_of(grid, layout, (int) current);
-    cell = wrap_columns(cell, layout, move.columns);
-    cell = wrap_rows(cell, layout, move.rows);
+    cell = wrap_columns(cell, layout, move.x);
+    cell = wrap_rows(cell, layout, move.y);
     if (position_of(grid, layout, cell) >= (int) count) {
         missing_fix fix = {layout, move, (int) count};
         cell = fix_missing(grid, cell, &fix);
@@ -192,7 +194,7 @@ static grid_cell wrap_rows(grid_cell cell, grid_layout layout, int delta)
 
 static grid_cell fix_missing(const tabwin_grid *grid, grid_cell cell, const missing_fix *fix)
 {
-    if (fix->move.columns != 0) {
+    if (fix->move.x != 0) {
         return fix_horizontal(grid, cell, fix);
     }
     return fix_vertical(grid, cell, fix);
@@ -202,7 +204,7 @@ static grid_cell fix_horizontal(const tabwin_grid *grid, grid_cell cell, const m
 {
     const grid_layout *layout = &fix->layout;
     bool icons = grid->mode == WM_TABWIN_GRID;
-    if (fix->move.columns > 0) {
+    if (fix->move.x > 0) {
         if (icons) {
             return (grid_cell) {0, 0};
         }
@@ -218,7 +220,7 @@ static grid_cell fix_vertical(const tabwin_grid *grid, grid_cell cell, const mis
 {
     const grid_layout *layout = &fix->layout;
     bool icons = grid->mode == WM_TABWIN_GRID;
-    if (fix->move.rows > 0) {
+    if (fix->move.y > 0) {
         return (grid_cell) {0, cell.column + 1 >= layout->columns ? 0 : cell.column + 1};
     }
     if (icons) {

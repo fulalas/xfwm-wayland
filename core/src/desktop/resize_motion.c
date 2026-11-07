@@ -131,7 +131,7 @@ static void apply_constraints(wm_desktop *desktop, wm_window *window, uint32_t e
     placement_constrain(desktop, window);
     client->height -= client->y - y;
     client->width -= client->x - x;
-    size_hints_fit_user(desktop, window, edges, client);
+    size_hints_fit_user(desktop, window, edges);
     if (edges & WM_EDGE_LEFT) {
         client->x = right_edge - client->width;
     }

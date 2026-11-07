@@ -13,15 +13,15 @@ static void test_zoom_steps_in_and_out(void)
     fake_world world;
     wm_config config = fake_config();
     wm_desktop *desktop = fake_desktop_start(&world, &config);
-    fake_click where = {WM_TARGET_DESKTOP, NULL, {300, 200}, 0, WM_MOD_ALT};
-    CHECK_INT_EQ(WM_CONSUMED, fake_scroll(&world, desktop, &where, -2));
+    fake_click where = {WM_TARGET_DESKTOP, NULL, {300, 200}, 0, WM_MOD_ALT, -1};
+    CHECK_INT_EQ(WM_CONSUMED, fake_scroll(&world, &where, -2));
     CHECK_DOUBLE_NEAR(65536.0 / (65536.0 - 8192.0), world.zoom.level, 1e-9);
     CHECK_INT_EQ(300, world.zoom.center.x);
     CHECK(world.zoom.zoom_pointer);
-    fake_click moved = {WM_TARGET_DESKTOP, NULL, {500, 600}, 0, 0};
+    fake_click moved = {WM_TARGET_DESKTOP, NULL, {500, 600}, 0, 0, -1};
     fake_motion(&world, desktop, &moved);
     CHECK_INT_EQ(500, world.zoom.center.x);
-    fake_scroll(&world, desktop, &where, 2);
+    fake_scroll(&world, &where, 2);
     CHECK_DOUBLE_NEAR(1.0, world.zoom.level, 1e-9);
     wm_desktop_destroy(desktop);
 }
@@ -31,8 +31,8 @@ static void test_zoom_is_clamped(void)
     fake_world world;
     wm_config config = fake_config();
     wm_desktop *desktop = fake_desktop_start(&world, &config);
-    fake_click where = {WM_TARGET_DESKTOP, NULL, {300, 200}, 0, WM_MOD_ALT};
-    fake_scroll(&world, desktop, &where, -40);
+    fake_click where = {WM_TARGET_DESKTOP, NULL, {300, 200}, 0, WM_MOD_ALT, -1};
+    fake_scroll(&world, &where, -40);
     CHECK_DOUBLE_NEAR(64.0, world.zoom.level, 1e-9);
     wm_desktop_destroy(desktop);
 }
@@ -66,7 +66,7 @@ static void test_focus_clears_urgency(void)
     wm_window *window = fake_map(desktop, 1, small);
     fake_map(desktop, 2, small);
     wm_window_demand_attention(desktop, window);
-    fake_click click = {WM_TARGET_CLIENT, window, {900, 500}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, window, {900, 500}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     CHECK(!wm_window_current_view(window).urgent);
     wm_desktop_destroy(desktop);
@@ -169,7 +169,7 @@ static void test_fill_key_grows_to_neighbours(void)
     wm_window_desc other = fake_desc(2, (wm_rect) {500, 120, 200, 200});
     other.has_position = true;
     wm_window *window = wm_window_map(desktop, &other);
-    fake_click click = {WM_TARGET_CLIENT, window, {600, 200}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, window, {600, 200}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     fake_key(desktop, FAKE_KEY_F, WM_MOD_SUPER);
     CHECK_RECT_EQ(((wm_rect) {308, 20, 1608, 1056}), wm_window_current_view(window).client);
@@ -201,32 +201,33 @@ static void test_timer_is_scheduled_for_focus_delay(void)
     wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_window *window = fake_map(desktop, 1, small);
     fake_map(desktop, 2, small);
-    fake_click where = {WM_TARGET_CLIENT, window, {10, 10}, 0, 0};
+    fake_click where = {WM_TARGET_CLIENT, window, {10, 10}, 0, 0, -1};
     fake_motion(&world, desktop, &where);
     CHECK(world.timer_pending);
     CHECK_INT_EQ(world.now_ms + 250, world.timer_deadline_ms);
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"zoom_steps_in_and_out", test_zoom_steps_in_and_out},
+    {"zoom_is_clamped", test_zoom_is_clamped},
+    {"urgent_blink_stops_looking_active", test_urgent_blink_stops_looking_active},
+    {"focus_clears_urgency", test_focus_clears_urgency},
+    {"same_width_title_change_redraws_frame", test_same_width_title_change_redraws_frame},
+    {"not_responding_after_close_asks_terminate",
+     test_not_responding_after_close_asks_terminate},
+    {"close_without_focus_logs_out", test_close_without_focus_logs_out},
+    {"command_binding_spawns", test_command_binding_spawns},
+    {"app_shortcut_reports_press_and_release", test_app_shortcut_reports_press_and_release},
+    {"second_app_shortcut_releases_the_first", test_second_app_shortcut_releases_the_first},
+    {"user_shortcut_beats_app_shortcut", test_user_shortcut_beats_app_shortcut},
+    {"fill_key_grows_to_neighbours", test_fill_key_grows_to_neighbours},
+    {"request_configure_ignored_when_maximized",
+     test_request_configure_ignored_when_maximized},
+    {"timer_is_scheduled_for_focus_delay", test_timer_is_scheduled_for_focus_delay},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"zoom_steps_in_and_out", test_zoom_steps_in_and_out},
-        {"zoom_is_clamped", test_zoom_is_clamped},
-        {"urgent_blink_stops_looking_active", test_urgent_blink_stops_looking_active},
-        {"focus_clears_urgency", test_focus_clears_urgency},
-        {"same_width_title_change_redraws_frame", test_same_width_title_change_redraws_frame},
-        {"not_responding_after_close_asks_terminate",
-         test_not_responding_after_close_asks_terminate},
-        {"close_without_focus_logs_out", test_close_without_focus_logs_out},
-        {"command_binding_spawns", test_command_binding_spawns},
-        {"app_shortcut_reports_press_and_release", test_app_shortcut_reports_press_and_release},
-        {"second_app_shortcut_releases_the_first", test_second_app_shortcut_releases_the_first},
-        {"user_shortcut_beats_app_shortcut", test_user_shortcut_beats_app_shortcut},
-        {"fill_key_grows_to_neighbours", test_fill_key_grows_to_neighbours},
-        {"request_configure_ignored_when_maximized",
-         test_request_configure_ignored_when_maximized},
-        {"timer_is_scheduled_for_focus_delay", test_timer_is_scheduled_for_focus_delay},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

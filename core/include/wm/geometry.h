@@ -20,6 +20,11 @@ typedef struct wm_rect {
     int height;
 } wm_rect;
 
+typedef struct wm_segment {
+    int start;
+    int end;
+} wm_segment;
+
 typedef struct wm_extents {
     int left;
     int right;
@@ -47,7 +52,10 @@ long wm_rect_overlap_area(const wm_rect *a, const wm_rect *b);
 wm_point wm_rect_center(const wm_rect *rect);
 wm_rect wm_rect_shrink(const wm_rect *rect, const wm_extents *extents);
 wm_rect wm_rect_grow(const wm_rect *rect, const wm_extents *extents);
-bool wm_segments_overlap(int start_a, int end_a, int start_b, int end_b);
+wm_segment wm_rect_columns(const wm_rect *rect);
+wm_segment wm_rect_rows(const wm_rect *rect);
+bool wm_segments_overlap(wm_segment a, wm_segment b);
+bool wm_segments_touch(wm_segment a, wm_segment b);
 int wm_clamp(int value, int min, int max);
 int wm_min(int a, int b);
 int wm_max(int a, int b);

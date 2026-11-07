@@ -33,13 +33,14 @@ void appearance_ui_fill_rect(cairo_t *cr, const wm_rect *rect, const ui_color *c
     cairo_fill(cr);
 }
 
-void appearance_ui_panel(cairo_t *cr, const ui_style *style, wm_size size, int border)
+void appearance_ui_panel(cairo_t *cr, const ui_style *style, wm_size size)
 {
     wm_rect outer = { 0, 0, size.width, size.height };
 
     appearance_ui_fill_rect(cr, &outer, &style->background);
-    cairo_rectangle(cr, half_pixel, half_pixel, size.width - border, size.height - border);
-    cairo_set_line_width(cr, border);
+    cairo_rectangle(cr, half_pixel, half_pixel, size.width - PANEL_BORDER,
+                    size.height - PANEL_BORDER);
+    cairo_set_line_width(cr, PANEL_BORDER);
     appearance_text_set_color(cr, &style->border);
     cairo_stroke(cr);
 }

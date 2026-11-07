@@ -162,19 +162,20 @@ static void test_switcher_uses_primary_monitor(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"switcher_uses_primary_monitor", test_switcher_uses_primary_monitor},
+    {"cycle_lists_windows_in_focus_order", test_cycle_lists_windows_in_focus_order},
+    {"releasing_modifier_activates_selection", test_releasing_modifier_activates_selection},
+    {"reverse_cycle_selects_last", test_reverse_cycle_selects_last},
+    {"cancel_keeps_focus", test_cancel_keeps_focus},
+    {"mouse_selects_and_activates", test_mouse_selects_and_activates},
+    {"minimized_windows_come_last", test_minimized_windows_come_last},
+    {"unmapped_window_leaves_cycle", test_unmapped_window_leaves_cycle},
+    {"grid_geometry", test_grid_geometry},
+    {"arrow_keys_move_in_grid", test_arrow_keys_move_in_grid},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"switcher_uses_primary_monitor", test_switcher_uses_primary_monitor},
-        {"cycle_lists_windows_in_focus_order", test_cycle_lists_windows_in_focus_order},
-        {"releasing_modifier_activates_selection", test_releasing_modifier_activates_selection},
-        {"reverse_cycle_selects_last", test_reverse_cycle_selects_last},
-        {"cancel_keeps_focus", test_cancel_keeps_focus},
-        {"mouse_selects_and_activates", test_mouse_selects_and_activates},
-        {"minimized_windows_come_last", test_minimized_windows_come_last},
-        {"unmapped_window_leaves_cycle", test_unmapped_window_leaves_cycle},
-        {"grid_geometry", test_grid_geometry},
-        {"arrow_keys_move_in_grid", test_arrow_keys_move_in_grid},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

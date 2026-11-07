@@ -36,8 +36,8 @@ static char *make_theme_with_rc(const char *themerc)
     for (size_t i = 0; i < G_N_ELEMENTS(paths); i++) {
         g_free(paths[i]);
     }
-    fixture_write_png(dir, "close-active.png", 16, 14);
-    fixture_write_png(dir, "top-left-inactive.png", 8, 8);
+    fixture_write_png(dir, "close-active.png", (wm_size) { 16, 14 });
+    fixture_write_png(dir, "top-left-inactive.png", (wm_size) { 8, 8 });
     return dir;
 }
 
@@ -195,12 +195,10 @@ static void test_absolute_name_is_the_theme_dir(void)
 
 static const char variant_theme[] = "XfwmTestVariantTheme";
 
-static char *data_home;
-
 static char *variant_dir(const char *suffix)
 {
     char *name = g_strconcat(variant_theme, suffix, NULL);
-    char *dir = g_build_filename(data_home, "themes", name, "xfwm4", NULL);
+    char *dir = g_build_filename(g_getenv("XDG_DATA_HOME"), "themes", name, "xfwm4", NULL);
     g_free(name);
     return dir;
 }
@@ -242,7 +240,7 @@ static char *make_svg_theme(void)
 
     g_free(fixture_write(dir, "themerc", themerc_content));
     g_free(fixture_write(dir, "left-active.svg", red_svg));
-    fixture_write_png(dir, "left-active.png", 4, 6);
+    fixture_write_png(dir, "left-active.png", (wm_size) { 4, 6 });
     return dir;
 }
 
@@ -367,30 +365,31 @@ static void test_thin_pixmaps_keep_one_pixel(void)
     cairo_surface_destroy(surface);
 }
 
+static const check_case cases[] = {
+    { "metrics_from_pixmaps", test_metrics_from_pixmaps },
+    { "missing_pixmaps_are_empty", test_missing_pixmaps_are_empty },
+    { "overlay_composes_on_xpm_size", test_overlay_composes_on_xpm_size },
+    { "theme_options_are_raw_values", test_theme_options_are_raw_values },
+    { "same_request_is_loaded", test_same_request_is_loaded },
+    { "themerc_title_font_wins", test_themerc_title_font_wins },
+    { "double_scale_halves_metrics", test_double_scale_halves_metrics },
+    { "half_transparent_pixels_are_cut_out", test_half_transparent_pixels_are_cut_out },
+    { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
+    { "theme_pixels_map_to_screen_pixels", test_theme_pixels_map_to_screen_pixels },
+    { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
+    { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
+    { "svg_wins_over_bitmaps", test_svg_wins_over_bitmaps },
+    { "svg_cuts_out_partly_clear_pixels", test_svg_cuts_out_partly_clear_pixels },
+    { "svg_uses_theme_colors_and_one_pixel_lines",
+      test_svg_uses_theme_colors_and_one_pixel_lines },
+    { "svg_theme_keeps_the_title_font_size", test_svg_theme_keeps_the_title_font_size },
+};
+
 int main(void)
 {
-    data_home = fixture_dir_create();
-    g_setenv("XDG_DATA_HOME", data_home, TRUE);
-    static const check_case cases[] = {
-        { "metrics_from_pixmaps", test_metrics_from_pixmaps },
-        { "missing_pixmaps_are_empty", test_missing_pixmaps_are_empty },
-        { "overlay_composes_on_xpm_size", test_overlay_composes_on_xpm_size },
-        { "theme_options_are_raw_values", test_theme_options_are_raw_values },
-        { "same_request_is_loaded", test_same_request_is_loaded },
-        { "themerc_title_font_wins", test_themerc_title_font_wins },
-        { "double_scale_halves_metrics", test_double_scale_halves_metrics },
-        { "half_transparent_pixels_are_cut_out", test_half_transparent_pixels_are_cut_out },
-        { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
-        { "theme_pixels_map_to_screen_pixels", test_theme_pixels_map_to_screen_pixels },
-        { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
-        { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
-        { "svg_wins_over_bitmaps", test_svg_wins_over_bitmaps },
-        { "svg_cuts_out_partly_clear_pixels", test_svg_cuts_out_partly_clear_pixels },
-        { "svg_uses_theme_colors_and_one_pixel_lines",
-          test_svg_uses_theme_colors_and_one_pixel_lines },
-        { "svg_theme_keeps_the_title_font_size", test_svg_theme_keeps_the_title_font_size },
-    };
+    char *data_home = fixture_dir_create();
 
+    g_setenv("XDG_DATA_HOME", data_home, TRUE);
     int result = check_run(cases, sizeof cases / sizeof cases[0]);
     fixture_dir_remove(data_home);
     return result;

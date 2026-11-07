@@ -1,6 +1,6 @@
 #include "check.h"
 #include "wm/desktop.h"
-#include "x11_motif.h"
+#include "xwayland/x11_motif.h"
 
 enum {
     FUNCTIONS = 1,

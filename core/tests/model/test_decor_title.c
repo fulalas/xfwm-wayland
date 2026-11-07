@@ -182,27 +182,28 @@ static void test_no_title_when_corners_fill_the_width(void)
     CHECK_INT_EQ(0, fixture_count_ops(&layout, WM_PIXMAP_TITLE));
 }
 
+static const check_case CASES[] = {
+    {"full_width_center_text_position", test_full_width_center_text_position},
+    {"full_width_middle_spans_between_buttons", test_full_width_middle_spans_between_buttons},
+    {"full_width_left_and_right_alignment", test_full_width_left_and_right_alignment},
+    {"full_width_horizontal_offset", test_full_width_horizontal_offset},
+    {"full_width_long_text_starts_at_offset", test_full_width_long_text_starts_at_offset},
+    {"fitted_title_middle_matches_text_width", test_fitted_title_middle_matches_text_width},
+    {"fitted_left_and_right_alignment", test_fitted_left_and_right_alignment},
+    {"fitted_title_adds_shadow_width", test_fitted_title_adds_shadow_width},
+    {"fitted_long_text_is_limited_to_title_width",
+     test_fitted_long_text_is_limited_to_title_width},
+    {"fitted_empty_text_is_not_drawn", test_fitted_empty_text_is_not_drawn},
+    {"vertical_offset_moves_text_down", test_vertical_offset_moves_text_down},
+    {"vertical_offset_cannot_push_text_out", test_vertical_offset_cannot_push_text_out},
+    {"inactive_title_uses_inactive_settings", test_inactive_title_uses_inactive_settings},
+    {"text_is_clipped_before_right_title_edge", test_text_is_clipped_before_right_title_edge},
+    {"long_title_stops_before_buttons", test_long_title_stops_before_buttons},
+    {"border_top_shifts_title_up", test_border_top_shifts_title_up},
+    {"no_title_when_corners_fill_the_width", test_no_title_when_corners_fill_the_width},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"full_width_center_text_position", test_full_width_center_text_position},
-        {"full_width_middle_spans_between_buttons", test_full_width_middle_spans_between_buttons},
-        {"full_width_left_and_right_alignment", test_full_width_left_and_right_alignment},
-        {"full_width_horizontal_offset", test_full_width_horizontal_offset},
-        {"full_width_long_text_starts_at_offset", test_full_width_long_text_starts_at_offset},
-        {"fitted_title_middle_matches_text_width", test_fitted_title_middle_matches_text_width},
-        {"fitted_left_and_right_alignment", test_fitted_left_and_right_alignment},
-        {"fitted_title_adds_shadow_width", test_fitted_title_adds_shadow_width},
-        {"fitted_long_text_is_limited_to_title_width",
-         test_fitted_long_text_is_limited_to_title_width},
-        {"fitted_empty_text_is_not_drawn", test_fitted_empty_text_is_not_drawn},
-        {"vertical_offset_moves_text_down", test_vertical_offset_moves_text_down},
-        {"vertical_offset_cannot_push_text_out", test_vertical_offset_cannot_push_text_out},
-        {"inactive_title_uses_inactive_settings", test_inactive_title_uses_inactive_settings},
-        {"text_is_clipped_before_right_title_edge", test_text_is_clipped_before_right_title_edge},
-        {"long_title_stops_before_buttons", test_long_title_stops_before_buttons},
-        {"border_top_shifts_title_up", test_border_top_shifts_title_up},
-        {"no_title_when_corners_fill_the_width", test_no_title_when_corners_fill_the_width},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

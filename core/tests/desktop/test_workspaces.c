@@ -302,41 +302,42 @@ static void test_scroll_on_desktop_switches_workspace(void)
     fake_world world;
     wm_config config = fake_config();
     wm_desktop *desktop = fake_desktop_start(&world, &config);
-    fake_click where = {WM_TARGET_DESKTOP, NULL, {50, 50}, 0, 0};
-    fake_scroll(&world, desktop, &where, 1);
+    fake_click where = {WM_TARGET_DESKTOP, NULL, {50, 50}, 0, 0, -1};
+    fake_scroll(&world, &where, 1);
     CHECK_INT_EQ(1, world.workspaces.current);
-    fake_scroll(&world, desktop, &where, 1);
+    fake_scroll(&world, &where, 1);
     CHECK_INT_EQ(1, world.workspaces.current);
     fake_advance(&world, desktop, 30);
-    fake_scroll(&world, desktop, &where, -1);
+    fake_scroll(&world, &where, -1);
     CHECK_INT_EQ(0, world.workspaces.current);
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"switch_restores_workspace_focus", test_switch_restores_workspace_focus},
+    {"delete_keeps_ids_of_other_workspaces", test_delete_keeps_ids_of_other_workspaces},
+    {"ids_are_unique", test_ids_are_unique},
+    {"move_window_to_workspace_key", test_move_window_to_workspace_key},
+    {"left_workspace_wraps_layout", test_left_workspace_wraps_layout},
+    {"left_workspace_stops_without_wrap", test_left_workspace_stops_without_wrap},
+    {"rows_move_up_and_down", test_rows_move_up_and_down},
+    {"rows_wrap_around_short_last_row", test_rows_wrap_around_short_last_row},
+    {"rows_skip_unused_rows", test_rows_skip_unused_rows},
+    {"changing_rows_republishes_layout", test_changing_rows_republishes_layout},
+    {"rows_stop_at_edges_without_wrap", test_rows_stop_at_edges_without_wrap},
+    {"move_window_down_a_row", test_move_window_down_a_row},
+    {"pager_renames_and_resizes", test_pager_renames_and_resizes},
+    {"toggle_returns_to_previous", test_toggle_returns_to_previous},
+    {"switch_out_of_range_without_wrap_cycle", test_switch_out_of_range_without_wrap_cycle},
+    {"add_and_delete_active_workspace", test_add_and_delete_active_workspace},
+    {"workspace_names", test_workspace_names},
+    {"fewer_workspaces_from_config_moves_windows",
+     test_fewer_workspaces_from_config_moves_windows},
+    {"show_desktop_toggle", test_show_desktop_toggle},
+    {"scroll_on_desktop_switches_workspace", test_scroll_on_desktop_switches_workspace},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"switch_restores_workspace_focus", test_switch_restores_workspace_focus},
-        {"delete_keeps_ids_of_other_workspaces", test_delete_keeps_ids_of_other_workspaces},
-        {"ids_are_unique", test_ids_are_unique},
-        {"move_window_to_workspace_key", test_move_window_to_workspace_key},
-        {"left_workspace_wraps_layout", test_left_workspace_wraps_layout},
-        {"left_workspace_stops_without_wrap", test_left_workspace_stops_without_wrap},
-        {"rows_move_up_and_down", test_rows_move_up_and_down},
-        {"rows_wrap_around_short_last_row", test_rows_wrap_around_short_last_row},
-        {"rows_skip_unused_rows", test_rows_skip_unused_rows},
-        {"changing_rows_republishes_layout", test_changing_rows_republishes_layout},
-        {"rows_stop_at_edges_without_wrap", test_rows_stop_at_edges_without_wrap},
-        {"move_window_down_a_row", test_move_window_down_a_row},
-        {"pager_renames_and_resizes", test_pager_renames_and_resizes},
-        {"toggle_returns_to_previous", test_toggle_returns_to_previous},
-        {"switch_out_of_range_without_wrap_cycle", test_switch_out_of_range_without_wrap_cycle},
-        {"add_and_delete_active_workspace", test_add_and_delete_active_workspace},
-        {"workspace_names", test_workspace_names},
-        {"fewer_workspaces_from_config_moves_windows",
-         test_fewer_workspaces_from_config_moves_windows},
-        {"show_desktop_toggle", test_show_desktop_toggle},
-        {"scroll_on_desktop_switches_workspace", test_scroll_on_desktop_switches_workspace},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

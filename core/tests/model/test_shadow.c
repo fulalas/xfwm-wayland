@@ -32,13 +32,14 @@ static void test_deltas_move_and_resize_the_shadow(void)
     CHECK_RECT_EQ(((wm_rect) {-23, -18, 53, 42}), wm_shadow_rect(&frame, &config));
 }
 
+static const check_case CASES[] = {
+    {"kernel_size_is_even_and_three_radii", test_kernel_size_is_even_and_three_radii},
+    {"default_shadow_is_shifted_down", test_default_shadow_is_shifted_down},
+    {"zero_deltas_center_the_shadow", test_zero_deltas_center_the_shadow},
+    {"deltas_move_and_resize_the_shadow", test_deltas_move_and_resize_the_shadow},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"kernel_size_is_even_and_three_radii", test_kernel_size_is_even_and_three_radii},
-        {"default_shadow_is_shifted_down", test_default_shadow_is_shifted_down},
-        {"zero_deltas_center_the_shadow", test_zero_deltas_center_the_shadow},
-        {"deltas_move_and_resize_the_shadow", test_deltas_move_and_resize_the_shadow},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

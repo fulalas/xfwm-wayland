@@ -69,20 +69,22 @@ static void test_keyboard_system_defaults(void)
     CHECK(!prefs.numlock);
 }
 
+static const fake_entry custom_layout[] = {
+    { "XkbDisable", "false" }, { "XkbLayout", "us,ru" }, { "XkbVariant", ",phonetic" },
+    { "XkbModel", "pc105" }, { "XkbOptions/Group", "grp:alt_shift_toggle" },
+    { "XkbOptions/Compose", "compose:ralt" }, { NULL, NULL },
+};
+
+static const fake_entry custom_keyboards[] = {
+    { "KeyRepeat/Delay", "300" }, { "KeyRepeat/Rate", "40" }, { "Numlock", "true" },
+    { NULL, NULL },
+};
+
 static void test_keyboard_custom_layout(void)
 {
-    static const fake_entry layout[] = {
-        { "XkbDisable", "false" }, { "XkbLayout", "us,ru" }, { "XkbVariant", ",phonetic" },
-        { "XkbModel", "pc105" }, { "XkbOptions/Group", "grp:alt_shift_toggle" },
-        { "XkbOptions/Compose", "compose:ralt" }, { NULL, NULL },
-    };
-    static const fake_entry keyboards[] = {
-        { "KeyRepeat/Delay", "300" }, { "KeyRepeat/Rate", "40" }, { "Numlock", "true" },
-        { NULL, NULL },
-    };
     keyboard_sources sources = {
-        .layout = fake_source(layout),
-        .keyboards = fake_source(keyboards),
+        .layout = fake_source(custom_layout),
+        .keyboards = fake_source(custom_keyboards),
     };
     keyboard_prefs prefs = input_keyboard_prefs_from(&sources);
 

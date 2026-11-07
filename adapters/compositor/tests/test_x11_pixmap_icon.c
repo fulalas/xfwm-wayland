@@ -1,5 +1,5 @@
 #include "check.h"
-#include "x11_pixmap_icon.h"
+#include "xwayland/x11_pixmap_icon.h"
 
 static uint32_t pixel(cairo_surface_t *surface, int x, int y)
 {

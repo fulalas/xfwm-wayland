@@ -12,10 +12,15 @@ enum {
     KEYSYM_NUM_LOCK = 0xff7f,
 };
 
+typedef struct copied_array {
+    void *items;
+    size_t count;
+} copied_array;
+
 static bool key_matches(const wm_key *key, const wm_key_event *event);
 static uint32_t default_keysym(wm_action action);
 static void copy_commands(keybindings *keys, const wm_keymap *keymap);
-static void *copy_array(const void *items, size_t count, size_t size, size_t *copied);
+static copied_array copy_array(const void *items, size_t count, size_t size);
 static char *copy_text(const char *text);
 
 void keybindings_free(keybindings *keys)
@@ -35,11 +40,15 @@ void keybindings_copy(keybindings *keys, const wm_keymap *keymap)
     if (keymap == NULL) {
         return;
     }
-    keys->bindings = copy_array(keymap->bindings, keymap->binding_count,
-                                sizeof(keys->bindings[0]), &keys->binding_count);
+    copied_array bindings = copy_array(keymap->bindings, keymap->binding_count,
+                                       sizeof(keys->bindings[0]));
+    keys->bindings = bindings.items;
+    keys->binding_count = bindings.count;
     copy_commands(keys, keymap);
-    keys->app_shortcuts = copy_array(keymap->app_shortcuts, keymap->app_shortcut_count,
-                                     sizeof(keys->app_shortcuts[0]), &keys->app_shortcut_count);
+    copied_array shortcuts = copy_array(keymap->app_shortcuts, keymap->app_shortcut_count,
+                                        sizeof(keys->app_shortcuts[0]));
+    keys->app_shortcuts = shortcuts.items;
+    keys->app_shortcut_count = shortcuts.count;
 }
 
 wm_action keybindings_action_for(const keybindings *keys, const wm_key_event *event)
@@ -88,6 +97,25 @@ bool keybindings_is_key_of(const keybindings *keys, wm_action action, uint32_t k
     return !bound && default_keysym(action) == keysym;
 }
 
+move_direction keybindings_direction_of(const keybindings *keys, uint32_t keysym)
+{
+    static const struct {
+        wm_action action;
+        move_direction direction;
+    } arrows[] = {
+        {WM_ACTION_LEFT, DIRECTION_LEFT},
+        {WM_ACTION_RIGHT, DIRECTION_RIGHT},
+        {WM_ACTION_UP, DIRECTION_UP},
+        {WM_ACTION_DOWN, DIRECTION_DOWN},
+    };
+    for (size_t i = 0; i < sizeof(arrows) / sizeof(arrows[0]); i++) {
+        if (keybindings_is_key_of(keys, arrows[i].action, keysym)) {
+            return arrows[i].direction;
+        }
+    }
+    return DIRECTION_NONE;
+}
+
 uint32_t keybindings_modifiers_of(const keybindings *keys, wm_action action)
 {
     uint32_t modifiers = 0;
@@ -134,12 +162,12 @@ static uint32_t default_keysym(wm_action action)
     }
 }
 
-static void *copy_array(const void *items, size_t count, size_t size, size_t *copied)
+static copied_array copy_array(const void *items, size_t count, size_t size)
 {
-    void *copy = count > 0 ? malloc(count * size) : NULL;
-    *copied = copy != NULL ? count : 0;
-    if (copy != NULL) {
-        memcpy(copy, items, count * size);
+    copied_array copy = {count > 0 ? malloc(count * size) : NULL, 0};
+    if (copy.items != NULL) {
+        memcpy(copy.items, items, count * size);
+        copy.count = count;
     }
     return copy;
 }

@@ -177,6 +177,9 @@ static wm_compositing_config compositing_defaults(void)
         .move_opacity_percent = DEFAULT_OPAQUE_PERCENT,
         .resize_opacity_percent = DEFAULT_OPAQUE_PERCENT,
         .popup_opacity_percent = DEFAULT_OPAQUE_PERCENT,
+        .suspend_fullscreen = true,
+        .vblank_mode = WM_VBLANK_AUTO,
+        .hdr_brightness_percent = DEFAULT_HDR_BRIGHTNESS_PERCENT,
         .shadow_opacity_percent = DEFAULT_SHADOW_OPACITY_PERCENT,
         .shadow_delta_x = DEFAULT_SHADOW_DELTA_X,
         .shadow_delta_y = DEFAULT_SHADOW_DELTA_Y,
@@ -185,8 +188,5 @@ static wm_compositing_config compositing_defaults(void)
         .show_frame_shadow = true,
         .show_popup_shadow = false,
         .show_dock_shadow = true,
-        .suspend_fullscreen = true,
-        .vblank_mode = WM_VBLANK_AUTO,
-        .hdr_brightness_percent = DEFAULT_HDR_BRIGHTNESS_PERCENT,
     };
 }

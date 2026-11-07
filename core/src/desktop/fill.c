@@ -66,7 +66,7 @@ static neighbours find_neighbours(const wm_desktop *desktop, const wm_window *wi
 
 static void consider_horizontal(neighbours *found, const wm_rect *frame, const wm_rect *other)
 {
-    if (!wm_segments_overlap(frame->y, wm_rect_bottom(frame), other->y, wm_rect_bottom(other))) {
+    if (!wm_segments_overlap(wm_rect_rows(frame), wm_rect_rows(other))) {
         return;
     }
     int other_right = wm_rect_right(other);
@@ -82,7 +82,7 @@ static void consider_horizontal(neighbours *found, const wm_rect *frame, const w
 
 static void consider_vertical(neighbours *found, const wm_rect *frame, const wm_rect *other)
 {
-    if (!wm_segments_overlap(frame->x, wm_rect_right(frame), other->x, wm_rect_right(other))) {
+    if (!wm_segments_overlap(wm_rect_columns(frame), wm_rect_columns(other))) {
         return;
     }
     if (wm_rect_bottom(other) <= frame->y

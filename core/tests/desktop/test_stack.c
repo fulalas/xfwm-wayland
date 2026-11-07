@@ -26,7 +26,7 @@ static void test_raise_brings_transients(void)
     wm_window *parent = fake_map(desktop, 1, small);
     fake_map_dialog(desktop, 2, parent);
     fake_map(desktop, 3, small);
-    fake_click click = {WM_TARGET_CLIENT, parent, {800, 500}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, parent, {800, 500}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     static const int expected[] = {3, 1, 2};
     check_order(&world, expected, 3);
@@ -54,7 +54,7 @@ static void test_layers_order_types(void)
     map_typed(desktop, 1, WM_TYPE_DOCK);
     wm_window *normal = map_typed(desktop, 2, WM_TYPE_NORMAL);
     map_typed(desktop, 3, WM_TYPE_DESKTOP);
-    fake_click click = {WM_TARGET_CLIENT, normal, {800, 500}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, normal, {800, 500}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     static const int expected[] = {3, 2, 1};
     check_order(&world, expected, 3);
@@ -140,26 +140,27 @@ static void test_raising_top_window_keeps_stacking_unchanged(void)
     fake_map(desktop, 1, small);
     wm_window *top = fake_map(desktop, 2, small);
     int before = world.stacking_calls;
-    fake_click click = {WM_TARGET_CLIENT, top, {100, 100}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, top, {100, 100}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     CHECK_INT_EQ(before, world.stacking_calls);
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"raise_brings_transients", test_raise_brings_transients},
+    {"late_parent_keeps_child_above", test_late_parent_keeps_child_above},
+    {"layers_order_types", test_layers_order_types},
+    {"focused_fullscreen_goes_above_docks", test_focused_fullscreen_goes_above_docks},
+    {"unfocused_fullscreen_drops_to_normal", test_unfocused_fullscreen_drops_to_normal},
+    {"above_window_stays_on_top", test_above_window_stays_on_top},
+    {"middle_click_on_title_lowers", test_middle_click_on_title_lowers},
+    {"transient_of_above_window_inherits_layer",
+     test_transient_of_above_window_inherits_layer},
+    {"raising_top_window_keeps_stacking_unchanged",
+     test_raising_top_window_keeps_stacking_unchanged},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"raise_brings_transients", test_raise_brings_transients},
-        {"late_parent_keeps_child_above", test_late_parent_keeps_child_above},
-        {"layers_order_types", test_layers_order_types},
-        {"focused_fullscreen_goes_above_docks", test_focused_fullscreen_goes_above_docks},
-        {"unfocused_fullscreen_drops_to_normal", test_unfocused_fullscreen_drops_to_normal},
-        {"above_window_stays_on_top", test_above_window_stays_on_top},
-        {"middle_click_on_title_lowers", test_middle_click_on_title_lowers},
-        {"transient_of_above_window_inherits_layer",
-         test_transient_of_above_window_inherits_layer},
-        {"raising_top_window_keeps_stacking_unchanged",
-         test_raising_top_window_keeps_stacking_unchanged},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

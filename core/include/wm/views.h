@@ -161,6 +161,11 @@ typedef struct wm_menu_level {
     wm_menu_item items[WM_MENU_ITEM_MAX];
 } wm_menu_level;
 
+typedef struct wm_menu_entry {
+    const wm_menu_level *level;
+    size_t index;
+} wm_menu_entry;
+
 typedef struct wm_menu_view {
     wm_menu_level main;
     bool submenu_open;

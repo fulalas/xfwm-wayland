@@ -3,12 +3,11 @@
 #include "desktop_state.h"
 #include "keybindings.h"
 
+static void move_by_key(wm_desktop *desktop, const wm_key_event *event);
 static bool is_reverse_key(const wm_desktop *desktop, const wm_key_event *event);
-static void move_selection(wm_desktop *desktop, int rows, int columns);
+static void move_selection(wm_desktop *desktop, move_direction direction);
 static void select_next(wm_desktop *desktop);
 static void select_previous(wm_desktop *desktop);
-static bool is_arrow(const wm_desktop *desktop, uint32_t keysym);
-static void move_by_arrow(wm_desktop *desktop, uint32_t keysym);
 
 wm_dispatch cycle_key(wm_desktop *desktop, const wm_key_event *event)
 {
@@ -20,20 +19,26 @@ wm_dispatch cycle_key(wm_desktop *desktop, const wm_key_event *event)
         cycle_end(desktop);
         return WM_CONSUMED;
     }
-    if (is_arrow(desktop, event->keysym)) {
-        move_by_arrow(desktop, event->keysym);
-    } else {
-        wm_action action = keybindings_action_for(&desktop->keys, event);
-        if (action == WM_ACTION_CYCLE_REVERSE_WINDOWS || is_reverse_key(desktop, event)) {
-            select_previous(desktop);
-        } else if (action == WM_ACTION_CYCLE_WINDOWS) {
-            select_next(desktop);
-        }
-    }
+    move_by_key(desktop, event);
     if (!keysym_is_modifier(event->keysym) && !(event->modifiers & desktop->cycle.modifiers)) {
         cycle_end(desktop);
     }
     return WM_CONSUMED;
+}
+
+static void move_by_key(wm_desktop *desktop, const wm_key_event *event)
+{
+    move_direction direction = keybindings_direction_of(&desktop->keys, event->keysym);
+    if (direction != DIRECTION_NONE) {
+        move_selection(desktop, direction);
+        return;
+    }
+    wm_action action = keybindings_action_for(&desktop->keys, event);
+    if (action == WM_ACTION_CYCLE_REVERSE_WINDOWS || is_reverse_key(desktop, event)) {
+        select_previous(desktop);
+    } else if (action == WM_ACTION_CYCLE_WINDOWS) {
+        select_next(desktop);
+    }
 }
 
 wm_dispatch cycle_key_release(wm_desktop *desktop, const wm_key_event *event)
@@ -104,11 +109,12 @@ static bool is_reverse_key(const wm_desktop *desktop, const wm_key_event *event)
            && keybindings_action_for(&desktop->keys, &plain) == WM_ACTION_CYCLE_WINDOWS;
 }
 
-static void move_selection(wm_desktop *desktop, int rows, int columns)
+static void move_selection(wm_desktop *desktop, move_direction direction)
 {
     cycle_session *cycle = &desktop->cycle;
-    grid_move move = {rows, columns};
-    cycle_select(desktop, tabwin_select_delta(&cycle->grid, cycle->count, cycle->selected, move));
+    grid_selection selection = {cycle->count, cycle->selected};
+    wm_point move = direction_offset(direction);
+    cycle_select(desktop, tabwin_select_delta(&cycle->grid, selection, move));
 }
 
 static void select_next(wm_desktop *desktop)
@@ -121,27 +127,4 @@ static void select_previous(wm_desktop *desktop)
 {
     cycle_session *cycle = &desktop->cycle;
     cycle_select(desktop, (cycle->selected + cycle->count - 1) % cycle->count);
-}
-
-static bool is_arrow(const wm_desktop *desktop, uint32_t keysym)
-{
-    const keybindings *keys = &desktop->keys;
-    return keybindings_is_key_of(keys, WM_ACTION_UP, keysym)
-           || keybindings_is_key_of(keys, WM_ACTION_DOWN, keysym)
-           || keybindings_is_key_of(keys, WM_ACTION_LEFT, keysym)
-           || keybindings_is_key_of(keys, WM_ACTION_RIGHT, keysym);
-}
-
-static void move_by_arrow(wm_desktop *desktop, uint32_t keysym)
-{
-    const keybindings *keys = &desktop->keys;
-    if (keybindings_is_key_of(keys, WM_ACTION_UP, keysym)) {
-        move_selection(desktop, -1, 0);
-    } else if (keybindings_is_key_of(keys, WM_ACTION_DOWN, keysym)) {
-        move_selection(desktop, 1, 0);
-    } else if (keybindings_is_key_of(keys, WM_ACTION_LEFT, keysym)) {
-        move_selection(desktop, 0, -1);
-    } else {
-        move_selection(desktop, 0, 1);
-    }
 }

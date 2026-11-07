@@ -14,8 +14,7 @@ typedef struct frame_buttons_state {
     wm_window *hover_window;
 } frame_buttons_state;
 
-void frame_buttons_press(wm_desktop *desktop, wm_window *window, wm_button button,
-                         uint32_t mouse_button);
+void frame_buttons_press(wm_desktop *desktop, wm_button button, const wm_button_event *event);
 bool frame_buttons_is_pressing(const wm_desktop *desktop);
 wm_dispatch frame_buttons_motion(wm_desktop *desktop, const wm_pointer_event *event);
 wm_dispatch frame_buttons_button(wm_desktop *desktop, const wm_button_event *event);

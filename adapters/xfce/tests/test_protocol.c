@@ -6,16 +6,25 @@
 #include "helper_protocol.h"
 #include "style_state.h"
 
-static helper_message message;
-
 static bool parse(const char *line)
 {
+    helper_message message;
+
     return helper_message_parse(line, &message);
+}
+
+static helper_message parsed(const char *line)
+{
+    helper_message message = { 0 };
+
+    CHECK(helper_message_parse(line, &message));
+    return message;
 }
 
 static void test_parse_symbol(void)
 {
-    CHECK(parse("symbol\tactive_text_color\t#ffffffffffff"));
+    helper_message message = parsed("symbol\tactive_text_color\t#ffffffffffff");
+
     CHECK_INT_EQ(HELPER_MESSAGE_SYMBOL, message.kind);
     CHECK(strcmp(message.name, "active_text_color") == 0);
     CHECK(strcmp(message.text, "#ffffffffffff") == 0);
@@ -23,23 +32,22 @@ static void test_parse_symbol(void)
 
 static void test_parse_style_markers_and_font(void)
 {
-    CHECK(parse("style-begin"));
-    CHECK_INT_EQ(HELPER_MESSAGE_STYLE_BEGIN, message.kind);
-    CHECK(parse("font\tCantarell 11"));
-    CHECK_INT_EQ(HELPER_MESSAGE_FONT, message.kind);
-    CHECK(strcmp(message.text, "Cantarell 11") == 0);
-    CHECK(parse("style-end"));
-    CHECK_INT_EQ(HELPER_MESSAGE_STYLE_END, message.kind);
+    helper_message font = parsed("font\tCantarell 11");
+
+    CHECK_INT_EQ(HELPER_MESSAGE_STYLE_BEGIN, parsed("style-begin").kind);
+    CHECK_INT_EQ(HELPER_MESSAGE_FONT, font.kind);
+    CHECK(strcmp(font.text, "Cantarell 11") == 0);
+    CHECK_INT_EQ(HELPER_MESSAGE_STYLE_END, parsed("style-end").kind);
 }
 
 static void test_parse_icon_reply(void)
 {
-    CHECK(parse("icon\t42\t/usr/share/icons/a\\tb.png"));
-    CHECK_INT_EQ(HELPER_MESSAGE_ICON, message.kind);
-    CHECK_INT_EQ(42, message.id);
-    CHECK(strcmp(message.text, "/usr/share/icons/a\tb.png") == 0);
-    CHECK(parse("icon\t7\t"));
-    CHECK(strcmp(message.text, "") == 0);
+    helper_message icon = parsed("icon\t42\t/usr/share/icons/a\\tb.png");
+
+    CHECK_INT_EQ(HELPER_MESSAGE_ICON, icon.kind);
+    CHECK_INT_EQ(42, icon.id);
+    CHECK(strcmp(icon.text, "/usr/share/icons/a\tb.png") == 0);
+    CHECK(strcmp(parsed("icon\t7\t").text, "") == 0);
 }
 
 static void test_parse_rejects_bad_lines(void)
@@ -86,7 +94,8 @@ static void test_terminate_answer(void)
 
 static void feed(style_state *state, const char *line)
 {
-    CHECK(parse(line));
+    helper_message message = parsed(line);
+
     style_state_apply(state, &message);
 }
 

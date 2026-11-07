@@ -11,13 +11,13 @@ typedef struct check_case {
     check_test_fn run;
 } check_case;
 
-extern int check_failures;
+void check_fail(void);
 
 #define CHECK(condition)                                                                   \
     do {                                                                                   \
         if (!(condition)) {                                                                \
             fprintf(stderr, "%s:%d: CHECK(%s) failed\n", __FILE__, __LINE__, #condition);  \
-            check_failures++;                                                              \
+            check_fail();                                                                  \
         }                                                                                  \
     } while (0)
 
@@ -28,7 +28,7 @@ extern int check_failures;
         if (check_e != check_a) {                                                          \
             fprintf(stderr, "%s:%d: expected %s == %ld, got %ld\n", __FILE__, __LINE__,    \
                     #actual, check_e, check_a);                                            \
-            check_failures++;                                                              \
+            check_fail();                                                                  \
         }                                                                                  \
     } while (0)
 
@@ -40,7 +40,7 @@ extern int check_failures;
             fprintf(stderr, "%s:%d: expected %s == {%d,%d,%d,%d}, got {%d,%d,%d,%d}\n",   \
                     __FILE__, __LINE__, #actual, check_e.x, check_e.y, check_e.width,      \
                     check_e.height, check_a.x, check_a.y, check_a.width, check_a.height);  \
-            check_failures++;                                                              \
+            check_fail();                                                                  \
         }                                                                                  \
     } while (0)
 

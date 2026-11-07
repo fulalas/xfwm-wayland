@@ -1,15 +1,9 @@
 #include "check.h"
-#include "display_policy.h"
+#include "output/display_policy.h"
 
 enum {
     MAX_OUTPUTS = 3,
 };
-
-static void decide(const display_wish *wishes, size_t count, bool lid_closed, bool *enabled)
-{
-    display_wishes input = { wishes, count, lid_closed };
-    display_policy_decide(&input, enabled);
-}
 
 static void test_internal_names(void)
 {
@@ -25,7 +19,7 @@ static void test_open_lid_keeps_wishes(void)
 {
     const display_wish wishes[] = {{true, true}, {false, true}};
     bool enabled[MAX_OUTPUTS] = {false};
-    decide(wishes, 2, false, enabled);
+    display_policy_decide(&(display_wishes){wishes, 2, false}, enabled);
     CHECK(enabled[0] && enabled[1]);
 }
 
@@ -33,7 +27,7 @@ static void test_closed_lid_turns_panel_off_with_external(void)
 {
     const display_wish wishes[] = {{true, true}, {false, true}};
     bool enabled[MAX_OUTPUTS] = {false};
-    decide(wishes, 2, true, enabled);
+    display_policy_decide(&(display_wishes){wishes, 2, true}, enabled);
     CHECK(!enabled[0] && enabled[1]);
 }
 
@@ -41,7 +35,7 @@ static void test_closed_lid_keeps_panel_when_alone(void)
 {
     const display_wish wishes[] = {{true, true}};
     bool enabled[MAX_OUTPUTS] = {false};
-    decide(wishes, 1, true, enabled);
+    display_policy_decide(&(display_wishes){wishes, 1, true}, enabled);
     CHECK(enabled[0]);
 }
 
@@ -49,7 +43,7 @@ static void test_closed_lid_keeps_panel_when_external_is_off(void)
 {
     const display_wish wishes[] = {{true, true}, {false, false}};
     bool enabled[MAX_OUTPUTS] = {false};
-    decide(wishes, 2, true, enabled);
+    display_policy_decide(&(display_wishes){wishes, 2, true}, enabled);
     CHECK(enabled[0] && !enabled[1]);
 }
 
@@ -58,8 +52,8 @@ static void test_never_leaves_every_output_off(void)
     const display_wish wishes[] = {{false, false}, {true, false}};
     bool open[MAX_OUTPUTS] = {false};
     bool closed[MAX_OUTPUTS] = {false};
-    decide(wishes, 2, false, open);
-    decide(wishes, 2, true, closed);
+    display_policy_decide(&(display_wishes){wishes, 2, false}, open);
+    display_policy_decide(&(display_wishes){wishes, 2, true}, closed);
     CHECK(!open[0] && open[1]);
     CHECK(closed[0] && !closed[1]);
 }
@@ -67,7 +61,7 @@ static void test_never_leaves_every_output_off(void)
 static void test_no_outputs(void)
 {
     bool enabled[MAX_OUTPUTS] = {false};
-    decide(NULL, 0, true, enabled);
+    display_policy_decide(&(display_wishes){NULL, 0, true}, enabled);
     CHECK(!enabled[0]);
 }
 

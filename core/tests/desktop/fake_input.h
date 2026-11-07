@@ -9,13 +9,13 @@ typedef struct fake_click {
     wm_point point;
     uint32_t button;
     uint32_t modifiers;
+    int item;
 } fake_click;
 
 wm_dispatch fake_motion(fake_world *world, wm_desktop *desktop, const fake_click *where);
 wm_dispatch fake_press(fake_world *world, wm_desktop *desktop, const fake_click *click);
 wm_dispatch fake_release(fake_world *world, wm_desktop *desktop, const fake_click *click);
-wm_dispatch fake_scroll(fake_world *world, wm_desktop *desktop, const fake_click *where,
-                        int vertical_steps);
+wm_dispatch fake_scroll(fake_world *world, const fake_click *where, int steps);
 wm_dispatch fake_key(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers);
 wm_dispatch fake_key_release(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers);
 wm_point fake_part_point(const wm_window *window, wm_part part);

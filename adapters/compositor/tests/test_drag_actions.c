@@ -2,7 +2,7 @@
 #include <wayland-server-protocol.h>
 
 #include "check.h"
-#include "drag_actions.h"
+#include "input/drag_actions.h"
 #include "wm/keys.h"
 
 static const int32_t COPY = WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY;

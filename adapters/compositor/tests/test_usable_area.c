@@ -1,5 +1,5 @@
 #include "check.h"
-#include "usable_area.h"
+#include "output/usable_area.h"
 
 static const wm_rect left_output = {0, 0, 1920, 1080};
 static const wm_rect right_output = {1920, 0, 1280, 1024};

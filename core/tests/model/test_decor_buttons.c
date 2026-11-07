@@ -127,24 +127,25 @@ static void test_inactive_layout_uses_inactive_sizes(void)
     CHECK_RECT_EQ(((wm_rect) {194, 4, 10, 12}), button_rect(&fixture, WM_BUTTON_CLOSE));
 }
 
+static const check_case CASES[] = {
+    {"default_layout_puts_menu_left_and_others_right",
+     test_default_layout_puts_menu_left_and_others_right},
+    {"button_missing_from_layout_is_hidden", test_button_missing_from_layout_is_hidden},
+    {"spacing_and_offset_move_buttons_inward", test_spacing_and_offset_move_buttons_inward},
+    {"narrow_window_drops_buttons_that_do_not_fit",
+     test_narrow_window_drops_buttons_that_do_not_fit},
+    {"unavailable_button_leaves_no_gap", test_unavailable_button_leaves_no_gap},
+    {"stick_button_needs_menu", test_stick_button_needs_menu},
+    {"layout_without_separator_puts_all_left", test_layout_without_separator_puts_all_left},
+    {"unknown_letters_are_ignored", test_unknown_letters_are_ignored},
+    {"maximized_borderless_uses_maximized_offset",
+     test_maximized_borderless_uses_maximized_offset},
+    {"negative_maximized_offset_is_ignored", test_negative_maximized_offset_is_ignored},
+    {"border_top_lifts_buttons_when_maximized", test_border_top_lifts_buttons_when_maximized},
+    {"inactive_layout_uses_inactive_sizes", test_inactive_layout_uses_inactive_sizes},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"default_layout_puts_menu_left_and_others_right",
-         test_default_layout_puts_menu_left_and_others_right},
-        {"button_missing_from_layout_is_hidden", test_button_missing_from_layout_is_hidden},
-        {"spacing_and_offset_move_buttons_inward", test_spacing_and_offset_move_buttons_inward},
-        {"narrow_window_drops_buttons_that_do_not_fit",
-         test_narrow_window_drops_buttons_that_do_not_fit},
-        {"unavailable_button_leaves_no_gap", test_unavailable_button_leaves_no_gap},
-        {"stick_button_needs_menu", test_stick_button_needs_menu},
-        {"layout_without_separator_puts_all_left", test_layout_without_separator_puts_all_left},
-        {"unknown_letters_are_ignored", test_unknown_letters_are_ignored},
-        {"maximized_borderless_uses_maximized_offset",
-         test_maximized_borderless_uses_maximized_offset},
-        {"negative_maximized_offset_is_ignored", test_negative_maximized_offset_is_ignored},
-        {"border_top_lifts_buttons_when_maximized", test_border_top_lifts_buttons_when_maximized},
-        {"inactive_layout_uses_inactive_sizes", test_inactive_layout_uses_inactive_sizes},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

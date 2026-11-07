@@ -1,5 +1,5 @@
 #include "check.h"
-#include "session_apply.h"
+#include "session/session_apply.h"
 
 static wm_window_view maximized_view(void)
 {

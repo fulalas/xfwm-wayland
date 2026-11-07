@@ -16,9 +16,11 @@ enum {
 
 static wm_dispatch easy_click_press(wm_desktop *desktop, wm_window *window,
                                     const wm_button_event *event);
+static void easy_edge_press(wm_desktop *desktop, wm_window *window, const wm_button_event *event);
 static void button1_action(wm_desktop *desktop, wm_window *window, const wm_button_event *event);
 static void edge_button(wm_desktop *desktop, const click_request *request);
 static wm_part edge_part(const wm_window *window, wm_point point);
+static wm_part corner_part(const wm_rect *client, wm_point local);
 static wm_dispatch frame_press(wm_desktop *desktop, wm_window *window,
                                const wm_button_event *event);
 static void title_press(wm_desktop *desktop, wm_window *window, const wm_button_event *event);
@@ -71,7 +73,6 @@ bool frame_input_is_easy_click(const wm_desktop *desktop, uint32_t modifiers)
 static wm_dispatch easy_click_press(wm_desktop *desktop, wm_window *window,
                                     const wm_button_event *event)
 {
-    wm_point point = event->pointer.position;
     switch (event->button) {
     case WM_MOUSE_LEFT:
         button1_action(desktop, window, event);
@@ -79,11 +80,9 @@ static wm_dispatch easy_click_press(wm_desktop *desktop, wm_window *window,
     case WM_MOUSE_MIDDLE:
         stack_lower(desktop, window);
         return WM_CONSUMED;
-    case WM_MOUSE_RIGHT: {
-        click_request request = {CLICK_FOR_EDGE, window, edge_part(window, point), event};
-        edge_button(desktop, &request);
+    case WM_MOUSE_RIGHT:
+        easy_edge_press(desktop, window, event);
         return WM_CONSUMED;
-    }
     case WM_MOUSE_BACK:
         workspaces_switch(desktop, desktop->workspaces.current - 1, NULL);
         return WM_CONSUMED;
@@ -93,6 +92,13 @@ static wm_dispatch easy_click_press(wm_desktop *desktop, wm_window *window,
     default:
         return WM_FORWARD;
     }
+}
+
+static void easy_edge_press(wm_desktop *desktop, wm_window *window, const wm_button_event *event)
+{
+    wm_part part = edge_part(window, event->pointer.position);
+    click_request request = {CLICK_FOR_EDGE, window, part, event};
+    edge_button(desktop, &request);
 }
 
 static void button1_action(wm_desktop *desktop, wm_window *window, const wm_button_event *event)
@@ -130,26 +136,27 @@ static void edge_button(wm_desktop *desktop, const click_request *request)
 static wm_part edge_part(const wm_window *window, wm_point point)
 {
     const wm_rect *client = &window->client;
-    int x = point.x - client->x;
-    int y = point.y - client->y;
-    int corner_x = client->width / CORNER_FRACTION > MIN_CORNER_PIXELS
-                       ? client->width / CORNER_FRACTION : MIN_CORNER_PIXELS;
-    int corner_y = client->height / CORNER_FRACTION > MIN_CORNER_PIXELS
-                       ? client->height / CORNER_FRACTION : MIN_CORNER_PIXELS;
-    int distance_x = client->width / 2 - abs(client->width / 2 - x);
-    int distance_y = client->height / 2 - abs(client->height / 2 - y);
-    bool left = x < client->width / 2;
-    bool top = y < client->height / 2;
+    wm_point local = {point.x - client->x, point.y - client->y};
+    int corner_x = wm_max(client->width / CORNER_FRACTION, MIN_CORNER_PIXELS);
+    int corner_y = wm_max(client->height / CORNER_FRACTION, MIN_CORNER_PIXELS);
+    int distance_x = client->width / 2 - abs(client->width / 2 - local.x);
+    int distance_y = client->height / 2 - abs(client->height / 2 - local.y);
     if (distance_x < corner_x && distance_y < corner_y) {
-        if (left) {
-            return top ? WM_PART_CORNER_TOP_LEFT : WM_PART_CORNER_BOTTOM_LEFT;
-        }
-        return top ? WM_PART_CORNER_TOP_RIGHT : WM_PART_CORNER_BOTTOM_RIGHT;
+        return corner_part(client, local);
     }
     if (distance_x / corner_x < distance_y / corner_y) {
-        return left ? WM_PART_SIDE_LEFT : WM_PART_SIDE_RIGHT;
+        return local.x < client->width / 2 ? WM_PART_SIDE_LEFT : WM_PART_SIDE_RIGHT;
     }
-    return top ? WM_PART_SIDE_TOP : WM_PART_SIDE_BOTTOM;
+    return local.y < client->height / 2 ? WM_PART_SIDE_TOP : WM_PART_SIDE_BOTTOM;
+}
+
+static wm_part corner_part(const wm_rect *client, wm_point local)
+{
+    bool top = local.y < client->height / 2;
+    if (local.x < client->width / 2) {
+        return top ? WM_PART_CORNER_TOP_LEFT : WM_PART_CORNER_BOTTOM_LEFT;
+    }
+    return top ? WM_PART_CORNER_TOP_RIGHT : WM_PART_CORNER_BOTTOM_RIGHT;
 }
 
 static wm_dispatch frame_press(wm_desktop *desktop, wm_window *window,
@@ -159,8 +166,7 @@ static wm_dispatch frame_press(wm_desktop *desktop, wm_window *window,
     if (is_button_part(part) && part != WM_PART_BUTTON_FIRST + WM_BUTTON_MENU) {
         if (event->button <= WM_MOUSE_RIGHT) {
             focus_and_raise_on_click(desktop, window);
-            frame_buttons_press(desktop, window, (wm_button) (part - WM_PART_BUTTON_FIRST),
-                                event->button);
+            frame_buttons_press(desktop, (wm_button) (part - WM_PART_BUTTON_FIRST), event);
         }
     } else if (part == WM_PART_TITLE) {
         title_press(desktop, window, event);

@@ -256,28 +256,29 @@ static void test_old_window_keeps_its_workspace(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"center_placement", test_center_placement},
+    {"mouse_placement", test_mouse_placement},
+    {"smart_placement_avoids_overlap", test_smart_placement_avoids_overlap},
+    {"transient_centered_on_parent", test_transient_centered_on_parent},
+    {"given_position_is_kept_visible", test_given_position_is_kept_visible},
+    {"large_window_is_auto_maximized", test_large_window_is_auto_maximized},
+    {"margins_reduce_work_area", test_margins_reduce_work_area},
+    {"transient_follows_parent_workspace", test_transient_follows_parent_workspace},
+    {"unmap_reports_stacking", test_unmap_reports_stacking},
+    {"launch_shows_busy_until_timeout", test_launch_shows_busy_until_timeout},
+    {"launched_window_opens_on_launch_workspace",
+     test_launched_window_opens_on_launch_workspace},
+    {"finished_launch_stops_busy", test_finished_launch_stops_busy},
+    {"finished_launch_still_places_window", test_finished_launch_still_places_window},
+    {"launch_follows_removed_workspace", test_launch_follows_removed_workspace},
+    {"late_launch_id_moves_new_window", test_late_launch_id_moves_new_window},
+    {"old_window_keeps_its_workspace", test_old_window_keeps_its_workspace},
+    {"size_commit_keeps_right_edge_on_left_resize",
+     test_size_commit_keeps_right_edge_on_left_resize},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"center_placement", test_center_placement},
-        {"mouse_placement", test_mouse_placement},
-        {"smart_placement_avoids_overlap", test_smart_placement_avoids_overlap},
-        {"transient_centered_on_parent", test_transient_centered_on_parent},
-        {"given_position_is_kept_visible", test_given_position_is_kept_visible},
-        {"large_window_is_auto_maximized", test_large_window_is_auto_maximized},
-        {"margins_reduce_work_area", test_margins_reduce_work_area},
-        {"transient_follows_parent_workspace", test_transient_follows_parent_workspace},
-        {"unmap_reports_stacking", test_unmap_reports_stacking},
-        {"launch_shows_busy_until_timeout", test_launch_shows_busy_until_timeout},
-        {"launched_window_opens_on_launch_workspace",
-         test_launched_window_opens_on_launch_workspace},
-        {"finished_launch_stops_busy", test_finished_launch_stops_busy},
-        {"finished_launch_still_places_window", test_finished_launch_still_places_window},
-        {"launch_follows_removed_workspace", test_launch_follows_removed_workspace},
-        {"late_launch_id_moves_new_window", test_late_launch_id_moves_new_window},
-        {"old_window_keeps_its_workspace", test_old_window_keeps_its_workspace},
-        {"size_commit_keeps_right_edge_on_left_resize",
-         test_size_commit_keeps_right_edge_on_left_resize},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

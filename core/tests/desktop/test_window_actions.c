@@ -87,15 +87,16 @@ static void test_undecorated_estimate_is_empty(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"normal_window_allows_everything", test_normal_window_allows_everything},
+    {"missing_capabilities_remove_actions", test_missing_capabilities_remove_actions},
+    {"maximized_window_cannot_resize", test_maximized_window_cannot_resize},
+    {"undecorated_window_cannot_shade", test_undecorated_window_cannot_shade},
+    {"estimated_extents_match_mapped_window", test_estimated_extents_match_mapped_window},
+    {"undecorated_estimate_is_empty", test_undecorated_estimate_is_empty},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"normal_window_allows_everything", test_normal_window_allows_everything},
-        {"missing_capabilities_remove_actions", test_missing_capabilities_remove_actions},
-        {"maximized_window_cannot_resize", test_maximized_window_cannot_resize},
-        {"undecorated_window_cannot_shade", test_undecorated_window_cannot_shade},
-        {"estimated_extents_match_mapped_window", test_estimated_extents_match_mapped_window},
-        {"undecorated_estimate_is_empty", test_undecorated_estimate_is_empty},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

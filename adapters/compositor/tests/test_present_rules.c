@@ -1,5 +1,5 @@
 #include "check.h"
-#include "present_rules.h"
+#include "render/present_rules.h"
 
 enum {
     REFRESH_NS = 16000000,
@@ -106,28 +106,29 @@ static void test_next_check_near_target_wakes_after_next_vblank(void)
     CHECK(check < LAST_NS + 2 * REFRESH_NS);
 }
 
+static const check_case cases[] = {
+    {"fifo_idle_surface_does_not_wait", test_fifo_idle_surface_does_not_wait},
+    {"fifo_set_barrier_makes_commit_wait", test_fifo_set_barrier_makes_commit_wait},
+    {"fifo_unapplied_barrier_makes_commit_wait",
+     test_fifo_unapplied_barrier_makes_commit_wait},
+    {"fifo_waiter_ready_after_clear", test_fifo_waiter_ready_after_clear},
+    {"fifo_waiter_blocked_by_barrier", test_fifo_waiter_blocked_by_barrier},
+    {"fifo_waiter_blocked_by_earlier_barrier_commit",
+     test_fifo_waiter_blocked_by_earlier_barrier_commit},
+    {"fifo_counters_wrap", test_fifo_counters_wrap},
+    {"vblank_next_is_strictly_after", test_vblank_next_is_strictly_after},
+    {"earliest_idle_is_next_vblank", test_earliest_idle_is_next_vblank},
+    {"next_frame_after_vblank_stamped_ahead", test_next_frame_after_vblank_stamped_ahead},
+    {"earliest_with_queued_frame_is_one_later", test_earliest_with_queued_frame_is_one_later},
+    {"earliest_unknown_clock_is_now", test_earliest_unknown_clock_is_now},
+    {"next_check_unknown_clock_is_target", test_next_check_unknown_clock_is_target},
+    {"next_check_far_target_wakes_two_frames_ahead",
+     test_next_check_far_target_wakes_two_frames_ahead},
+    {"next_check_near_target_wakes_after_next_vblank",
+     test_next_check_near_target_wakes_after_next_vblank},
+};
+
 int main(void)
 {
-    const check_case cases[] = {
-        {"fifo_idle_surface_does_not_wait", test_fifo_idle_surface_does_not_wait},
-        {"fifo_set_barrier_makes_commit_wait", test_fifo_set_barrier_makes_commit_wait},
-        {"fifo_unapplied_barrier_makes_commit_wait",
-         test_fifo_unapplied_barrier_makes_commit_wait},
-        {"fifo_waiter_ready_after_clear", test_fifo_waiter_ready_after_clear},
-        {"fifo_waiter_blocked_by_barrier", test_fifo_waiter_blocked_by_barrier},
-        {"fifo_waiter_blocked_by_earlier_barrier_commit",
-         test_fifo_waiter_blocked_by_earlier_barrier_commit},
-        {"fifo_counters_wrap", test_fifo_counters_wrap},
-        {"vblank_next_is_strictly_after", test_vblank_next_is_strictly_after},
-        {"earliest_idle_is_next_vblank", test_earliest_idle_is_next_vblank},
-        {"next_frame_after_vblank_stamped_ahead", test_next_frame_after_vblank_stamped_ahead},
-        {"earliest_with_queued_frame_is_one_later", test_earliest_with_queued_frame_is_one_later},
-        {"earliest_unknown_clock_is_now", test_earliest_unknown_clock_is_now},
-        {"next_check_unknown_clock_is_target", test_next_check_unknown_clock_is_target},
-        {"next_check_far_target_wakes_two_frames_ahead",
-         test_next_check_far_target_wakes_two_frames_ahead},
-        {"next_check_near_target_wakes_after_next_vblank",
-         test_next_check_near_target_wakes_after_next_vblank},
-    };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

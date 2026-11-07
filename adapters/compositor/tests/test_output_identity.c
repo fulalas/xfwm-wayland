@@ -1,7 +1,7 @@
 #include <glib.h>
 
 #include "check.h"
-#include "output_identity.h"
+#include "output/output_identity.h"
 
 static void test_matches_hash_of_names(void)
 {

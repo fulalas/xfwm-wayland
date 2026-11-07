@@ -43,7 +43,7 @@ static void test_bound_shortcuts_enter_the_keymap(void)
     };
     const wm_app_shortcut *keymap = NULL;
 
-    app_shortcuts_bind(shortcuts, "/s/1", requests, 2);
+    app_shortcuts_bind(shortcuts, "/s/1", (app_shortcut_requests) { requests, 2 });
     CHECK_INT_EQ(2, app_shortcuts_count(shortcuts));
     CHECK_INT_EQ(1, app_shortcuts_keymap(shortcuts, &keymap));
     const app_shortcut_entry *entry = app_shortcuts_find(shortcuts, keymap[0].id);
@@ -59,8 +59,8 @@ static void test_taken_key_passes_on_when_its_session_ends(void)
     app_shortcut_request second[] = { { "louder", "Louder", "XF86AudioRaiseVolume" } };
     const wm_app_shortcut *keymap = NULL;
 
-    app_shortcuts_bind(shortcuts, "/s/1", first, 1);
-    app_shortcuts_bind(shortcuts, "/s/2", second, 1);
+    app_shortcuts_bind(shortcuts, "/s/1", (app_shortcut_requests) { first, 1 });
+    app_shortcuts_bind(shortcuts, "/s/2", (app_shortcut_requests) { second, 1 });
     CHECK_INT_EQ(1, app_shortcuts_keymap(shortcuts, &keymap));
     CHECK(strcmp(app_shortcuts_find(shortcuts, keymap[0].id)->session, "/s/1") == 0);
     CHECK(app_shortcuts_drop_session(shortcuts, "/s/1"));
@@ -76,7 +76,7 @@ static void test_typing_keys_are_refused(void)
     app_shortcut_request requests[] = { { "a", "A", "a" }, { "enter", "Enter", "Return" } };
     const wm_app_shortcut *keymap = NULL;
 
-    app_shortcuts_bind(shortcuts, "/s/1", requests, 2);
+    app_shortcuts_bind(shortcuts, "/s/1", (app_shortcut_requests) { requests, 2 });
     CHECK_INT_EQ(0, app_shortcuts_keymap(shortcuts, &keymap));
     app_shortcuts_destroy(shortcuts);
 }

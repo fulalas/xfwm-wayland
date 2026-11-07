@@ -16,6 +16,7 @@ enum {
 };
 
 static bool begin(wm_desktop *desktop, wm_window *window, session_kind kind);
+static void hold_window(wm_window *window, const move_session *session);
 static bool can_begin(const wm_desktop *desktop, const wm_window *window, session_kind kind);
 static void remember_cancel_state(move_session *session, const wm_window *window);
 static void finish(wm_desktop *desktop);
@@ -24,7 +25,8 @@ static void cancel(wm_desktop *desktop);
 static void end_session(wm_desktop *desktop);
 static bool release_pending(const move_session *session);
 static void track_origin(wm_desktop *desktop, wm_point origin, uint32_t button);
-static void handle_arrow(wm_desktop *desktop, uint32_t keysym);
+static void handle_arrow(wm_desktop *desktop, move_direction direction);
+static void resize_arrow(wm_desktop *desktop, move_direction direction);
 static void move_arrow(wm_desktop *desktop, wm_point direction);
 static wm_point handle_point(const wm_desktop *desktop, const wm_window *window, wm_part handle);
 static int key_move_step(const wm_desktop *desktop);
@@ -116,11 +118,9 @@ wm_dispatch moveresize_key(wm_desktop *desktop, const wm_key_event *event)
         cancel(desktop);
         return WM_CONSUMED;
     }
-    if (keybindings_is_key_of(keys, WM_ACTION_LEFT, event->keysym)
-        || keybindings_is_key_of(keys, WM_ACTION_RIGHT, event->keysym)
-        || keybindings_is_key_of(keys, WM_ACTION_UP, event->keysym)
-        || keybindings_is_key_of(keys, WM_ACTION_DOWN, event->keysym)) {
-        handle_arrow(desktop, event->keysym);
+    move_direction direction = keybindings_direction_of(keys, event->keysym);
+    if (direction != DIRECTION_NONE) {
+        handle_arrow(desktop, direction);
         return WM_CONSUMED;
     }
     if (session->use_keys && !keysym_is_modifier(event->keysym)) {
@@ -171,7 +171,14 @@ static bool begin(wm_desktop *desktop, wm_window *window, session_kind kind)
     remember_cancel_state(session, window);
     session->box = kind == SESSION_MOVE ? desktop->config.move.box_move
                                         : desktop->config.move.box_resize;
-    if (kind == SESSION_MOVE) {
+    hold_window(window, session);
+    cursor_show_session(desktop);
+    return true;
+}
+
+static void hold_window(wm_window *window, const move_session *session)
+{
+    if (session->kind == SESSION_MOVE) {
         maximize_save_geometry(window);
         window->moving = true;
     } else {
@@ -180,8 +187,6 @@ static bool begin(wm_desktop *desktop, wm_window *window, session_kind kind)
     window->frozen = session->box;
     window->frozen_client = window->client;
     window_mark_dirty(window);
-    cursor_show_session(desktop);
-    return true;
 }
 
 static bool can_begin(const wm_desktop *desktop, const wm_window *window, session_kind kind)
@@ -275,30 +280,30 @@ static void track_origin(wm_desktop *desktop, wm_point origin, uint32_t button)
     desktop->pointer = origin;
 }
 
-static void handle_arrow(wm_desktop *desktop, uint32_t keysym)
+static void handle_arrow(wm_desktop *desktop, move_direction direction)
 {
-    const keybindings *keys = &desktop->keys;
-    wm_point direction = {0, 0};
-    wm_part side = WM_PART_SIDE_LEFT;
-    if (keybindings_is_key_of(keys, WM_ACTION_LEFT, keysym)) {
-        direction.x = -1;
-    } else if (keybindings_is_key_of(keys, WM_ACTION_RIGHT, keysym)) {
-        direction.x = 1;
-        side = WM_PART_SIDE_RIGHT;
-    } else if (keybindings_is_key_of(keys, WM_ACTION_UP, keysym)) {
-        direction.y = -1;
-        side = WM_PART_SIDE_TOP;
-    } else {
-        direction.y = 1;
-        side = WM_PART_SIDE_BOTTOM;
+    if (direction == DIRECTION_NONE) {
+        return;
     }
     if (desktop->session.kind == SESSION_MOVE) {
-        move_arrow(desktop, direction);
+        move_arrow(desktop, direction_offset(direction));
     } else {
-        wm_point steps = size_hints_key_steps(desktop->session.window, KEY_RESIZE_STEP);
-        wm_point step = {direction.x * steps.x, direction.y * steps.y};
-        resize_session_arrow(desktop, side, step);
+        resize_arrow(desktop, direction);
     }
+}
+
+static void resize_arrow(wm_desktop *desktop, move_direction direction)
+{
+    static const wm_part sides[] = {
+        [DIRECTION_UP] = WM_PART_SIDE_TOP,
+        [DIRECTION_DOWN] = WM_PART_SIDE_BOTTOM,
+        [DIRECTION_LEFT] = WM_PART_SIDE_LEFT,
+        [DIRECTION_RIGHT] = WM_PART_SIDE_RIGHT,
+    };
+    wm_point offset = direction_offset(direction);
+    wm_point steps = size_hints_key_steps(desktop->session.window, KEY_RESIZE_STEP);
+    wm_point step = {offset.x * steps.x, offset.y * steps.y};
+    resize_session_arrow(desktop, sides[direction], step);
 }
 
 static void move_arrow(wm_desktop *desktop, wm_point direction)

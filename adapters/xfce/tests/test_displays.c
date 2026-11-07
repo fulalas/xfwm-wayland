@@ -1,4 +1,5 @@
 #include <glib.h>
+#include <stdbool.h>
 #include <string.h>
 
 #include "check.h"
@@ -231,6 +232,19 @@ static void fill_edid(uint8_t *edid, size_t size)
     }
 }
 
+static bool plan_knows_hash(const display_set *connected, const char *hash)
+{
+    entry entries[] = {
+        { "/Default/DP-1", "TV" }, { "/Default/DP-1/EDID", hash },
+        { "/Default/DP-1/Active", "true" }, { NULL, NULL },
+    };
+    GHashTable *table = table_of(entries);
+    bool known = display_profile_plan(table, connected).displays[0].is_known;
+
+    g_hash_table_destroy(table);
+    return known;
+}
+
 static void test_plan_finds_x11_and_wayland_fingerprints(void)
 {
     enum { TV_EDID_SIZE = 256, BASE_BLOCK = 128 };
@@ -238,21 +252,13 @@ static void test_plan_finds_x11_and_wayland_fingerprints(void)
     fill_edid(edid, sizeof(edid));
     char *x11 = g_compute_checksum_for_data(G_CHECKSUM_SHA1, edid, BASE_BLOCK);
     char *wayland = g_compute_checksum_for_data(G_CHECKSUM_SHA1, edid, sizeof(edid));
-    const char *saved[] = { x11, wayland };
     display_state displays[] = {
         { .identity = { .connector = "DP-1", .edid = edid, .edid_size = sizeof(edid) } },
     };
     display_set connected = { displays, 1 };
 
-    for (size_t i = 0; i < G_N_ELEMENTS(saved); i++) {
-        entry entries[] = {
-            { "/Default/DP-1", "TV" }, { "/Default/DP-1/EDID", saved[i] },
-            { "/Default/DP-1/Active", "true" }, { NULL, NULL },
-        };
-        GHashTable *table = table_of(entries);
-        CHECK(display_profile_plan(table, &connected).displays[0].is_known);
-        g_hash_table_destroy(table);
-    }
+    CHECK(plan_knows_hash(&connected, x11));
+    CHECK(plan_knows_hash(&connected, wayland));
     char *written_hash = display_hash(&displays[0].identity);
     CHECK(strcmp(written_hash, x11) == 0);
     g_free(written_hash);
@@ -342,30 +348,30 @@ static void test_written_profile_reads_back(void)
     g_ptr_array_unref(writes);
 }
 
+static const check_case cases[] = {
+    { "hash_uses_edid_bytes", test_hash_uses_edid_bytes },
+    { "hash_without_edid_matches_settings_dialog",
+      test_hash_without_edid_matches_settings_dialog },
+    { "transform_from_reflection", test_transform_from_reflection },
+    { "transform_round_trip", test_transform_round_trip },
+    { "choose_single_matching_user_profile", test_choose_single_matching_user_profile },
+    { "choose_default_without_matching_profile",
+      test_choose_default_without_matching_profile },
+    { "choose_default_when_auto_enable_is_off", test_choose_default_when_auto_enable_is_off },
+    { "choose_default_when_two_profiles_match", test_choose_default_when_two_profiles_match },
+    { "read_matches_edid_under_another_connector",
+      test_read_matches_edid_under_another_connector },
+    { "read_inactive_output", test_read_inactive_output },
+    { "read_duplicate_edid_matches_by_name", test_read_duplicate_edid_matches_by_name },
+    { "read_unknown_output", test_read_unknown_output },
+    { "plan_keeps_one_primary", test_plan_keeps_one_primary },
+    { "plan_finds_x11_and_wayland_fingerprints", test_plan_finds_x11_and_wayland_fingerprints },
+    { "writes_follow_settings_dialog_layout", test_writes_follow_settings_dialog_layout },
+    { "writes_mark_duplicate_edids", test_writes_mark_duplicate_edids },
+    { "written_profile_reads_back", test_written_profile_reads_back },
+};
+
 int main(void)
 {
-    const check_case cases[] = {
-        { "hash_uses_edid_bytes", test_hash_uses_edid_bytes },
-        { "hash_without_edid_matches_settings_dialog",
-          test_hash_without_edid_matches_settings_dialog },
-        { "transform_from_reflection", test_transform_from_reflection },
-        { "transform_round_trip", test_transform_round_trip },
-        { "choose_single_matching_user_profile", test_choose_single_matching_user_profile },
-        { "choose_default_without_matching_profile",
-          test_choose_default_without_matching_profile },
-        { "choose_default_when_auto_enable_is_off", test_choose_default_when_auto_enable_is_off },
-        { "choose_default_when_two_profiles_match", test_choose_default_when_two_profiles_match },
-        { "read_matches_edid_under_another_connector",
-          test_read_matches_edid_under_another_connector },
-        { "read_inactive_output", test_read_inactive_output },
-        { "read_duplicate_edid_matches_by_name", test_read_duplicate_edid_matches_by_name },
-        { "read_unknown_output", test_read_unknown_output },
-        { "plan_keeps_one_primary", test_plan_keeps_one_primary },
-        { "plan_finds_x11_and_wayland_fingerprints", test_plan_finds_x11_and_wayland_fingerprints },
-        { "writes_follow_settings_dialog_layout", test_writes_follow_settings_dialog_layout },
-        { "writes_mark_duplicate_edids", test_writes_mark_duplicate_edids },
-        { "written_profile_reads_back", test_written_profile_reads_back },
-    };
-
     return check_run(cases, G_N_ELEMENTS(cases));
 }

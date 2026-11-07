@@ -20,7 +20,7 @@ static void test_click_on_client_focuses_and_raises(void)
     wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_window *first = fake_map(desktop, 1, small);
     fake_map(desktop, 2, small);
-    fake_click click = {WM_TARGET_CLIENT, first, {800, 500}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, first, {800, 500}, WM_MOUSE_LEFT, 0, -1};
     CHECK_INT_EQ(WM_FORWARD, fake_press(&world, desktop, &click));
     CHECK(world.focused == fake_handle(1));
     CHECK_INT_EQ(1, fake_stack_index(&world, fake_handle(1)));
@@ -63,7 +63,7 @@ static void test_focus_follows_mouse_after_delay(void)
     wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_window *first = fake_map(desktop, 1, small);
     fake_map(desktop, 2, small);
-    fake_click where = {WM_TARGET_CLIENT, first, {10, 10}, 0, 0};
+    fake_click where = {WM_TARGET_CLIENT, first, {10, 10}, 0, 0, -1};
     fake_motion(&world, desktop, &where);
     fake_advance(&world, desktop, 99);
     CHECK(world.focused == fake_handle(2));
@@ -155,7 +155,7 @@ static void test_modal_dialog_takes_focus_from_parent(void)
     modal.states = WM_STATE_MODAL;
     wm_window_map(desktop, &modal);
     fake_map(desktop, 3, (wm_rect) {0, 0, 100, 100});
-    fake_click click = {WM_TARGET_CLIENT, parent, {800, 500}, WM_MOUSE_LEFT, 0};
+    fake_click click = {WM_TARGET_CLIENT, parent, {800, 500}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     CHECK(world.focused == fake_handle(2));
     wm_desktop_destroy(desktop);
@@ -228,25 +228,26 @@ static void test_activating_parent_keeps_dialog_focused(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"new_window_gets_focus", test_new_window_gets_focus},
+    {"zero_user_time_is_not_focused", test_zero_user_time_is_not_focused},
+    {"old_user_time_cannot_steal_focus", test_old_user_time_cannot_steal_focus},
+    {"launched_window_ignores_old_user_time", test_launched_window_ignores_old_user_time},
+    {"activating_parent_keeps_dialog_focused", test_activating_parent_keeps_dialog_focused},
+    {"click_on_client_focuses_and_raises", test_click_on_client_focuses_and_raises},
+    {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},
+    {"unmap_passes_focus_to_top_most", test_unmap_passes_focus_to_top_most},
+    {"focus_follows_mouse_after_delay", test_focus_follows_mouse_after_delay},
+    {"prevented_focus_stealing_marks_urgent", test_prevented_focus_stealing_marks_urgent},
+    {"modal_dialog_takes_focus_from_parent", test_modal_dialog_takes_focus_from_parent},
+    {"window_without_focus_capability_is_skipped",
+     test_window_without_focus_capability_is_skipped},
+    {"pager_activation_switches_workspace", test_pager_activation_switches_workspace},
+    {"untrusted_activation_is_refused", test_untrusted_activation_is_refused},
+    {"bring_activation_moves_window", test_bring_activation_moves_window},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"new_window_gets_focus", test_new_window_gets_focus},
-        {"zero_user_time_is_not_focused", test_zero_user_time_is_not_focused},
-        {"old_user_time_cannot_steal_focus", test_old_user_time_cannot_steal_focus},
-        {"launched_window_ignores_old_user_time", test_launched_window_ignores_old_user_time},
-        {"activating_parent_keeps_dialog_focused", test_activating_parent_keeps_dialog_focused},
-        {"click_on_client_focuses_and_raises", test_click_on_client_focuses_and_raises},
-        {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},
-        {"unmap_passes_focus_to_top_most", test_unmap_passes_focus_to_top_most},
-        {"focus_follows_mouse_after_delay", test_focus_follows_mouse_after_delay},
-        {"prevented_focus_stealing_marks_urgent", test_prevented_focus_stealing_marks_urgent},
-        {"modal_dialog_takes_focus_from_parent", test_modal_dialog_takes_focus_from_parent},
-        {"window_without_focus_capability_is_skipped",
-         test_window_without_focus_capability_is_skipped},
-        {"pager_activation_switches_workspace", test_pager_activation_switches_workspace},
-        {"untrusted_activation_is_refused", test_untrusted_activation_is_refused},
-        {"bring_activation_moves_window", test_bring_activation_moves_window},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

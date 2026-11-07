@@ -11,6 +11,7 @@ desktop_sources = files(
   'cycle_input.c',
   'cycle_list.c',
   'desktop.c',
+  'direction.c',
   'effects.c',
   'fill.c',
   'focus.c',

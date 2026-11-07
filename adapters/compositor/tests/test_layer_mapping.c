@@ -1,5 +1,5 @@
 #include "check.h"
-#include "layer_mapping.h"
+#include "shell/layer_mapping.h"
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 static void test_core_layers_keep_their_order(void)

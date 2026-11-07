@@ -143,7 +143,7 @@ static void schedule(wm_desktop *desktop)
         wait = next < wait ? next : wait;
     }
     if (wait != UINT32_MAX) {
-        timers_start(desktop, TIMER_LAUNCH, NULL, (int) wait);
+        timers_start(desktop, &(timer_request) {TIMER_LAUNCH, NULL, (int) wait});
     }
 }
 

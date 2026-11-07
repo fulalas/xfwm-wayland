@@ -23,6 +23,7 @@ static unsigned xfwm4_flags(const char *property);
 static bool is_theme_property(const char *property);
 static unsigned xsettings_flags(const char *property);
 static unsigned shortcut_flags(const char *property);
+static unsigned power_flags(const char *property);
 static unsigned panel_flags(const char *property);
 
 const char *channel_name(channel_id id)
@@ -46,10 +47,7 @@ unsigned change_flags_for(channel_id id, const char *property)
     case CHANNEL_DISPLAYS:
         return CHANGE_DISPLAYS;
     case CHANNEL_POWER_MANAGER:
-        return g_str_has_prefix(property, "/xfce4-power-manager/dpms")
-                       || strcmp(property, "/xfce4-power-manager/presentation-mode") == 0
-                   ? CHANGE_POWER
-                   : 0;
+        return power_flags(property);
     case CHANNEL_PANEL:
         return panel_flags(property);
     default:
@@ -91,6 +89,15 @@ static unsigned shortcut_flags(const char *property)
 {
     if (g_str_has_prefix(property, "/xfwm4/") || g_str_has_prefix(property, "/commands/")) {
         return CHANGE_SHORTCUTS;
+    }
+    return 0;
+}
+
+static unsigned power_flags(const char *property)
+{
+    if (g_str_has_prefix(property, "/xfce4-power-manager/dpms")
+        || strcmp(property, "/xfce4-power-manager/presentation-mode") == 0) {
+        return CHANGE_POWER;
     }
     return 0;
 }

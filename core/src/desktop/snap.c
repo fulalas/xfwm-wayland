@@ -16,38 +16,37 @@ typedef struct snap_axis {
     int best_start;
 } snap_axis;
 
-typedef struct snap_segment {
-    int low;
-    int high;
-} snap_segment;
-
 typedef struct snap_axes {
     snap_axis *x;
     snap_axis *y;
     wm_rect frame;
 } snap_axes;
 
-static snap_axis make_axis(int start, int size, int moved, int snap_width);
+typedef struct edge_query {
+    wm_segment own;
+    int edge;
+    int snap_width;
+} edge_query;
+
+static snap_axis make_axis(wm_segment span, int moved, int snap_width);
 static void snap_to_obstacles(const wm_desktop *desktop, const wm_window *window,
                               const snap_axes *axes);
-static void snap_to_display(const wm_desktop *desktop, snap_axis *axis, snap_segment display);
-static void snap_to_obstacle(const wm_desktop *desktop, snap_axis *axis, snap_segment obstacle);
+static void snap_to_display(const wm_desktop *desktop, snap_axis *axis, wm_segment display);
+static void snap_to_obstacle(const wm_desktop *desktop, snap_axis *axis, wm_segment obstacle);
 static bool resist_allows(const wm_desktop *desktop, bool condition);
-static bool spans_overlap(int low_a, int high_a, int low_b, int high_b);
-static int closest_edge(const wm_desktop *desktop, snap_segment own, int edge,
-                        const snap_obstacles *obstacles);
+static int closest_edge(const edge_query *query, const snap_obstacles *obstacles);
 
 void snap_position(const wm_desktop *desktop, wm_window *window, wm_point previous)
 {
     int width = desktop->config.move.snap_width;
     wm_rect frame = frame_rect(desktop, window);
     wm_extents extents = frame_extents(desktop, window);
-    snap_axis x = make_axis(frame.x, frame.width, window->client.x - previous.x, width);
-    snap_axis y = make_axis(frame.y, frame.height, window->client.y - previous.y, width);
+    snap_axis x = make_axis(wm_rect_columns(&frame), window->client.x - previous.x, width);
+    snap_axis y = make_axis(wm_rect_rows(&frame), window->client.y - previous.y, width);
     if (desktop->config.move.snap_to_border) {
         wm_rect monitor = monitors_full_at(desktop, wm_rect_center(&frame));
-        snap_to_display(desktop, &x, (snap_segment) {monitor.x, wm_rect_right(&monitor)});
-        snap_to_display(desktop, &y, (snap_segment) {monitor.y, wm_rect_bottom(&monitor)});
+        snap_to_display(desktop, &x, wm_rect_columns(&monitor));
+        snap_to_display(desktop, &y, wm_rect_rows(&monitor));
     }
     snap_axes axes = {&x, &y, frame};
     snap_to_obstacles(desktop, window, &axes);
@@ -63,12 +62,13 @@ int snap_closest_edge_x(const wm_desktop *desktop, const wm_window *window, int 
 {
     wm_rect frame = frame_rect(desktop, window);
     snap_obstacles obstacles = snap_obstacles_collect(desktop, window);
-    snap_segment own = {frame.y - 1, wm_rect_bottom(&frame) + 1};
+    edge_query query = {{frame.y - 1, wm_rect_bottom(&frame) + 1}, edge,
+                        desktop->config.move.snap_width};
     for (size_t i = 0; i < obstacles.count; i++) {
         wm_rect *rect = &obstacles.rects[i];
         *rect = (wm_rect) {rect->y, rect->x, rect->height, rect->width};
     }
-    int closest = closest_edge(desktop, own, edge, &obstacles);
+    int closest = closest_edge(&query, &obstacles);
     snap_obstacles_free(&obstacles);
     return closest;
 }
@@ -77,15 +77,17 @@ int snap_closest_edge_y(const wm_desktop *desktop, const wm_window *window, int 
 {
     wm_rect frame = frame_rect(desktop, window);
     snap_obstacles obstacles = snap_obstacles_collect(desktop, window);
-    snap_segment own = {frame.x - 1, wm_rect_right(&frame) + 1};
-    int closest = closest_edge(desktop, own, edge, &obstacles);
+    edge_query query = {{frame.x - 1, wm_rect_right(&frame) + 1}, edge,
+                        desktop->config.move.snap_width};
+    int closest = closest_edge(&query, &obstacles);
     snap_obstacles_free(&obstacles);
     return closest;
 }
 
-static snap_axis make_axis(int start, int size, int moved, int snap_width)
+static snap_axis make_axis(wm_segment span, int moved, int snap_width)
 {
-    snap_axis axis = {start, size, moved < 0, moved > 0, snap_width + 1, start};
+    snap_axis axis = {span.start, span.end - span.start, moved < 0, moved > 0, snap_width + 1,
+                      span.start};
     return axis;
 }
 
@@ -96,46 +98,46 @@ static void snap_to_obstacles(const wm_desktop *desktop, const wm_window *window
     snap_obstacles obstacles = snap_obstacles_collect(desktop, window);
     for (size_t i = 0; i < obstacles.count; i++) {
         const wm_rect *other = &obstacles.rects[i];
-        if (spans_overlap(other->y, wm_rect_bottom(other), frame->y, wm_rect_bottom(frame))) {
-            snap_to_obstacle(desktop, axes->x, (snap_segment) {other->x, wm_rect_right(other)});
+        if (wm_segments_touch(wm_rect_rows(other), wm_rect_rows(frame))) {
+            snap_to_obstacle(desktop, axes->x, wm_rect_columns(other));
         }
-        if (spans_overlap(other->x, wm_rect_right(other), frame->x, wm_rect_right(frame))) {
-            snap_to_obstacle(desktop, axes->y, (snap_segment) {other->y, wm_rect_bottom(other)});
+        if (wm_segments_touch(wm_rect_columns(other), wm_rect_columns(frame))) {
+            snap_to_obstacle(desktop, axes->y, wm_rect_rows(other));
         }
     }
     snap_obstacles_free(&obstacles);
 }
 
-static void snap_to_display(const wm_desktop *desktop, snap_axis *axis, snap_segment display)
+static void snap_to_display(const wm_desktop *desktop, snap_axis *axis, wm_segment display)
 {
     int end = axis->start + axis->size;
-    if (abs(display.low - axis->start) < abs(display.high - end)) {
-        if (resist_allows(desktop, axis->start <= display.low && axis->decreasing)) {
-            axis->best_delta = abs(display.low - axis->start);
-            axis->best_start = display.low;
+    if (abs(display.start - axis->start) < abs(display.end - end)) {
+        if (resist_allows(desktop, axis->start <= display.start && axis->decreasing)) {
+            axis->best_delta = abs(display.start - axis->start);
+            axis->best_start = display.start;
         }
         return;
     }
-    if (resist_allows(desktop, end >= display.high && axis->increasing)) {
-        axis->best_delta = abs(display.high - end);
-        axis->best_start = display.high - axis->size;
+    if (resist_allows(desktop, end >= display.end && axis->increasing)) {
+        axis->best_delta = abs(display.end - end);
+        axis->best_start = display.end - axis->size;
     }
 }
 
-static void snap_to_obstacle(const wm_desktop *desktop, snap_axis *axis, snap_segment obstacle)
+static void snap_to_obstacle(const wm_desktop *desktop, snap_axis *axis, wm_segment obstacle)
 {
     int end = axis->start + axis->size;
-    int delta = abs(obstacle.high - axis->start);
+    int delta = abs(obstacle.end - axis->start);
     if (delta < axis->best_delta
-        && resist_allows(desktop, axis->start <= obstacle.high && axis->decreasing)) {
+        && resist_allows(desktop, axis->start <= obstacle.end && axis->decreasing)) {
         axis->best_delta = delta;
-        axis->best_start = obstacle.high;
+        axis->best_start = obstacle.end;
     }
-    delta = abs(obstacle.low - end);
+    delta = abs(obstacle.start - end);
     if (delta < axis->best_delta
-        && resist_allows(desktop, end >= obstacle.low && axis->increasing)) {
+        && resist_allows(desktop, end >= obstacle.start && axis->increasing)) {
         axis->best_delta = delta;
-        axis->best_start = obstacle.low - axis->size;
+        axis->best_start = obstacle.start - axis->size;
     }
 }
 
@@ -144,19 +146,15 @@ static bool resist_allows(const wm_desktop *desktop, bool condition)
     return !desktop->config.move.snap_resist || condition;
 }
 
-static bool spans_overlap(int low_a, int high_a, int low_b, int high_b)
+static int closest_edge(const edge_query *query, const snap_obstacles *obstacles)
 {
-    return low_a <= high_b && high_a >= low_b;
-}
-
-static int closest_edge(const wm_desktop *desktop, snap_segment own, int edge,
-                        const snap_obstacles *obstacles)
-{
-    int width = desktop->config.move.snap_width;
+    int edge = query->edge;
+    int width = query->snap_width;
     int closest = edge + width + 2;
     for (size_t i = 0; i < obstacles->count; i++) {
         const wm_rect *rect = &obstacles->rects[i];
-        if (!spans_overlap(own.low, own.high, rect->x - 1, wm_rect_right(rect) + 1)) {
+        wm_segment widened = {rect->x - 1, wm_rect_right(rect) + 1};
+        if (!wm_segments_touch(query->own, widened)) {
             continue;
         }
         if (abs(rect->y - edge) < abs(closest - edge)) {

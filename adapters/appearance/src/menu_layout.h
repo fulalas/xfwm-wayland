@@ -3,9 +3,10 @@
 
 #include "compositor/painter.h"
 #include "text.h"
+#include "ui_text.h"
 
 enum {
-    MENU_BORDER = 1,
+    MENU_BORDER = PANEL_BORDER,
     MENU_ITEM_PADDING_X = 6,
     MENU_TOGGLE_SIZE = 16,
     MENU_ARROW_SIZE = 16,

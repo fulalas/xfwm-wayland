@@ -19,8 +19,9 @@ typedef struct workspace_grid {
 } workspace_grid;
 
 static workspace_grid grid_of(const wm_desktop *desktop);
-static int move_target(const wm_desktop *desktop, int row_delta, int column_delta);
-static int shifted(int value, int by, int limit, bool wrap);
+static int move_target(const wm_desktop *desktop, move_direction direction);
+static int step_axis(const wm_desktop *desktop, int value, int limit);
+static int wrapped(int value, int limit);
 static void store_count(wm_desktop *desktop, int count);
 static void assign_new_ids(workspace_state *state, int from, int to);
 static void remove_id(workspace_state *state, int position);
@@ -49,19 +50,18 @@ void workspaces_switch_without_focus(wm_desktop *desktop, int workspace, wm_wind
     }
 }
 
-void workspaces_move(wm_desktop *desktop, int row_delta, int column_delta, wm_window *carried)
+void workspaces_move(wm_desktop *desktop, move_direction direction, wm_window *carried)
 {
-    int target = move_target(desktop, row_delta, column_delta);
+    int target = move_target(desktop, direction);
     if (target != desktop->workspaces.current) {
         workspaces_switch(desktop, target, carried);
     }
 }
 
-bool workspaces_move_changed(wm_desktop *desktop, int row_delta, int column_delta,
-                             wm_window *carried)
+bool workspaces_move_changed(wm_desktop *desktop, move_direction direction, wm_window *carried)
 {
     int before = desktop->workspaces.current;
-    workspaces_move(desktop, row_delta, column_delta, carried);
+    workspaces_move(desktop, direction, carried);
     return desktop->workspaces.current != before;
 }
 
@@ -252,26 +252,33 @@ static workspace_grid grid_of(const wm_desktop *desktop)
     return (workspace_grid) {(count - 1) / columns + 1, columns};
 }
 
-static int move_target(const wm_desktop *desktop, int row_delta, int column_delta)
+static int move_target(const wm_desktop *desktop, move_direction direction)
 {
     workspace_grid grid = grid_of(desktop);
-    bool wrap = desktop->config.workspaces.wrap_layout;
+    wm_point step = direction_offset(direction);
     int current = desktop->workspaces.current;
     int count = desktop->workspaces.count;
     int row = current / grid.columns;
     int column = current % grid.columns;
     do {
-        row = shifted(row, row_delta, grid.rows, wrap);
-        column = shifted(column, column_delta, grid.columns, wrap);
-    } while (wrap && row * grid.columns + column >= count);
+        row = step_axis(desktop, row + step.y, grid.rows);
+        column = step_axis(desktop, column + step.x, grid.columns);
+    } while (desktop->config.workspaces.wrap_layout && row * grid.columns + column >= count);
     int target = row * grid.columns + column;
     return target < count ? target : current;
 }
 
-static int shifted(int value, int by, int limit, bool wrap)
+static int step_axis(const wm_desktop *desktop, int value, int limit)
 {
-    value += by;
-    return wrap ? (value % limit + limit) % limit : wm_clamp(value, 0, limit - 1);
+    if (desktop->config.workspaces.wrap_layout) {
+        return wrapped(value, limit);
+    }
+    return wm_clamp(value, 0, limit - 1);
+}
+
+static int wrapped(int value, int limit)
+{
+    return (value % limit + limit) % limit;
 }
 
 static void store_count(wm_desktop *desktop, int count)

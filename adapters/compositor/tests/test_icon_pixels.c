@@ -1,5 +1,5 @@
 #include "check.h"
-#include "icon_pixels.h"
+#include "toplevel/icon_pixels.h"
 
 static void test_opaque_pixel_is_unchanged(void)
 {

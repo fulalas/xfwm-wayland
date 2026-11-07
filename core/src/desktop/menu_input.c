@@ -3,6 +3,13 @@
 #include "desktop_state.h"
 #include "keybindings.h"
 
+typedef struct mnemonic_matches {
+    int first;
+    int count;
+} mnemonic_matches;
+
+static void cancel(wm_desktop *desktop);
+static void activate_selected(wm_desktop *desktop);
 static wm_menu_level *active_level(menu_session *menu);
 static bool is_selectable(const wm_menu_item *item);
 static void step_selection(menu_session *menu, int direction);
@@ -10,19 +17,17 @@ static void open_submenu(wm_desktop *desktop);
 static void close_submenu(menu_session *menu);
 static void activate_main(wm_desktop *desktop, int index);
 static void activate_submenu(wm_desktop *desktop, int index);
+static void close_and_perform(wm_desktop *desktop, const wm_menu_item *item, int index);
 static void hover_main(wm_desktop *desktop, int index);
 static void handle_navigation(wm_desktop *desktop, uint32_t keysym);
 static bool handle_mnemonic(wm_desktop *desktop, uint32_t keysym);
+static mnemonic_matches find_mnemonic(const wm_desktop *desktop, const wm_menu_level *level,
+                                      uint32_t keysym);
 
 wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event)
 {
-    menu_session *menu = &desktop->menu;
     if (keybindings_is_key_of(&desktop->keys, WM_ACTION_CANCEL, event->keysym)) {
-        if (menu->view.submenu_open) {
-            close_submenu(menu);
-        } else {
-            menu_close(desktop);
-        }
+        cancel(desktop);
         return WM_CONSUMED;
     }
     menu_show_mnemonics(desktop);
@@ -31,15 +36,30 @@ wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event)
         return WM_CONSUMED;
     }
     if (keysym_is_return(event->keysym)) {
-        if (menu->view.submenu_open && menu->view.submenu.selected >= 0) {
-            activate_submenu(desktop, menu->view.submenu.selected);
-        } else if (menu->view.main.selected >= 0) {
-            activate_main(desktop, menu->view.main.selected);
-        }
+        activate_selected(desktop);
         return WM_CONSUMED;
     }
     handle_navigation(desktop, event->keysym);
     return WM_CONSUMED;
+}
+
+static void cancel(wm_desktop *desktop)
+{
+    if (desktop->menu.view.submenu_open) {
+        close_submenu(&desktop->menu);
+    } else {
+        menu_close(desktop);
+    }
+}
+
+static void activate_selected(wm_desktop *desktop)
+{
+    const menu_session *menu = &desktop->menu;
+    if (menu->view.submenu_open && menu->view.submenu.selected >= 0) {
+        activate_submenu(desktop, menu->view.submenu.selected);
+    } else if (menu->view.main.selected >= 0) {
+        activate_main(desktop, menu->view.main.selected);
+    }
 }
 
 wm_dispatch menu_motion(wm_desktop *desktop, const wm_pointer_event *event)
@@ -142,9 +162,7 @@ static void activate_main(wm_desktop *desktop, int index)
         open_submenu(desktop);
         return;
     }
-    wm_window *window = menu->window;
-    menu_close(desktop);
-    menu_perform(desktop, window, &item, index);
+    close_and_perform(desktop, &item, index);
 }
 
 static void activate_submenu(wm_desktop *desktop, int index)
@@ -157,9 +175,14 @@ static void activate_submenu(wm_desktop *desktop, int index)
     if (!is_selectable(&item)) {
         return;
     }
-    wm_window *window = menu->window;
+    close_and_perform(desktop, &item, index);
+}
+
+static void close_and_perform(wm_desktop *desktop, const wm_menu_item *item, int index)
+{
+    menu_choice choice = {desktop->menu.window, *item, index};
     menu_close(desktop);
-    menu_perform(desktop, window, &item, index);
+    menu_perform(desktop, &choice);
 }
 
 static void hover_main(wm_desktop *desktop, int index)
@@ -203,31 +226,36 @@ void menu_show_mnemonics(wm_desktop *desktop)
 static bool handle_mnemonic(wm_desktop *desktop, uint32_t keysym)
 {
     menu_session *menu = &desktop->menu;
-    const wm_environment *environment = &desktop->ports.environment;
     wm_menu_level *level = active_level(menu);
-    int count = (int) level->count;
-    int first = -1;
-    int matches = 0;
-    for (int step = 1; step <= count; step++) {
-        int index = (level->selected + step) % count;
-        const wm_menu_item *item = &level->items[index];
-        if (is_selectable(item)
-            && environment->menu_item_matches_key(environment->self, level, (size_t) index,
-                                                  keysym)) {
-            first = first < 0 ? index : first;
-            matches++;
-        }
-    }
-    if (matches == 0) {
+    mnemonic_matches matches = find_mnemonic(desktop, level, keysym);
+    if (matches.count == 0) {
         return false;
     }
-    if (matches > 1) {
-        level->selected = first;
+    if (matches.count > 1) {
+        level->selected = matches.first;
         menu->dirty = true;
     } else if (menu->view.submenu_open) {
-        activate_submenu(desktop, first);
+        activate_submenu(desktop, matches.first);
     } else {
-        activate_main(desktop, first);
+        activate_main(desktop, matches.first);
     }
     return true;
+}
+
+static mnemonic_matches find_mnemonic(const wm_desktop *desktop, const wm_menu_level *level,
+                                      uint32_t keysym)
+{
+    const wm_environment *environment = &desktop->ports.environment;
+    int count = (int) level->count;
+    mnemonic_matches matches = {-1, 0};
+    for (int step = 1; step <= count; step++) {
+        int index = (level->selected + step) % count;
+        wm_menu_entry entry = {level, (size_t) index};
+        if (is_selectable(&level->items[index])
+            && environment->menu_item_matches_key(environment->self, &entry, keysym)) {
+            matches.first = matches.first < 0 ? index : matches.first;
+            matches.count++;
+        }
+    }
+    return matches;
 }

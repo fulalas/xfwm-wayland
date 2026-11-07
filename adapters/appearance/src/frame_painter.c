@@ -26,24 +26,54 @@ typedef struct op_anchor {
     bool bottom;
 } op_anchor;
 
+typedef struct frame_job {
+    cairo_t *cr;
+    const frame_painter *painter;
+    const frame_paint_request *request;
+    device_map map;
+} frame_job;
+
+typedef struct pattern_axis {
+    int pixels;
+    int box_start;
+    int box_length;
+    int origin;
+    double zoom;
+    bool anchored_end;
+    bool stretched;
+    bool plain;
+} pattern_axis;
+
+typedef struct pixmap_op {
+    const wm_paint_op *op;
+    const op_source *source;
+    op_anchor anchor;
+} pixmap_op;
+
 static device_map map_for(const frame_paint_request *request);
 static int device_x(const device_map *map, int x);
 static int device_y(const device_map *map, int y);
 static wm_rect device_rect(const device_map *map, const wm_rect *rect);
 static void set_logical_matrix(cairo_t *cr, const device_map *map);
-static void paint_ops(cairo_t *cr, const frame_painter *painter,
-                      const frame_paint_request *request, const device_map *map);
+static void paint_ops(const frame_job *job);
+static void paint_op(const frame_job *job, const wm_paint_op *op);
+static void paint_title(const frame_job *job);
 static bool op_is_in_band(const wm_paint_op *op, const wm_rect *band);
 static bool title_is_in_band(const frame_painter *painter, const frame_paint_request *request);
 static op_source source_for(const frame_painter *painter, const frame_paint_request *request,
                             wm_pixmap_ref ref);
-static void paint_pixmap(cairo_t *cr, const wm_paint_op *op, const op_source *source,
-                         const frame_paint_request *request, const device_map *map);
-static void paint_icon(cairo_t *cr, const wm_paint_op *op, cairo_surface_t *icon,
-                       const device_map *map);
-static wm_rect image_rect(const wm_paint_op *op, const op_source *source, op_anchor anchor);
-static cairo_pattern_t *create_pattern(const wm_paint_op *op, const op_source *source,
-                                       const device_map *map, op_anchor anchor);
+static void paint_pixmap(const frame_job *job, const wm_paint_op *op, const op_source *source);
+static wm_rect visible_area(const frame_job *job, const pixmap_op *pixmap);
+static void paint_icon(const frame_job *job, const wm_paint_op *op, cairo_surface_t *icon);
+static wm_rect image_rect(const pixmap_op *pixmap);
+static cairo_pattern_t *create_pattern(const pixmap_op *pixmap, const device_map *map);
+static pattern_axis horizontal_axis(const pixmap_op *pixmap, const device_map *map,
+                                    const wm_rect *box);
+static pattern_axis vertical_axis(const pixmap_op *pixmap, const device_map *map,
+                                  const wm_rect *box);
+static double axis_scale(const pattern_axis *axis);
+static double axis_start(const pattern_axis *axis);
+static cairo_extend_t extend_for(wm_fill_mode mode);
 static op_anchor anchor_of(wm_pixmap_ref ref);
 
 cairo_surface_t *appearance_frame_paint(const frame_painter *painter,
@@ -55,12 +85,12 @@ cairo_surface_t *appearance_frame_paint(const frame_painter *painter,
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
                                                           width > 0 ? width : 1,
                                                           height > 0 ? height : 1);
-    cairo_t *cr = cairo_create(surface);
+    frame_job job = { cairo_create(surface), painter, request, map };
 
     if (request->layout != NULL && request->layout->has_frame) {
-        paint_ops(cr, painter, request, &map);
+        paint_ops(&job);
     }
-    cairo_destroy(cr);
+    cairo_destroy(job.cr);
     cairo_surface_flush(surface);
     return surface;
 }
@@ -109,32 +139,40 @@ static void set_logical_matrix(cairo_t *cr, const device_map *map)
     cairo_set_matrix(cr, &matrix);
 }
 
-static void paint_ops(cairo_t *cr, const frame_painter *painter,
-                      const frame_paint_request *request, const device_map *map)
+static void paint_ops(const frame_job *job)
 {
-    const wm_decor_layout *layout = request->layout;
+    const wm_decor_layout *layout = job->request->layout;
 
     for (size_t i = 0; i < layout->op_count && i < WM_DECOR_OP_MAX; i++) {
-        const wm_paint_op *op = &layout->ops[i];
-        if (!op_is_in_band(op, &request->band)) {
-            continue;
-        }
-        op_source source = source_for(painter, request, op->pixmap);
-        if (source.surface == NULL) {
-            continue;
-        }
-        if (op->pixmap.kind == WM_PIXMAP_APP_ICON) {
-            paint_icon(cr, op, source.surface, map);
-        } else {
-            paint_pixmap(cr, op, &source, request, map);
-        }
+        paint_op(job, &layout->ops[i]);
     }
-    if (title_is_in_band(painter, request)) {
-        cairo_save(cr);
-        set_logical_matrix(cr, map);
-        appearance_title_draw(cr, painter->title, request);
-        cairo_restore(cr);
+    if (title_is_in_band(job->painter, job->request)) {
+        paint_title(job);
     }
+}
+
+static void paint_op(const frame_job *job, const wm_paint_op *op)
+{
+    if (!op_is_in_band(op, &job->request->band)) {
+        return;
+    }
+    op_source source = source_for(job->painter, job->request, op->pixmap);
+    if (source.surface == NULL) {
+        return;
+    }
+    if (op->pixmap.kind == WM_PIXMAP_APP_ICON) {
+        paint_icon(job, op, source.surface);
+    } else {
+        paint_pixmap(job, op, &source);
+    }
+}
+
+static void paint_title(const frame_job *job)
+{
+    cairo_save(job->cr);
+    set_logical_matrix(job->cr, &job->map);
+    appearance_title_draw(job->cr, job->painter->title, job->request);
+    cairo_restore(job->cr);
 }
 
 static bool op_is_in_band(const wm_paint_op *op, const wm_rect *band)
@@ -175,32 +213,38 @@ static op_source source_for(const frame_painter *painter, const frame_paint_requ
     };
 }
 
-static void paint_pixmap(cairo_t *cr, const wm_paint_op *op, const op_source *source,
-                         const frame_paint_request *request, const device_map *map)
+static void paint_pixmap(const frame_job *job, const wm_paint_op *op, const op_source *source)
 {
-    op_anchor anchor = anchor_of(op->pixmap);
-    wm_rect visible = wm_rect_intersection(&op->dest, &op->clip);
-    visible = wm_rect_intersection(&visible, &request->band);
-    if (op->mode == WM_FILL_PLAIN) {
-        wm_rect image = image_rect(op, source, anchor);
-        visible = wm_rect_intersection(&visible, &image);
-    }
-    wm_rect area = device_rect(map, &visible);
+    pixmap_op pixmap = { op, source, anchor_of(op->pixmap) };
+    wm_rect visible = visible_area(job, &pixmap);
+    wm_rect area = device_rect(&job->map, &visible);
     if (wm_rect_is_empty(&visible) || wm_rect_is_empty(&area)) {
         return;
     }
-    cairo_pattern_t *pattern = create_pattern(op, source, map, anchor);
-    cairo_save(cr);
-    cairo_set_antialias(cr, CAIRO_ANTIALIAS_NONE);
-    cairo_rectangle(cr, area.x, area.y, area.width, area.height);
-    cairo_set_source(cr, pattern);
-    cairo_fill(cr);
-    cairo_restore(cr);
+    cairo_pattern_t *pattern = create_pattern(&pixmap, &job->map);
+    cairo_save(job->cr);
+    cairo_set_antialias(job->cr, CAIRO_ANTIALIAS_NONE);
+    cairo_rectangle(job->cr, area.x, area.y, area.width, area.height);
+    cairo_set_source(job->cr, pattern);
+    cairo_fill(job->cr);
+    cairo_restore(job->cr);
     cairo_pattern_destroy(pattern);
 }
 
-static void paint_icon(cairo_t *cr, const wm_paint_op *op, cairo_surface_t *icon,
-                       const device_map *map)
+static wm_rect visible_area(const frame_job *job, const pixmap_op *pixmap)
+{
+    const wm_paint_op *op = pixmap->op;
+    wm_rect visible = wm_rect_intersection(&op->dest, &op->clip);
+
+    visible = wm_rect_intersection(&visible, &job->request->band);
+    if (op->mode == WM_FILL_PLAIN) {
+        wm_rect image = image_rect(pixmap);
+        visible = wm_rect_intersection(&visible, &image);
+    }
+    return visible;
+}
+
+static void paint_icon(const frame_job *job, const wm_paint_op *op, cairo_surface_t *icon)
 {
     wm_rect area = wm_rect_intersection(&op->dest, &op->clip);
     canvas_image image = { icon, op->dest, opaque_alpha };
@@ -208,62 +252,105 @@ static void paint_icon(cairo_t *cr, const wm_paint_op *op, cairo_surface_t *icon
     if (wm_rect_is_empty(&area)) {
         return;
     }
-    cairo_save(cr);
-    set_logical_matrix(cr, map);
-    cairo_rectangle(cr, area.x, area.y, area.width, area.height);
-    cairo_clip(cr);
-    appearance_canvas_paint_fitted(cr, &image);
-    cairo_restore(cr);
+    cairo_save(job->cr);
+    set_logical_matrix(job->cr, &job->map);
+    cairo_rectangle(job->cr, area.x, area.y, area.width, area.height);
+    cairo_clip(job->cr);
+    appearance_canvas_paint_fitted(job->cr, &image);
+    cairo_restore(job->cr);
 }
 
-static wm_rect image_rect(const wm_paint_op *op, const op_source *source, op_anchor anchor)
+static wm_rect image_rect(const pixmap_op *pixmap)
 {
-    int width = source->logical.width;
-    int height = source->logical.height;
+    const wm_rect *dest = &pixmap->op->dest;
+    int width = pixmap->source->logical.width;
+    int height = pixmap->source->logical.height;
 
     return (wm_rect) {
-        anchor.right ? op->dest.x + op->dest.width - width : op->dest.x,
-        anchor.bottom ? op->dest.y + op->dest.height - height : op->dest.y,
+        pixmap->anchor.right ? dest->x + dest->width - width : dest->x,
+        pixmap->anchor.bottom ? dest->y + dest->height - height : dest->y,
         width,
         height,
     };
 }
 
-static cairo_pattern_t *create_pattern(const wm_paint_op *op, const op_source *source,
-                                       const device_map *map, op_anchor anchor)
+static cairo_pattern_t *create_pattern(const pixmap_op *pixmap, const device_map *map)
 {
-    wm_rect box = device_rect(map, &op->dest);
-    double zoom = source->zoom;
-    int width = (int) lround(source->pixels.width * zoom);
-    int height = (int) lround(source->pixels.height * zoom);
-    double scale_x = 1.0 / zoom;
-    double scale_y = 1.0 / zoom;
-    double start_x = anchor.right ? box.x + box.width - width : device_x(map, op->origin.x);
-    double start_y = anchor.bottom ? box.y + box.height - height : device_y(map, op->origin.y);
-    cairo_extend_t extend = op->mode == WM_FILL_TILE    ? CAIRO_EXTEND_REPEAT
-                            : op->mode == WM_FILL_PLAIN ? CAIRO_EXTEND_PAD
-                                                        : CAIRO_EXTEND_NONE;
-
-    if (op->mode == WM_FILL_PLAIN) {
-        start_x = anchor.right ? box.x + box.width - width : box.x;
-        start_y = anchor.bottom ? box.y + box.height - height : box.y;
-    }
-    if (op->mode == WM_FILL_STRETCH_HORIZONTAL && box.width > 0) {
-        scale_x = (double) source->pixels.width / box.width;
-        start_x = device_x(map, op->origin.x);
-    }
-    if (op->mode == WM_FILL_STRETCH_VERTICAL && box.height > 0) {
-        scale_y = (double) source->pixels.height / box.height;
-        start_y = device_y(map, op->origin.y);
-    }
-    cairo_pattern_t *pattern = cairo_pattern_create_for_surface(source->surface);
+    wm_rect box = device_rect(map, &pixmap->op->dest);
+    pattern_axis x = horizontal_axis(pixmap, map, &box);
+    pattern_axis y = vertical_axis(pixmap, map, &box);
+    cairo_pattern_t *pattern = cairo_pattern_create_for_surface(pixmap->source->surface);
     cairo_matrix_t matrix;
-    cairo_matrix_init_scale(&matrix, scale_x, scale_y);
-    cairo_matrix_translate(&matrix, -start_x, -start_y);
+
+    cairo_matrix_init_scale(&matrix, axis_scale(&x), axis_scale(&y));
+    cairo_matrix_translate(&matrix, -axis_start(&x), -axis_start(&y));
     cairo_pattern_set_matrix(pattern, &matrix);
-    cairo_pattern_set_extend(pattern, extend);
+    cairo_pattern_set_extend(pattern, extend_for(pixmap->op->mode));
     cairo_pattern_set_filter(pattern, CAIRO_FILTER_NEAREST);
     return pattern;
+}
+
+static pattern_axis horizontal_axis(const pixmap_op *pixmap, const device_map *map,
+                                    const wm_rect *box)
+{
+    const wm_paint_op *op = pixmap->op;
+
+    return (pattern_axis) {
+        .pixels = pixmap->source->pixels.width,
+        .box_start = box->x,
+        .box_length = box->width,
+        .origin = device_x(map, op->origin.x),
+        .zoom = pixmap->source->zoom,
+        .anchored_end = pixmap->anchor.right,
+        .stretched = op->mode == WM_FILL_STRETCH_HORIZONTAL,
+        .plain = op->mode == WM_FILL_PLAIN,
+    };
+}
+
+static pattern_axis vertical_axis(const pixmap_op *pixmap, const device_map *map,
+                                  const wm_rect *box)
+{
+    const wm_paint_op *op = pixmap->op;
+
+    return (pattern_axis) {
+        .pixels = pixmap->source->pixels.height,
+        .box_start = box->y,
+        .box_length = box->height,
+        .origin = device_y(map, op->origin.y),
+        .zoom = pixmap->source->zoom,
+        .anchored_end = pixmap->anchor.bottom,
+        .stretched = op->mode == WM_FILL_STRETCH_VERTICAL,
+        .plain = op->mode == WM_FILL_PLAIN,
+    };
+}
+
+static double axis_scale(const pattern_axis *axis)
+{
+    if (axis->stretched && axis->box_length > 0) {
+        return (double) axis->pixels / axis->box_length;
+    }
+    return 1.0 / axis->zoom;
+}
+
+static double axis_start(const pattern_axis *axis)
+{
+    int length = (int) lround(axis->pixels * axis->zoom);
+
+    if (axis->stretched && axis->box_length > 0) {
+        return axis->origin;
+    }
+    if (axis->anchored_end) {
+        return axis->box_start + axis->box_length - length;
+    }
+    return axis->plain ? axis->box_start : axis->origin;
+}
+
+static cairo_extend_t extend_for(wm_fill_mode mode)
+{
+    if (mode == WM_FILL_TILE) {
+        return CAIRO_EXTEND_REPEAT;
+    }
+    return mode == WM_FILL_PLAIN ? CAIRO_EXTEND_PAD : CAIRO_EXTEND_NONE;
 }
 
 static op_anchor anchor_of(wm_pixmap_ref ref)

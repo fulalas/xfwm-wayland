@@ -3,8 +3,8 @@
 #include <string.h>
 
 #include "check.h"
-#include "xresources.h"
-#include "xsettings_wire.h"
+#include "xwayland/xresources.h"
+#include "xwayland/xsettings_wire.h"
 
 static void add_integer(xsettings_table *table, const char *name, int32_t value)
 {

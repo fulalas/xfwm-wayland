@@ -38,35 +38,40 @@ static void test_frame_surface_uses_scaled_band(void)
     appearance_destroy(appearance);
 }
 
-static const char half_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
-                                      "\"4 4 2 1\",\n\". c #FF0000\",\n\"  c None\",\n"
-                                      "\"..  \",\"..  \",\"..  \",\"..  \"};\n";
+typedef struct one_op_frame {
+    const char *file;
+    const char *content;
+    double theme_scale;
+    wm_paint_op op;
+    wm_rect band;
+    double scale;
+    wm_point origin;
+} one_op_frame;
 
-static void test_band_edge_stays_opaque(void)
+static wm_paint_op op_at(wm_pixmap_ref pixmap, wm_rect dest, wm_fill_mode mode)
+{
+    return (wm_paint_op) { .pixmap = pixmap, .dest = dest, .mode = mode, .clip = dest };
+}
+
+static cairo_surface_t *paint_one_op(const one_op_frame *frame)
 {
     char *dir = fixture_dir_create();
     g_free(fixture_write(dir, "themerc", ""));
-    g_free(fixture_write(dir, "bottom-left-active.xpm", half_corner_xpm));
+    g_free(fixture_write(dir, frame->file, frame->content));
     appearance *appearance = appearance_create();
     ui_style style = appearance_fallback_style();
-    theme_request theme = { dir, "Sans 9", 1.0, &style };
+    theme_request theme = { dir, "Sans 9", frame->theme_scale, &style };
     CHECK(appearance_load(appearance, &theme));
     compositor_painter painter = appearance_painter(appearance);
     wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
-    layout.ops[0] = (wm_paint_op) {
-        .pixmap = { WM_PIXMAP_CORNER, WM_CORNER_BOTTOM_LEFT, WM_FRAME_ACTIVE },
-        .dest = { 0, 0, 4, 4 },
-        .mode = WM_FILL_PLAIN,
-        .clip = { 0, 0, 4, 4 },
-    };
-    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL, { 0, 0 } };
+    layout.ops[0] = frame->op;
+    frame_paint_request request = { &layout, frame->band, frame->scale, NULL, NULL,
+                                    frame->origin };
     cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
-    CHECK_INT_EQ(3, cairo_image_surface_get_width(surface));
-    CHECK_INT_EQ(255, fixture_alpha_at(surface, 2, 2));
-    cairo_surface_destroy(surface);
     appearance_destroy(appearance);
     fixture_dir_remove(dir);
+    return surface;
 }
 
 static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
@@ -77,36 +82,51 @@ static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
     return ((const uint32_t *) (const void *) (data + y * stride))[x];
 }
 
+static const char half_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
+                                      "\"4 4 2 1\",\n\". c #FF0000\",\n\"  c None\",\n"
+                                      "\"..  \",\"..  \",\"..  \",\"..  \"};\n";
+
+static void test_band_edge_stays_opaque(void)
+{
+    wm_pixmap_ref corner = { WM_PIXMAP_CORNER, WM_CORNER_BOTTOM_LEFT, WM_FRAME_ACTIVE };
+    one_op_frame frame = {
+        .file = "bottom-left-active.xpm",
+        .content = half_corner_xpm,
+        .theme_scale = 1.0,
+        .op = op_at(corner, (wm_rect) { 0, 0, 4, 4 }, WM_FILL_PLAIN),
+        .band = { 0, 0, 2, 4 },
+        .scale = 1.5,
+    };
+    cairo_surface_t *surface = paint_one_op(&frame);
+
+    CHECK_INT_EQ(3, cairo_image_surface_get_width(surface));
+    CHECK_INT_EQ(255, fixture_alpha_at(surface, 2, 2));
+    cairo_surface_destroy(surface);
+}
+
 static const char right_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
                                        "\"8 3 2 1\",\n\". c #FF0000\",\n\"# c #0000FF\",\n"
                                        "\".......#\",\".......#\",\".......#\"};\n";
 
+static const wm_pixmap_ref top_right = { WM_PIXMAP_CORNER, WM_CORNER_TOP_RIGHT, WM_FRAME_ACTIVE };
+
 static void check_right_corner(wm_point origin, int last_column)
 {
-    char *dir = fixture_dir_create();
-    g_free(fixture_write(dir, "themerc", ""));
-    g_free(fixture_write(dir, "top-right-active.xpm", right_corner_xpm));
-    appearance *appearance = appearance_create();
-    ui_style style = appearance_fallback_style();
-    theme_request theme = { dir, "Sans 9", 1.5, &style };
-    CHECK(appearance_load(appearance, &theme));
-    compositor_painter painter = appearance_painter(appearance);
-    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
-    layout.ops[0] = (wm_paint_op) {
-        .pixmap = { WM_PIXMAP_CORNER, WM_CORNER_TOP_RIGHT, WM_FRAME_ACTIVE },
-        .dest = { 0, 0, 5, 2 },
-        .mode = WM_FILL_PLAIN,
-        .clip = { 0, 0, 5, 2 },
+    one_op_frame frame = {
+        .file = "top-right-active.xpm",
+        .content = right_corner_xpm,
+        .theme_scale = 1.5,
+        .op = op_at(top_right, (wm_rect) { 0, 0, 5, 2 }, WM_FILL_PLAIN),
+        .band = { 0, 0, 5, 2 },
+        .scale = 1.5,
+        .origin = origin,
     };
-    frame_paint_request request = { &layout, { 0, 0, 5, 2 }, 1.5, NULL, NULL, origin };
-    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+    cairo_surface_t *surface = paint_one_op(&frame);
 
     CHECK_INT_EQ(last_column + 1, cairo_image_surface_get_width(surface));
     CHECK_INT_EQ(0xff0000ff, pixel_at(surface, last_column, 1));
     CHECK(pixel_at(surface, last_column - 1, 1) != 0xff0000ff);
     cairo_surface_destroy(surface);
-    appearance_destroy(appearance);
-    fixture_dir_remove(dir);
 }
 
 static void test_right_corner_keeps_its_outer_column(void)
@@ -126,23 +146,16 @@ static const char right_corner_svg[] =
 
 static int svg_corner_blue_columns(wm_point origin)
 {
-    char *dir = fixture_dir_create();
-    g_free(fixture_write(dir, "themerc", ""));
-    g_free(fixture_write(dir, "top-right-active.svg", right_corner_svg));
-    appearance *appearance = appearance_create();
-    ui_style style = appearance_fallback_style();
-    theme_request theme = { dir, "Sans 9", 1.5, &style };
-    CHECK(appearance_load(appearance, &theme));
-    compositor_painter painter = appearance_painter(appearance);
-    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
-    layout.ops[0] = (wm_paint_op) {
-        .pixmap = { WM_PIXMAP_CORNER, WM_CORNER_TOP_RIGHT, WM_FRAME_ACTIVE },
-        .dest = { 0, 0, 5, 3 },
-        .mode = WM_FILL_PLAIN,
-        .clip = { 0, 0, 5, 3 },
+    one_op_frame frame = {
+        .file = "top-right-active.svg",
+        .content = right_corner_svg,
+        .theme_scale = 1.5,
+        .op = op_at(top_right, (wm_rect) { 0, 0, 5, 3 }, WM_FILL_PLAIN),
+        .band = { 0, 0, 5, 3 },
+        .scale = 1.5,
+        .origin = origin,
     };
-    frame_paint_request request = { &layout, { 0, 0, 5, 3 }, 1.5, NULL, NULL, origin };
-    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+    cairo_surface_t *surface = paint_one_op(&frame);
     int width = cairo_image_surface_get_width(surface);
     int blue = 0;
 
@@ -151,8 +164,6 @@ static int svg_corner_blue_columns(wm_point origin)
         blue += pixel_at(surface, x, 1) == 0xff0000ff;
     }
     cairo_surface_destroy(surface);
-    appearance_destroy(appearance);
-    fixture_dir_remove(dir);
     return blue;
 }
 
@@ -166,31 +177,23 @@ static const char dark_light_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
                                           "\"2 2 2 1\",\n\". c #000000\",\n\"# c #FFFFFF\",\n"
                                           "\".#\",\".#\"};\n";
 
+static const wm_pixmap_ref left_side = { WM_PIXMAP_SIDE, WM_SIDE_LEFT, WM_FRAME_ACTIVE };
+
 static void test_tiled_edge_does_not_wrap(void)
 {
     enum { OPAQUE_WHITE = 0xFFFFFFFFu };
-    char *dir = fixture_dir_create();
-    g_free(fixture_write(dir, "themerc", ""));
-    g_free(fixture_write(dir, "left-active.xpm", dark_light_side_xpm));
-    appearance *appearance = appearance_create();
-    ui_style style = appearance_fallback_style();
-    theme_request theme = { dir, "Sans 9", 1.0, &style };
-    CHECK(appearance_load(appearance, &theme));
-    compositor_painter painter = appearance_painter(appearance);
-    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
-    layout.ops[0] = (wm_paint_op) {
-        .pixmap = { WM_PIXMAP_SIDE, WM_SIDE_LEFT, WM_FRAME_ACTIVE },
-        .dest = { 0, 0, 2, 4 },
-        .mode = WM_FILL_TILE,
-        .clip = { 0, 0, 2, 4 },
+    one_op_frame frame = {
+        .file = "left-active.xpm",
+        .content = dark_light_side_xpm,
+        .theme_scale = 1.0,
+        .op = op_at(left_side, (wm_rect) { 0, 0, 2, 4 }, WM_FILL_TILE),
+        .band = { 0, 0, 2, 4 },
+        .scale = 1.5,
     };
-    frame_paint_request request = { &layout, { 0, 0, 2, 4 }, 1.5, NULL, NULL, { 0, 0 } };
-    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
+    cairo_surface_t *surface = paint_one_op(&frame);
 
     CHECK_INT_EQ(OPAQUE_WHITE, pixel_at(surface, 2, 2));
     cairo_surface_destroy(surface);
-    appearance_destroy(appearance);
-    fixture_dir_remove(dir);
 }
 
 static const char three_color_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
@@ -200,28 +203,17 @@ static const char three_color_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
 
 static cairo_surface_t *paint_tile(const char *xpm, wm_rect band)
 {
-    char *dir = fixture_dir_create();
-    g_free(fixture_write(dir, "themerc", ""));
-    g_free(fixture_write(dir, "left-active.xpm", xpm));
-    appearance *appearance = appearance_create();
-    ui_style style = appearance_fallback_style();
-    theme_request theme = { dir, "Sans 9", 1.0, &style };
-    CHECK(appearance_load(appearance, &theme));
-    compositor_painter painter = appearance_painter(appearance);
-    wm_decor_layout layout = { .has_frame = true, .op_count = 1 };
-    layout.ops[0] = (wm_paint_op) {
-        .pixmap = { WM_PIXMAP_SIDE, WM_SIDE_LEFT, WM_FRAME_ACTIVE },
-        .dest = { 0, 0, 6, 1 },
-        .origin = { 1, 0 },
-        .mode = WM_FILL_TILE,
-        .clip = { 0, 0, 6, 1 },
+    one_op_frame frame = {
+        .file = "left-active.xpm",
+        .content = xpm,
+        .theme_scale = 1.0,
+        .op = op_at(left_side, (wm_rect) { 0, 0, 6, 1 }, WM_FILL_TILE),
+        .band = band,
+        .scale = 1.0,
     };
-    frame_paint_request request = { &layout, band, 1.0, NULL, NULL, { 0, 0 } };
-    cairo_surface_t *surface = painter.paint_frame(painter.self, &request);
 
-    appearance_destroy(appearance);
-    fixture_dir_remove(dir);
-    return surface;
+    frame.op.origin = (wm_point) { 1, 0 };
+    return paint_one_op(&frame);
 }
 
 static void test_tile_starts_at_its_origin(void)

@@ -36,10 +36,16 @@ struct xfce_environment {
     char *title_font;
 };
 
+typedef struct change_notice {
+    unsigned flag;
+    void (*callback)(void *self);
+} change_notice;
+
 static void refresh_settings(xfce_environment *environment);
 static void reload_keymap(xfce_environment *environment);
 static void on_channel_changed(void *self, channel_id id, const char *property);
 static void on_dispatch(void *self, unsigned flags);
+static void notify_changes(xfce_environment *environment, unsigned flags);
 static void notify_settings(xfce_environment *environment, unsigned flags);
 static void on_style_changed(void *self);
 static void on_session_ended(void *self);
@@ -130,10 +136,10 @@ wm_keymap xfce_environment_keymap(xfce_environment *environment)
     return keymap;
 }
 
-void xfce_environment_app_shortcut(xfce_environment *environment, uint32_t id, bool pressed,
-                                   uint32_t time_ms)
+void xfce_environment_app_shortcut(xfce_environment *environment,
+                                  const wm_app_shortcut_event *event)
 {
-    shortcuts_portal_activate(environment->portal, id, pressed, time_ms);
+    shortcuts_portal_emit(environment->portal, event);
 }
 
 xfce_style xfce_environment_style(xfce_environment *environment)
@@ -263,17 +269,23 @@ static void on_dispatch(void *self, unsigned flags)
         reload_keymap(environment);
         notify(environment, environment->listener.shortcuts_changed);
     }
-    if (flags & CHANGE_INPUT) {
-        notify(environment, environment->listener.input_changed);
-    }
-    if (flags & CHANGE_X11_SETTINGS) {
-        notify(environment, environment->listener.x11_settings_changed);
-    }
-    if (flags & CHANGE_DISPLAYS) {
-        notify(environment, environment->listener.displays_changed);
-    }
-    if (flags & CHANGE_POWER) {
-        notify(environment, environment->listener.power_changed);
+    notify_changes(environment, flags);
+}
+
+static void notify_changes(xfce_environment *environment, unsigned flags)
+{
+    const xfce_listener *listener = &environment->listener;
+    const change_notice notices[] = {
+        { CHANGE_INPUT, listener->input_changed },
+        { CHANGE_X11_SETTINGS, listener->x11_settings_changed },
+        { CHANGE_DISPLAYS, listener->displays_changed },
+        { CHANGE_POWER, listener->power_changed },
+    };
+
+    for (size_t i = 0; i < G_N_ELEMENTS(notices); i++) {
+        if (flags & notices[i].flag) {
+            notify(environment, notices[i].callback);
+        }
     }
 }
 

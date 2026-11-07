@@ -48,6 +48,8 @@ static void on_name_lost(GDBusConnection *connection, const char *name, gpointer
 static void on_method(GDBusConnection *connection, const char *sender, const char *path,
                       const char *interface, const char *method, GVariant *parameters,
                       GDBusMethodInvocation *invocation, gpointer data);
+static guint cookie_of(GVariant *parameters);
+static void notify_activity(screensaver_service *service);
 static guint inhibit(screensaver_service *service, const char *sender);
 static void uninhibit(screensaver_service *service, guint cookie);
 static void watch_sender(screensaver_service *service, const char *sender);
@@ -129,17 +131,28 @@ static void on_method(GDBusConnection *connection, const char *sender, const cha
         g_dbus_method_invocation_return_value(invocation,
                                               g_variant_new("(u)", inhibit(service, sender)));
     } else if (g_strcmp0(method, "UnInhibit") == 0) {
-        guint cookie = 0;
-        g_variant_get(parameters, "(u)", &cookie);
-        uninhibit(service, cookie);
+        uninhibit(service, cookie_of(parameters));
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (g_strcmp0(method, "SimulateUserActivity") == 0) {
-        if (service->listener.activity != NULL) {
-            service->listener.activity(service->listener.self);
-        }
+        notify_activity(service);
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else {
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", FALSE));
+    }
+}
+
+static guint cookie_of(GVariant *parameters)
+{
+    guint cookie = 0;
+
+    g_variant_get(parameters, "(u)", &cookie);
+    return cookie;
+}
+
+static void notify_activity(screensaver_service *service)
+{
+    if (service->listener.activity != NULL) {
+        service->listener.activity(service->listener.self);
     }
 }
 

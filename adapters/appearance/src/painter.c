@@ -12,7 +12,7 @@ static wm_size measure_title(void *self, const char *title);
 static shadow_template make_shadow_template(void *self, double opacity);
 static menu_layout layout_menu(void *self, const wm_menu_level *level);
 static cairo_surface_t *paint_menu(void *self, const menu_paint_request *request);
-static uint32_t menu_mnemonic(void *self, const wm_menu_level *level, size_t index);
+static uint32_t menu_mnemonic(void *self, const wm_menu_entry *entry);
 static cycle_layout layout_cycle(void *self, const wm_cycle_view *view);
 static cairo_surface_t *paint_cycle(void *self, const cycle_paint_request *request);
 static wm_size layout_label(void *self, const char *text);
@@ -70,10 +70,10 @@ static cairo_surface_t *paint_menu(void *self, const menu_paint_request *request
     return appearance_menu_paint(&ui, request);
 }
 
-static uint32_t menu_mnemonic(void *self, const wm_menu_level *level, size_t index)
+static uint32_t menu_mnemonic(void *self, const wm_menu_entry *entry)
 {
     (void) self;
-    return appearance_menu_item_mnemonic(level, index);
+    return appearance_menu_item_mnemonic(entry->level, entry->index);
 }
 
 static cycle_layout layout_cycle(void *self, const wm_cycle_view *view)

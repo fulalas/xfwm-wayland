@@ -7,6 +7,7 @@
 #include "compositor/services.h"
 #include "wm/config.h"
 #include "wm/keys.h"
+#include "wm/ports.h"
 
 enum {
     XFCE_SYMBOL_MAX = 32,
@@ -75,8 +76,8 @@ const char *xfce_environment_title_font(xfce_environment *environment);
 wm_config xfce_environment_config(xfce_environment *environment,
                                   const xfce_setting_source *theme);
 wm_keymap xfce_environment_keymap(xfce_environment *environment);
-void xfce_environment_app_shortcut(xfce_environment *environment, uint32_t id, bool pressed,
-                                   uint32_t time_ms);
+void xfce_environment_app_shortcut(xfce_environment *environment,
+                                  const wm_app_shortcut_event *event);
 xfce_style xfce_environment_style(xfce_environment *environment);
 int xfce_environment_font_dpi(xfce_environment *environment);
 compositor_services xfce_environment_services(xfce_environment *environment);

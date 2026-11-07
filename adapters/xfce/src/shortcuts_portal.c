@@ -1,6 +1,7 @@
 #include "shortcuts_portal.h"
 
 #include <gio/gio.h>
+#include <stdbool.h>
 
 #include "app_shortcuts.h"
 
@@ -90,6 +91,7 @@ static void create_session(shortcuts_portal *portal, GVariant *parameters,
                            GDBusMethodInvocation *invocation);
 static void bind_shortcuts(shortcuts_portal *portal, GVariant *parameters,
                            GDBusMethodInvocation *invocation);
+static void bind_requests(shortcuts_portal *portal, const char *session, GVariant *shortcuts);
 static void list_shortcuts(shortcuts_portal *portal, GVariant *parameters,
                            GDBusMethodInvocation *invocation);
 static void return_results(GDBusMethodInvocation *invocation, GVariant *results);
@@ -154,18 +156,21 @@ size_t shortcuts_portal_keymap(const shortcuts_portal *portal, const wm_app_shor
     return app_shortcuts_keymap(portal->shortcuts, keymap);
 }
 
-void shortcuts_portal_activate(shortcuts_portal *portal, uint32_t id, bool pressed,
-                               uint32_t time_ms)
+void shortcuts_portal_emit(shortcuts_portal *portal, const wm_app_shortcut_event *event)
 {
-    const app_shortcut_entry *entry = app_shortcuts_find(portal->shortcuts, id);
+    static const char *const signal_names[] = {
+        [WM_SHORTCUT_PRESSED] = "Activated",
+        [WM_SHORTCUT_RELEASED] = "Deactivated",
+    };
+    const app_shortcut_entry *entry = app_shortcuts_find(portal->shortcuts, event->id);
 
     if (entry == NULL || portal->connection == NULL) {
         return;
     }
-    GVariant *signal = g_variant_new("(ost@a{sv})", entry->session, entry->shortcut_id,
-                                     (guint64) time_ms, empty_vardict());
+    GVariant *args = g_variant_new("(ost@a{sv})", entry->session, entry->shortcut_id,
+                                   (guint64) event->time_ms, empty_vardict());
     g_dbus_connection_emit_signal(portal->connection, NULL, object_path, shortcuts_interface,
-                                  pressed ? "Activated" : "Deactivated", signal, NULL);
+                                  signal_names[event->state], args, NULL);
 }
 
 static void on_bus_acquired(GDBusConnection *connection, const char *name, gpointer data)
@@ -267,22 +272,29 @@ static void bind_shortcuts(shortcuts_portal *portal, GVariant *parameters,
                                               G_DBUS_ERROR_ACCESS_DENIED, "Unknown session");
         return;
     }
+    bind_requests(portal, session, shortcuts);
+    g_variant_unref(shortcuts);
+    notify_changed(portal);
+    return_shortcuts(invocation, portal, session);
+}
+
+static void bind_requests(shortcuts_portal *portal, const char *session, GVariant *shortcuts)
+{
     gsize count = g_variant_n_children(shortcuts);
     app_shortcut_request *requests = g_new0(app_shortcut_request, count);
     GVariant **children = g_new0(GVariant *, count);
+
     for (gsize i = 0; i < count; i++) {
         children[i] = g_variant_get_child_value(shortcuts, i);
         requests[i] = request_from(children[i]);
     }
-    app_shortcuts_bind(portal->shortcuts, session, requests, count);
+    app_shortcuts_bind(portal->shortcuts, session,
+                       (app_shortcut_requests) { requests, count });
     for (gsize i = 0; i < count; i++) {
         g_variant_unref(children[i]);
     }
     g_free(children);
     g_free(requests);
-    g_variant_unref(shortcuts);
-    notify_changed(portal);
-    return_shortcuts(invocation, portal, session);
 }
 
 static void list_shortcuts(shortcuts_portal *portal, GVariant *parameters,

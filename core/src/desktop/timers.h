@@ -21,6 +21,12 @@ typedef struct timer_entry {
     uint32_t deadline_ms;
 } timer_entry;
 
+typedef struct timer_request {
+    timer_kind kind;
+    wm_window *window;
+    int delay_ms;
+} timer_request;
+
 typedef struct timer_set {
     timer_entry *entries;
     size_t count;
@@ -30,7 +36,7 @@ typedef struct timer_set {
 } timer_set;
 
 void timers_free(timer_set *timers);
-void timers_start(wm_desktop *desktop, timer_kind kind, wm_window *window, int delay_ms);
+void timers_start(wm_desktop *desktop, const timer_request *request);
 void timers_cancel(wm_desktop *desktop, timer_kind kind, wm_window *window);
 void timers_cancel_kind(wm_desktop *desktop, timer_kind kind);
 void timers_cancel_window(wm_desktop *desktop, const wm_window *window);

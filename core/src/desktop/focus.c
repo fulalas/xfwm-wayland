@@ -116,7 +116,8 @@ void focus_pointer_entered(wm_desktop *desktop, wm_window *window)
     }
     if (desktop->config.focus.focus_delay_ms > 0) {
         desktop->focus.delayed = window;
-        timers_start(desktop, TIMER_FOCUS, window, desktop->config.focus.focus_delay_ms);
+        timer_request timer = {TIMER_FOCUS, window, desktop->config.focus.focus_delay_ms};
+        timers_start(desktop, &timer);
         return;
     }
     focus_set(desktop, window);
@@ -202,7 +203,8 @@ static void raise_after_focus(wm_desktop *desktop, wm_window *window)
         stack_raise(desktop, window);
         return;
     }
-    timers_start(desktop, TIMER_RAISE, NULL, desktop->config.focus.raise_delay_ms);
+    timer_request timer = {TIMER_RAISE, NULL, desktop->config.focus.raise_delay_ms};
+    timers_start(desktop, &timer);
 }
 
 static bool is_excluded(const window_list *exclude, const wm_window *window)

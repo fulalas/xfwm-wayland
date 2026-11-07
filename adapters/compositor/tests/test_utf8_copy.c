@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "check.h"
-#include "utf8_copy.h"
+#include "util/utf8_copy.h"
 
 static void test_short_text_is_copied_whole(void)
 {

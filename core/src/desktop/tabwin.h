@@ -15,12 +15,12 @@ typedef struct tabwin_grid {
     wm_rect monitor;
 } tabwin_grid;
 
-typedef struct grid_move {
-    int rows;
-    int columns;
-} grid_move;
+typedef struct grid_selection {
+    size_t count;
+    size_t current;
+} grid_selection;
 
 tabwin_grid tabwin_compute(const wm_desktop *desktop, size_t count);
-size_t tabwin_select_delta(const tabwin_grid *grid, size_t count, size_t current, grid_move move);
+size_t tabwin_select_delta(const tabwin_grid *grid, grid_selection selection, wm_point move);
 
 #endif

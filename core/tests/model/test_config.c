@@ -107,20 +107,21 @@ static void test_shadow_deltas_default_to_three_pixels_up(void)
     CHECK_INT_EQ(0, compositing.shadow_delta_height);
 }
 
+static const check_case CASES[] = {
+    {"frame_defaults_match_xfwm4", test_frame_defaults_match_xfwm4},
+    {"title_defaults_are_centered_full_width", test_title_defaults_are_centered_full_width},
+    {"focus_defaults_are_click_to_focus", test_focus_defaults_are_click_to_focus},
+    {"easy_click_defaults_to_alt", test_easy_click_defaults_to_alt},
+    {"move_defaults_snap_to_border", test_move_defaults_snap_to_border},
+    {"placement_defaults_to_center_without_margins",
+     test_placement_defaults_to_center_without_margins},
+    {"cycle_defaults_show_preview_grid", test_cycle_defaults_show_preview_grid},
+    {"four_unnamed_workspaces", test_four_unnamed_workspaces},
+    {"compositing_defaults_enabled_with_gl", test_compositing_defaults_enabled_with_gl},
+    {"shadow_deltas_default_to_three_pixels_up", test_shadow_deltas_default_to_three_pixels_up},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"frame_defaults_match_xfwm4", test_frame_defaults_match_xfwm4},
-        {"title_defaults_are_centered_full_width", test_title_defaults_are_centered_full_width},
-        {"focus_defaults_are_click_to_focus", test_focus_defaults_are_click_to_focus},
-        {"easy_click_defaults_to_alt", test_easy_click_defaults_to_alt},
-        {"move_defaults_snap_to_border", test_move_defaults_snap_to_border},
-        {"placement_defaults_to_center_without_margins",
-         test_placement_defaults_to_center_without_margins},
-        {"cycle_defaults_show_preview_grid", test_cycle_defaults_show_preview_grid},
-        {"four_unnamed_workspaces", test_four_unnamed_workspaces},
-        {"compositing_defaults_enabled_with_gl", test_compositing_defaults_enabled_with_gl},
-        {"shadow_deltas_default_to_three_pixels_up", test_shadow_deltas_default_to_three_pixels_up},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

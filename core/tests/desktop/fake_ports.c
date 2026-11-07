@@ -2,8 +2,6 @@
 
 #include <string.h>
 
-static char handles[FAKE_WINDOW_MAX];
-
 static fake_world *world_of(void *self);
 static void window_changed(void *self, void *window, const wm_window_view *view);
 static void stacking_changed(void *self, void *const *windows, size_t count);
@@ -25,7 +23,7 @@ static void close_window(void *self, void *window);
 static void ask_terminate(void *self, void *window);
 static void warp_pointer(void *self, wm_point point);
 static void spawn(void *self, const char *command);
-static void app_shortcut(void *self, uint32_t id, bool pressed, uint32_t time_ms);
+static void app_shortcut(void *self, const wm_app_shortcut_event *event);
 static void logout(void *self);
 static void store_workspace_count(void *self, int count);
 static void store_workspace_names(void *self, const char *const *names, size_t count);
@@ -36,8 +34,7 @@ static wm_output_info output_at_index(void *self, size_t index);
 static wm_point pointer_position(void *self);
 static uint32_t now_ms(void *self);
 static wm_size measure_title(void *self, const char *text);
-static bool menu_item_matches_key(void *self, const wm_menu_level *level, size_t index,
-                                  uint32_t keysym);
+static bool menu_item_matches_key(void *self, const wm_menu_entry *entry, uint32_t keysym);
 static void set_all_states(wm_size sizes[WM_FRAME_STATE_COUNT], wm_size size);
 
 void fake_world_init(fake_world *world)
@@ -100,12 +97,13 @@ wm_desktop *fake_desktop_create(fake_world *world, const wm_config *config)
     wm_desktop *desktop = wm_desktop_create(&world->ports, config);
     wm_theme_metrics theme = fake_theme();
     wm_desktop_set_appearance(desktop, &theme, config);
+    world->desktop = desktop;
     return desktop;
 }
 
 void *fake_handle(int id)
 {
-    return &handles[id];
+    return (void *) (uintptr_t) (id + 1);
 }
 
 wm_window_desc fake_desc(int id, wm_rect geometry)
@@ -126,6 +124,14 @@ wm_window_desc fake_desc(int id, wm_rect geometry)
 wm_window *fake_map(wm_desktop *desktop, int id, wm_rect geometry)
 {
     wm_window_desc desc = fake_desc(id, geometry);
+    return wm_window_map(desktop, &desc);
+}
+
+wm_window *fake_map_with_hints(wm_desktop *desktop, wm_rect geometry,
+                               const wm_size_hints *hints)
+{
+    wm_window_desc desc = fake_desc(1, geometry);
+    desc.size_hints = *hints;
     return wm_window_map(desktop, &desc);
 }
 
@@ -311,12 +317,11 @@ static void spawn(void *self, const char *command)
     strncpy(world->spawned, command, FAKE_TEXT_MAX - 1);
 }
 
-static void app_shortcut(void *self, uint32_t id, bool pressed, uint32_t time_ms)
+static void app_shortcut(void *self, const wm_app_shortcut_event *event)
 {
-    (void) time_ms;
     fake_world *world = world_of(self);
-    world->app_shortcut_id = id;
-    if (pressed) {
+    world->app_shortcut_id = event->id;
+    if (event->state == WM_SHORTCUT_PRESSED) {
         world->app_shortcut_presses++;
     } else {
         world->app_shortcut_releases++;
@@ -378,11 +383,10 @@ static wm_size measure_title(void *self, const char *text)
     return (wm_size) {(int) strlen(text) * 6, 10};
 }
 
-static bool menu_item_matches_key(void *self, const wm_menu_level *level, size_t index,
-                                  uint32_t keysym)
+static bool menu_item_matches_key(void *self, const wm_menu_entry *entry, uint32_t keysym)
 {
     (void) self;
-    return level->items[index].label == WM_MENU_CLOSE && keysym == 'c';
+    return entry->level->items[entry->index].label == WM_MENU_CLOSE && keysym == 'c';
 }
 
 static void set_all_states(wm_size sizes[WM_FRAME_STATE_COUNT], wm_size size)

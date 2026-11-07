@@ -1,7 +1,7 @@
 #include <xcb/xproto.h>
 
 #include "check.h"
-#include "x11_gravity.h"
+#include "xwayland/x11_gravity.h"
 
 static const x11_framed_window framed = {{100, 200, 400, 300}, {4, 6, 24, 8}};
 

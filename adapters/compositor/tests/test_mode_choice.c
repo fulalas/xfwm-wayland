@@ -1,5 +1,5 @@
 #include "check.h"
-#include "mode_choice.h"
+#include "output/mode_choice.h"
 
 static const mode_option modes[] = {
     {{3840, 2160, 60000}, true},

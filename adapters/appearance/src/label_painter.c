@@ -28,7 +28,7 @@ cairo_surface_t *appearance_label_paint(const ui_text *ui, const label_paint_req
         .alignment = PANGO_ALIGN_CENTER,
     };
 
-    appearance_ui_panel(canvas.cr, ui->style, size, MENU_BORDER);
+    appearance_ui_panel(canvas.cr, ui->style, size);
     appearance_ui_text_draw(canvas.cr, ui, &box);
     return appearance_canvas_finish(&canvas);
 }

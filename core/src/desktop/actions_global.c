@@ -68,22 +68,22 @@ static void previous_workspace(wm_desktop *desktop)
 
 static void left_workspace(wm_desktop *desktop)
 {
-    workspaces_move(desktop, 0, -1, NULL);
+    workspaces_move(desktop, DIRECTION_LEFT, NULL);
 }
 
 static void right_workspace(wm_desktop *desktop)
 {
-    workspaces_move(desktop, 0, 1, NULL);
+    workspaces_move(desktop, DIRECTION_RIGHT, NULL);
 }
 
 static void up_workspace(wm_desktop *desktop)
 {
-    workspaces_move(desktop, -1, 0, NULL);
+    workspaces_move(desktop, DIRECTION_UP, NULL);
 }
 
 static void down_workspace(wm_desktop *desktop)
 {
-    workspaces_move(desktop, 1, 0, NULL);
+    workspaces_move(desktop, DIRECTION_DOWN, NULL);
 }
 
 static void add_workspace(wm_desktop *desktop)

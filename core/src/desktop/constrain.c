@@ -25,7 +25,7 @@ static void keep_on_monitor(constrain_box *box);
 static void keep_off_struts(constrain_box *box);
 static void keep_off_top_strut(constrain_box *box);
 static bool intersects_strip(const constrain_box *box, wm_rect strip);
-static bool title_overlaps(const constrain_box *box, int top, int bottom);
+static bool title_overlaps(const constrain_box *box, wm_segment band);
 
 void placement_constrain(wm_desktop *desktop, wm_window *window)
 {
@@ -137,7 +137,7 @@ static void keep_off_top_strut(constrain_box *box)
     if (!intersects_strip(box, top)) {
         return;
     }
-    if (title_overlaps(box, monitor->y, work->y)) {
+    if (title_overlaps(box, (wm_segment) {monitor->y, work->y})) {
         set_frame_y(box, work->y);
     }
     if (wm_rect_bottom(&box->frame) <= work->y + box->min_visible) {
@@ -150,7 +150,8 @@ static bool intersects_strip(const constrain_box *box, wm_rect strip)
     return strip.width > 0 && strip.height > 0 && wm_rect_intersects(&strip, &box->frame);
 }
 
-static bool title_overlaps(const constrain_box *box, int top, int bottom)
+static bool title_overlaps(const constrain_box *box, wm_segment band)
 {
-    return wm_segments_overlap(box->frame.y, box->frame.y + box->title_visible, top, bottom);
+    wm_segment title = {box->frame.y, box->frame.y + box->title_visible};
+    return wm_segments_overlap(title, band);
 }

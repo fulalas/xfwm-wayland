@@ -23,7 +23,8 @@ void click_begin(wm_desktop *desktop, const click_request *request)
     click->allow_double = allows_double(request->purpose);
     click->origin = request->press->pointer.position;
     click->start_ms = request->press->pointer.time_ms;
-    timers_start(desktop, TIMER_CLICK, NULL, desktop->config.mouse.double_click_time_ms);
+    timer_request timer = {TIMER_CLICK, NULL, desktop->config.mouse.double_click_time_ms};
+    timers_start(desktop, &timer);
 }
 
 bool click_is_pending(const wm_desktop *desktop)

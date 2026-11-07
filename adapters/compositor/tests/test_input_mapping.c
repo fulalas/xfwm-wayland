@@ -4,7 +4,7 @@
 #include <xkbcommon/xkbcommon.h>
 
 #include "check.h"
-#include "input_mapping.h"
+#include "input/input_mapping.h"
 #include "wm/desktop.h"
 #include "wm/keys.h"
 

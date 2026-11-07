@@ -7,6 +7,7 @@
 
 static const uint32_t OPACITY_OPAQUE = 0xffffffffu;
 
+static void copy_desc(wm_window *window, const wm_window_desc *desc);
 static char *copy_text(const char *text);
 static uint32_t type_removed_flags(wm_window_type type);
 static uint32_t capability_flags(uint32_t capabilities);
@@ -21,11 +22,19 @@ wm_window *window_create(const wm_window_desc *desc, unsigned long serial)
     if (window == NULL) {
         return NULL;
     }
+    window->serial = serial;
+    window->layer = WM_LAYER_NORMAL;
+    window->dirty = true;
+    copy_desc(window, desc);
+    return window;
+}
+
+static void copy_desc(wm_window *window, const wm_window_desc *desc)
+{
     window->handle = desc->handle;
     window->requested_type = desc->type;
     window->capabilities = desc->capabilities;
     window->states = desc->states & ~(uint32_t) WM_STATE_URGENT;
-    window->serial = serial;
     window->client = desc->geometry;
     window->drawn = (wm_size) {desc->geometry.width, desc->geometry.height};
     window->hints = desc->size_hints;
@@ -33,13 +42,10 @@ wm_window *window_create(const wm_window_desc *desc, unsigned long serial)
     window->title = copy_text(desc->title);
     window->app_id = copy_text(desc->app_id);
     window->opacity = window_opacity_from_double(desc->opacity);
-    window->layer = WM_LAYER_NORMAL;
     window->activation_allowed = desc->activation_allowed;
     window->opacity_locked = desc->opacity_locked;
     window->has_position = desc->has_position;
     window->has_icon = desc->has_icon;
-    window->dirty = true;
-    return window;
 }
 
 void window_destroy(wm_window *window)

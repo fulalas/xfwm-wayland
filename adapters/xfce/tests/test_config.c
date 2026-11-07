@@ -242,27 +242,27 @@ static void test_defaults_visit_stored_keys_only(void)
     CHECK(!count.has_margin);
 }
 
+static const check_case cases[] = {
+    { "activate_action", test_activate_action },
+    { "double_click_action", test_double_click_action },
+    { "placement_and_alignment", test_placement_and_alignment },
+    { "title_shadow", test_title_shadow },
+    { "vblank_mode", test_vblank_mode },
+    { "render_time", test_render_time },
+    { "easy_click", test_easy_click },
+    { "bool_and_int_values", test_bool_and_int_values },
+    { "clamped_values", test_clamped_values },
+    { "enum_strings_mapped", test_enum_strings_mapped },
+    { "theme_overrides_stored", test_theme_overrides_stored },
+    { "missing_keys_keep_start_values", test_missing_keys_keep_start_values },
+    { "xsettings_double_click_wins", test_xsettings_double_click_wins },
+    { "button_layout_truncated", test_button_layout_truncated },
+    { "workspace_names", test_workspace_names },
+    { "defaults_table", test_defaults_table },
+    { "defaults_visit_stored_keys_only", test_defaults_visit_stored_keys_only },
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        { "activate_action", test_activate_action },
-        { "double_click_action", test_double_click_action },
-        { "placement_and_alignment", test_placement_and_alignment },
-        { "title_shadow", test_title_shadow },
-        { "vblank_mode", test_vblank_mode },
-        { "render_time", test_render_time },
-        { "easy_click", test_easy_click },
-        { "bool_and_int_values", test_bool_and_int_values },
-        { "clamped_values", test_clamped_values },
-        { "enum_strings_mapped", test_enum_strings_mapped },
-        { "theme_overrides_stored", test_theme_overrides_stored },
-        { "missing_keys_keep_start_values", test_missing_keys_keep_start_values },
-        { "xsettings_double_click_wins", test_xsettings_double_click_wins },
-        { "button_layout_truncated", test_button_layout_truncated },
-        { "workspace_names", test_workspace_names },
-        { "defaults_table", test_defaults_table },
-        { "defaults_visit_stored_keys_only", test_defaults_visit_stored_keys_only },
-    };
-
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

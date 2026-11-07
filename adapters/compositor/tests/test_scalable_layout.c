@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "check.h"
-#include "scalable_layout.h"
+#include "cursor/scalable_layout.h"
 
 static scalable_layout layout(int cursor_size, double output_scale)
 {

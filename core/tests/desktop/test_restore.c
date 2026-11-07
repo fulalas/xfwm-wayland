@@ -102,18 +102,19 @@ static void test_fullscreen_window_reports_geometry_before_fullscreen(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"saved_workspace_is_used", test_saved_workspace_is_used},
+    {"unknown_saved_workspace_falls_back_to_current",
+     test_unknown_saved_workspace_falls_back_to_current},
+    {"transient_ignores_saved_workspace", test_transient_ignores_saved_workspace},
+    {"saved_geometry_is_kept", test_saved_geometry_is_kept},
+    {"saved_maximized_window_restores_to_saved_geometry",
+     test_saved_maximized_window_restores_to_saved_geometry},
+    {"fullscreen_window_reports_geometry_before_fullscreen",
+     test_fullscreen_window_reports_geometry_before_fullscreen},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"saved_workspace_is_used", test_saved_workspace_is_used},
-        {"unknown_saved_workspace_falls_back_to_current",
-         test_unknown_saved_workspace_falls_back_to_current},
-        {"transient_ignores_saved_workspace", test_transient_ignores_saved_workspace},
-        {"saved_geometry_is_kept", test_saved_geometry_is_kept},
-        {"saved_maximized_window_restores_to_saved_geometry",
-         test_saved_maximized_window_restores_to_saved_geometry},
-        {"fullscreen_window_reports_geometry_before_fullscreen",
-         test_fullscreen_window_reports_geometry_before_fullscreen},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

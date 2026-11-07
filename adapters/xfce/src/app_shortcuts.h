@@ -15,6 +15,11 @@ typedef struct app_shortcut_request {
     const char *trigger;
 } app_shortcut_request;
 
+typedef struct app_shortcut_requests {
+    const app_shortcut_request *items;
+    size_t count;
+} app_shortcut_requests;
+
 typedef struct app_shortcut_entry {
     uint32_t id;
     char *session;
@@ -29,7 +34,7 @@ typedef struct app_shortcut_entry {
 app_shortcuts *app_shortcuts_create(void);
 void app_shortcuts_destroy(app_shortcuts *shortcuts);
 void app_shortcuts_bind(app_shortcuts *shortcuts, const char *session,
-                        const app_shortcut_request *requests, size_t count);
+                        app_shortcut_requests requests);
 bool app_shortcuts_drop_session(app_shortcuts *shortcuts, const char *session);
 size_t app_shortcuts_count(const app_shortcuts *shortcuts);
 const app_shortcut_entry *app_shortcuts_at(const app_shortcuts *shortcuts, size_t index);

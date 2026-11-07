@@ -13,15 +13,14 @@ static void maximize_action(wm_desktop *desktop, wm_window *window);
 static void clear_hover(wm_desktop *desktop);
 static wm_part hovered_part(const wm_pointer_event *event);
 
-void frame_buttons_press(wm_desktop *desktop, wm_window *window, wm_button button,
-                         uint32_t mouse_button)
+void frame_buttons_press(wm_desktop *desktop, wm_button button, const wm_button_event *event)
 {
     frame_buttons_state *state = &desktop->buttons;
     state->pressing = true;
-    state->window = window;
+    state->window = event->pointer.target.window;
     state->button = button;
-    state->mouse_button = mouse_button;
-    set_status(window, button, WM_BUTTON_PRESSED);
+    state->mouse_button = event->button;
+    set_status(state->window, button, WM_BUTTON_PRESSED);
 }
 
 bool frame_buttons_is_pressing(const wm_desktop *desktop)

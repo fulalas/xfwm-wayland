@@ -21,9 +21,19 @@ static const vblank_name vblank_names[] = {
 };
 static const char default_session_command[] = "xfce4-session";
 
+typedef struct arg_reader {
+    int count;
+    char **args;
+    int index;
+} arg_reader;
+
+static void bind_text_domains(void);
+static int run(const app_options *options);
 static bool parse_options(int argc, char **argv, app_options *options);
+static bool parse_option(arg_reader *reader, app_options *options);
+static bool parse_flag(const char *arg, app_options *options);
 static bool finish_options(app_options *options);
-static const char *option_value(int argc, char **argv, int *i, const char *short_name,
+static const char *option_value(arg_reader *reader, const char *short_name,
                                 const char *long_name);
 static bool parse_compositing(const char *value, app_options *options);
 static bool parse_vblank(const char *value, app_options *options);
@@ -31,14 +41,8 @@ static bool parse_vblank(const char *value, app_options *options);
 int main(int argc, char **argv)
 {
     app_options options = { 0 };
-    app *app;
-    int status;
 
-    setlocale(LC_ALL, "");
-    bindtextdomain("xfwm4", APP_LOCALE_DIR);
-    bind_textdomain_codeset("xfwm4", "UTF-8");
-    bindtextdomain(APP_TEXT_DOMAIN, APP_LOCALE_DIR);
-    bind_textdomain_codeset(APP_TEXT_DOMAIN, "UTF-8");
+    bind_text_domains();
     if (!parse_options(argc, argv, &options)) {
         fputs(usage, stderr);
         return EXIT_FAILURE;
@@ -47,10 +51,25 @@ int main(int argc, char **argv)
         printf("xfwm-wayland %s\n", APP_VERSION);
         return EXIT_SUCCESS;
     }
+    return run(&options);
+}
+
+static void bind_text_domains(void)
+{
+    setlocale(LC_ALL, "");
+    bindtextdomain("xfwm4", APP_LOCALE_DIR);
+    bind_textdomain_codeset("xfwm4", "UTF-8");
+    bindtextdomain(APP_TEXT_DOMAIN, APP_LOCALE_DIR);
+    bind_textdomain_codeset(APP_TEXT_DOMAIN, "UTF-8");
+}
+
+static int run(const app_options *options)
+{
     app_realtime_start();
     GPid bus = app_session_bus_start();
-    app = app_create(&options);
-    status = app ? app_run(app) : EXIT_FAILURE;
+    app *app = app_create(options);
+    int status = app ? app_run(app) : EXIT_FAILURE;
+
     if (app) {
         app_destroy(app);
     }
@@ -65,39 +84,46 @@ static bool is_option(const char *arg, const char *short_name, const char *long_
 
 static bool parse_options(int argc, char **argv, app_options *options)
 {
-    for (int i = 1; i < argc; i++) {
-        if (is_option(argv[i], "-V", "--version")) {
-            options->show_version = true;
-            continue;
+    arg_reader reader = { argc, argv, 1 };
+
+    for (; reader.index < reader.count; reader.index++) {
+        if (!parse_option(&reader, options)) {
+            return false;
         }
-        if (is_option(argv[i], "-s", "--startup") && i + 1 < argc) {
-            options->startup_command = argv[++i];
-            continue;
-        }
-        if (is_option(argv[i], "-n", "--no-session")) {
-            options->no_session = true;
-            continue;
-        }
-        if (is_option(argv[i], "-r", "--replace")) {
-            continue;
-        }
-        const char *compositing = option_value(argc, argv, &i, "-c", "--compositor");
-        if (compositing != NULL) {
-            if (!parse_compositing(compositing, options)) {
-                return false;
-            }
-            continue;
-        }
-        const char *vblank = option_value(argc, argv, &i, "-b", "--vblank");
-        if (vblank != NULL) {
-            if (!parse_vblank(vblank, options)) {
-                return false;
-            }
-            continue;
-        }
-        return false;
     }
     return finish_options(options);
+}
+
+static bool parse_option(arg_reader *reader, app_options *options)
+{
+    const char *arg = reader->args[reader->index];
+
+    if (parse_flag(arg, options)) {
+        return true;
+    }
+    if (is_option(arg, "-s", "--startup") && reader->index + 1 < reader->count) {
+        options->startup_command = reader->args[++reader->index];
+        return true;
+    }
+    const char *compositing = option_value(reader, "-c", "--compositor");
+    if (compositing != NULL) {
+        return parse_compositing(compositing, options);
+    }
+    const char *vblank = option_value(reader, "-b", "--vblank");
+    return vblank != NULL && parse_vblank(vblank, options);
+}
+
+static bool parse_flag(const char *arg, app_options *options)
+{
+    if (is_option(arg, "-V", "--version")) {
+        options->show_version = true;
+        return true;
+    }
+    if (is_option(arg, "-n", "--no-session")) {
+        options->no_session = true;
+        return true;
+    }
+    return is_option(arg, "-r", "--replace");
 }
 
 static bool finish_options(app_options *options)
@@ -111,16 +137,16 @@ static bool finish_options(app_options *options)
     return true;
 }
 
-static const char *option_value(int argc, char **argv, int *i, const char *short_name,
+static const char *option_value(arg_reader *reader, const char *short_name,
                                 const char *long_name)
 {
-    const char *arg = argv[*i];
+    const char *arg = reader->args[reader->index];
     size_t long_length = strlen(long_name);
     if (strncmp(arg, long_name, long_length) == 0 && arg[long_length] == '=') {
         return arg + long_length + 1;
     }
-    if (is_option(arg, short_name, long_name) && *i + 1 < argc) {
-        return argv[++*i];
+    if (is_option(arg, short_name, long_name) && reader->index + 1 < reader->count) {
+        return reader->args[++reader->index];
     }
     return NULL;
 }

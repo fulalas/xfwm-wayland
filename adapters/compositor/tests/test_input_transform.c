@@ -2,7 +2,7 @@
 
 #include "check.h"
 #include "compositor/services.h"
-#include "input_transform.h"
+#include "input/input_transform.h"
 
 enum {
     CORNER_COUNT = 4,

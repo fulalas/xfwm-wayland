@@ -2,16 +2,21 @@
 
 #include <stdlib.h>
 
-int check_failures;
+static int failures;
+
+void check_fail(void)
+{
+    failures++;
+}
 
 int check_run(const check_case *cases, size_t count)
 {
     size_t failed_cases = 0;
 
     for (size_t i = 0; i < count; i++) {
-        int before = check_failures;
+        int before = failures;
         cases[i].run();
-        if (check_failures != before) {
+        if (failures != before) {
             fprintf(stderr, "FAIL %s\n", cases[i].name);
             failed_cases++;
         }

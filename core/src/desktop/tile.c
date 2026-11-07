@@ -18,16 +18,21 @@ typedef struct tile_request {
     bool restore_position;
 } tile_request;
 
+typedef struct tile_fit {
+    bool fits;
+    wm_rect client;
+} tile_fit;
+
 static bool tile(wm_desktop *desktop, wm_window *window, const tile_request *request);
-static bool tile_rect(const wm_desktop *desktop, const wm_window *window,
-                      const tile_request *request, wm_rect *client);
+static tile_fit tile_rect(const wm_desktop *desktop, const wm_window *window,
+                          const tile_request *request);
 static wm_rect tile_frame(const wm_rect *full, tile_mode mode);
 static wm_point span(int start, int length, int part);
 static bool tile_window(wm_desktop *desktop, wm_window *window, tile_mode mode);
 
-bool tile_window_at(wm_desktop *desktop, wm_window *window, wm_point point, tile_mode mode)
+bool tile_window_at(wm_desktop *desktop, wm_window *window, const tile_placement *placement)
 {
-    tile_request request = {point, mode, false};
+    tile_request request = {placement->point, placement->mode, false};
     return tile(desktop, window, &request);
 }
 
@@ -48,9 +53,9 @@ void tile_update_size(wm_desktop *desktop, wm_window *window)
         return;
     }
     tile_request request = {frame_center(desktop, window), window->tile, false};
-    wm_rect client;
-    if (tile_rect(desktop, window, &request, &client)) {
-        window->client = client;
+    tile_fit fit = tile_rect(desktop, window, &request);
+    if (fit.fits) {
+        window->client = fit.client;
         window_mark_dirty(window);
     }
 }
@@ -65,29 +70,31 @@ static bool tile(wm_desktop *desktop, wm_window *window, const tile_request *req
     }
     uint32_t old_states = window->states;
     window->states &= ~(uint32_t) WM_STATE_MAXIMIZED;
-    wm_rect client;
-    if (!tile_rect(desktop, window, request, &client)) {
+    tile_fit fit = tile_rect(desktop, window, request);
+    if (!fit.fits) {
         window->states = old_states;
         return false;
     }
     window->restore_size_pos = true;
     window->tile = request->mode;
-    window->client = client;
+    window->client = fit.client;
     window_mark_dirty(window);
     return true;
 }
 
-static bool tile_rect(const wm_desktop *desktop, const wm_window *window,
-                      const tile_request *request, wm_rect *client)
+static tile_fit tile_rect(const wm_desktop *desktop, const wm_window *window,
+                          const tile_request *request)
 {
+    tile_fit fit = {false, {0, 0, 0, 0}};
     wm_rect full = monitors_work_area_at(desktop, request->point);
     wm_rect frame = tile_frame(&full, request->mode);
     if (frame.width == 0 && frame.height == 0) {
-        return false;
+        return fit;
     }
     wm_extents extents = frame_extents(desktop, window);
-    *client = wm_rect_shrink(&frame, &extents);
-    return size_hints_allow(window, (wm_size) {client->width, client->height});
+    fit.client = wm_rect_shrink(&frame, &extents);
+    fit.fits = size_hints_allow(window, (wm_size) {fit.client.width, fit.client.height});
+    return fit;
 }
 
 static wm_rect tile_frame(const wm_rect *full, tile_mode mode)

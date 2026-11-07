@@ -20,7 +20,9 @@ typedef struct window_action {
 } window_action;
 
 static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *event);
+static void send_app_shortcut(wm_desktop *desktop, const wm_app_shortcut_event *event);
 static bool is_grab_only(wm_action action);
+static void run_action(wm_desktop *desktop, wm_action action);
 static bool is_window_action(wm_action action);
 static void run_focused(wm_desktop *desktop, wm_window *window, wm_action action);
 static void run_unfocused(wm_desktop *desktop, wm_action action);
@@ -100,14 +102,7 @@ wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
     if (is_grab_only(action)) {
         return WM_FORWARD;
     }
-    wm_window *focused = desktop->focus.focused;
-    if (is_window_action(action) && focused != NULL) {
-        run_focused(desktop, focused, action);
-    } else if (is_window_action(action)) {
-        run_unfocused(desktop, action);
-    } else {
-        actions_run_global(desktop, action);
-    }
+    run_action(desktop, action);
     return WM_CONSUMED;
 }
 
@@ -118,8 +113,7 @@ wm_dispatch actions_release_key(wm_desktop *desktop, const wm_key_event *event)
         return WM_FORWARD;
     }
     desktop->held_app_shortcut = 0;
-    wm_commands *commands = &desktop->ports.commands;
-    commands->app_shortcut(commands->self, id, false, event->time_ms);
+    send_app_shortcut(desktop, &(wm_app_shortcut_event) {id, WM_SHORTCUT_RELEASED, event->time_ms});
     return WM_CONSUMED;
 }
 
@@ -129,13 +123,14 @@ static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *e
     if (shortcut == NULL) {
         return WM_FORWARD;
     }
-    wm_commands *commands = &desktop->ports.commands;
     if (desktop->held_app_shortcut != 0) {
-        commands->app_shortcut(commands->self, desktop->held_app_shortcut, false, event->time_ms);
+        send_app_shortcut(desktop, &(wm_app_shortcut_event) {desktop->held_app_shortcut,
+                                                             WM_SHORTCUT_RELEASED, event->time_ms});
     }
     desktop->held_app_shortcut = shortcut->id;
     desktop->held_app_shortcut_keysym = event->keysym;
-    commands->app_shortcut(commands->self, shortcut->id, true, event->time_ms);
+    send_app_shortcut(desktop, &(wm_app_shortcut_event) {shortcut->id, WM_SHORTCUT_PRESSED,
+                                                         event->time_ms});
     return WM_CONSUMED;
 }
 
@@ -143,6 +138,18 @@ static bool is_grab_only(wm_action action)
 {
     return action == WM_ACTION_CANCEL || action == WM_ACTION_UP || action == WM_ACTION_DOWN
            || action == WM_ACTION_LEFT || action == WM_ACTION_RIGHT;
+}
+
+static void run_action(wm_desktop *desktop, wm_action action)
+{
+    wm_window *focused = desktop->focus.focused;
+    if (is_window_action(action) && focused != NULL) {
+        run_focused(desktop, focused, action);
+    } else if (is_window_action(action)) {
+        run_unfocused(desktop, action);
+    } else {
+        actions_run_global(desktop, action);
+    }
 }
 
 static bool is_window_action(wm_action action)
@@ -257,20 +264,26 @@ static void carry_to_previous(wm_desktop *desktop, wm_window *window)
 
 static void carry_left(wm_desktop *desktop, wm_window *window)
 {
-    workspaces_move(desktop, 0, -1, window);
+    workspaces_move(desktop, DIRECTION_LEFT, window);
 }
 
 static void carry_right(wm_desktop *desktop, wm_window *window)
 {
-    workspaces_move(desktop, 0, 1, window);
+    workspaces_move(desktop, DIRECTION_RIGHT, window);
 }
 
 static void carry_up(wm_desktop *desktop, wm_window *window)
 {
-    workspaces_move(desktop, -1, 0, window);
+    workspaces_move(desktop, DIRECTION_UP, window);
 }
 
 static void carry_down(wm_desktop *desktop, wm_window *window)
 {
-    workspaces_move(desktop, 1, 0, window);
+    workspaces_move(desktop, DIRECTION_DOWN, window);
+}
+
+static void send_app_shortcut(wm_desktop *desktop, const wm_app_shortcut_event *event)
+{
+    wm_commands *commands = &desktop->ports.commands;
+    commands->app_shortcut(commands->self, event);
 }

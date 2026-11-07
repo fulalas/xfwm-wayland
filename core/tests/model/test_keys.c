@@ -87,20 +87,21 @@ static void test_typing_keys_are_not_global(void)
     CHECK(!wm_key_is_global(&shift));
 }
 
+static const check_case CASES[] = {
+    {"plain_names_map_to_actions", test_plain_names_map_to_actions},
+    {"monitor_and_workspace_moves_are_distinct",
+     test_monitor_and_workspace_moves_are_distinct},
+    {"old_move_aliases_move_to_workspace", test_old_move_aliases_move_to_workspace},
+    {"numbered_workspace_names", test_numbered_workspace_names},
+    {"numbered_move_to_workspace_names", test_numbered_move_to_workspace_names},
+    {"out_of_range_workspace_numbers_are_unknown",
+     test_out_of_range_workspace_numbers_are_unknown},
+    {"unknown_names_map_to_none", test_unknown_names_map_to_none},
+    {"global_keys_are_special_or_modified", test_global_keys_are_special_or_modified},
+    {"typing_keys_are_not_global", test_typing_keys_are_not_global},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"plain_names_map_to_actions", test_plain_names_map_to_actions},
-        {"monitor_and_workspace_moves_are_distinct",
-         test_monitor_and_workspace_moves_are_distinct},
-        {"old_move_aliases_move_to_workspace", test_old_move_aliases_move_to_workspace},
-        {"numbered_workspace_names", test_numbered_workspace_names},
-        {"numbered_move_to_workspace_names", test_numbered_move_to_workspace_names},
-        {"out_of_range_workspace_numbers_are_unknown",
-         test_out_of_range_workspace_numbers_are_unknown},
-        {"unknown_names_map_to_none", test_unknown_names_map_to_none},
-        {"global_keys_are_special_or_modified", test_global_keys_are_special_or_modified},
-        {"typing_keys_are_not_global", test_typing_keys_are_not_global},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

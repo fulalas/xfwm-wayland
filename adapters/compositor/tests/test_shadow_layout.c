@@ -1,5 +1,5 @@
 #include "check.h"
-#include "shadow_layout.h"
+#include "decor/shadow_layout.h"
 
 static const shadow_geometry image = {{25, 25}, 12};
 

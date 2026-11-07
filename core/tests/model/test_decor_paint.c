@@ -236,34 +236,35 @@ static void test_right_menu_slice_is_offset_from_title_end(void)
     CHECK_INT_EQ(8, slice->origin.x);
 }
 
+static const check_case CASES[] = {
+    {"ops_follow_xfwm4_paint_order", test_ops_follow_xfwm4_paint_order},
+    {"sides_tile_from_their_origin", test_sides_tile_from_their_origin},
+    {"title_parts_tile_from_part_start", test_title_parts_tile_from_part_start},
+    {"top_strip_reuses_title_parts", test_top_strip_reuses_title_parts},
+    {"top_strip_prefers_top_pixmaps", test_top_strip_prefers_top_pixmaps},
+    {"top_strip_height_from_top_pixmap", test_top_strip_height_from_top_pixmap},
+    {"top_strip_height_from_border_top", test_top_strip_height_from_border_top},
+    {"tall_text_removes_top_strip", test_tall_text_removes_top_strip},
+    {"corners_are_drawn_once_at_frame_corners", test_corners_are_drawn_once_at_frame_corners},
+    {"corner_stretch_replaces_corner", test_corner_stretch_replaces_corner},
+    {"side_stretch_scales_along_the_side", test_side_stretch_scales_along_the_side},
+    {"title_stretch_replaces_title_parts", test_title_stretch_replaces_title_parts},
+    {"title_stretch_clips_text_before_right_edge",
+     test_title_stretch_clips_text_before_right_edge},
+    {"shaded_frame_skips_left_and_right", test_shaded_frame_skips_left_and_right},
+    {"shaded_frame_trims_corners_taller_than_frame",
+     test_shaded_frame_trims_corners_taller_than_frame},
+    {"maximized_borderless_has_no_sides_or_corners",
+     test_maximized_borderless_has_no_sides_or_corners},
+    {"app_icon_is_painted_over_menu_button", test_app_icon_is_painted_over_menu_button},
+    {"no_app_icon_without_menu_pixmap", test_no_app_icon_without_menu_pixmap},
+    {"app_icon_on_stretched_title_uses_title_slice",
+     test_app_icon_on_stretched_title_uses_title_slice},
+    {"right_menu_slice_is_offset_from_title_end",
+     test_right_menu_slice_is_offset_from_title_end},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"ops_follow_xfwm4_paint_order", test_ops_follow_xfwm4_paint_order},
-        {"sides_tile_from_their_origin", test_sides_tile_from_their_origin},
-        {"title_parts_tile_from_part_start", test_title_parts_tile_from_part_start},
-        {"top_strip_reuses_title_parts", test_top_strip_reuses_title_parts},
-        {"top_strip_prefers_top_pixmaps", test_top_strip_prefers_top_pixmaps},
-        {"top_strip_height_from_top_pixmap", test_top_strip_height_from_top_pixmap},
-        {"top_strip_height_from_border_top", test_top_strip_height_from_border_top},
-        {"tall_text_removes_top_strip", test_tall_text_removes_top_strip},
-        {"corners_are_drawn_once_at_frame_corners", test_corners_are_drawn_once_at_frame_corners},
-        {"corner_stretch_replaces_corner", test_corner_stretch_replaces_corner},
-        {"side_stretch_scales_along_the_side", test_side_stretch_scales_along_the_side},
-        {"title_stretch_replaces_title_parts", test_title_stretch_replaces_title_parts},
-        {"title_stretch_clips_text_before_right_edge",
-         test_title_stretch_clips_text_before_right_edge},
-        {"shaded_frame_skips_left_and_right", test_shaded_frame_skips_left_and_right},
-        {"shaded_frame_trims_corners_taller_than_frame",
-         test_shaded_frame_trims_corners_taller_than_frame},
-        {"maximized_borderless_has_no_sides_or_corners",
-         test_maximized_borderless_has_no_sides_or_corners},
-        {"app_icon_is_painted_over_menu_button", test_app_icon_is_painted_over_menu_button},
-        {"no_app_icon_without_menu_pixmap", test_no_app_icon_without_menu_pixmap},
-        {"app_icon_on_stretched_title_uses_title_slice",
-         test_app_icon_on_stretched_title_uses_title_slice},
-        {"right_menu_slice_is_offset_from_title_end",
-         test_right_menu_slice_is_offset_from_title_end},
-    };
-    return check_run(cases, sizeof cases / sizeof cases[0]);
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

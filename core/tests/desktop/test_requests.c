@@ -99,17 +99,18 @@ static void test_workspace_request_out_of_range_is_ignored(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"minimize_sends_no_configure", test_minimize_sends_no_configure},
+    {"refused_maximize_still_answers", test_refused_maximize_still_answers},
+    {"maximize_directions_are_absolute", test_maximize_directions_are_absolute},
+    {"appearance_presents_each_window_once", test_appearance_presents_each_window_once},
+    {"workspace_request_moves_window", test_workspace_request_moves_window},
+    {"workspace_request_unsticks_window", test_workspace_request_unsticks_window},
+    {"workspace_request_out_of_range_is_ignored",
+     test_workspace_request_out_of_range_is_ignored},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"minimize_sends_no_configure", test_minimize_sends_no_configure},
-        {"refused_maximize_still_answers", test_refused_maximize_still_answers},
-        {"maximize_directions_are_absolute", test_maximize_directions_are_absolute},
-        {"appearance_presents_each_window_once", test_appearance_presents_each_window_once},
-        {"workspace_request_moves_window", test_workspace_request_moves_window},
-        {"workspace_request_unsticks_window", test_workspace_request_unsticks_window},
-        {"workspace_request_out_of_range_is_ignored",
-         test_workspace_request_out_of_range_is_ignored},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

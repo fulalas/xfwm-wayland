@@ -5,6 +5,14 @@
 
 static const double pixel_epsilon = 1e-6;
 
+typedef struct device_box {
+    double left;
+    double top;
+    double right;
+    double bottom;
+} device_box;
+
+static device_box fitted_box(cairo_t *cr, const wm_rect *rect, wm_size size);
 static int pixels(int logical, double scale);
 static int logical_length(int pixels, double scale);
 static double fill_factor(int pixel_count, int logical);
@@ -56,23 +64,32 @@ void appearance_canvas_paint_fitted(cairo_t *cr, const canvas_image *image)
     if (wm_size_is_empty(size)) {
         return;
     }
-    double zoom = fmin((double) rect->width / size.width, (double) rect->height / size.height);
-    double left = rect->x + (rect->width - size.width * zoom) / 2.0;
-    double top = rect->y + (rect->height - size.height * zoom) / 2.0;
-    double right = left + size.width * zoom;
-    double bottom = top + size.height * zoom;
-    cairo_user_to_device(cr, &left, &top);
-    cairo_user_to_device(cr, &right, &bottom);
-    left = round(left);
-    top = round(top);
+    device_box box = fitted_box(cr, rect, size);
     cairo_save(cr);
     cairo_identity_matrix(cr);
-    cairo_translate(cr, left, top);
-    cairo_scale(cr, fmax(round(right) - left, 1.0) / size.width,
-                fmax(round(bottom) - top, 1.0) / size.height);
+    cairo_translate(cr, box.left, box.top);
+    cairo_scale(cr, fmax(round(box.right) - box.left, 1.0) / size.width,
+                fmax(round(box.bottom) - box.top, 1.0) / size.height);
     cairo_set_source_surface(cr, image->surface, 0, 0);
     cairo_paint_with_alpha(cr, image->alpha);
     cairo_restore(cr);
+}
+
+static device_box fitted_box(cairo_t *cr, const wm_rect *rect, wm_size size)
+{
+    double zoom = fmin((double) rect->width / size.width, (double) rect->height / size.height);
+    device_box box = {
+        .left = rect->x + (rect->width - size.width * zoom) / 2.0,
+        .top = rect->y + (rect->height - size.height * zoom) / 2.0,
+    };
+
+    box.right = box.left + size.width * zoom;
+    box.bottom = box.top + size.height * zoom;
+    cairo_user_to_device(cr, &box.left, &box.top);
+    cairo_user_to_device(cr, &box.right, &box.bottom);
+    box.left = round(box.left);
+    box.top = round(box.top);
+    return box;
 }
 
 wm_size appearance_surface_size(cairo_surface_t *surface)

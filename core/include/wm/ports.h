@@ -33,6 +33,17 @@ typedef struct wm_presenter {
     void (*busy_changed)(void *self, bool busy);
 } wm_presenter;
 
+typedef enum wm_shortcut_state {
+    WM_SHORTCUT_PRESSED,
+    WM_SHORTCUT_RELEASED,
+} wm_shortcut_state;
+
+typedef struct wm_app_shortcut_event {
+    uint32_t id;
+    wm_shortcut_state state;
+    uint32_t time_ms;
+} wm_app_shortcut_event;
+
 typedef struct wm_commands {
     void *self;
     void (*configure)(void *self, void *window, const wm_rect *client);
@@ -40,7 +51,7 @@ typedef struct wm_commands {
     void (*ask_terminate)(void *self, void *window);
     void (*warp_pointer)(void *self, wm_point point);
     void (*spawn)(void *self, const char *command);
-    void (*app_shortcut)(void *self, uint32_t id, bool pressed, uint32_t time_ms);
+    void (*app_shortcut)(void *self, const wm_app_shortcut_event *event);
     void (*logout)(void *self);
     void (*store_workspace_count)(void *self, int count);
     void (*store_workspace_names)(void *self, const char *const *names, size_t count);
@@ -55,8 +66,7 @@ typedef struct wm_environment {
     wm_point (*pointer_position)(void *self);
     uint32_t (*now_ms)(void *self);
     wm_size (*measure_title)(void *self, const char *text);
-    bool (*menu_item_matches_key)(void *self, const wm_menu_level *level, size_t index,
-                                  uint32_t keysym);
+    bool (*menu_item_matches_key)(void *self, const wm_menu_entry *entry, uint32_t keysym);
 } wm_environment;
 
 typedef struct wm_ports {

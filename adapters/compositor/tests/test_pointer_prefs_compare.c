@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "check.h"
-#include "pointer_prefs_compare.h"
+#include "input/pointer_prefs_compare.h"
 
 static void test_unset_prefs_are_equal(void)
 {

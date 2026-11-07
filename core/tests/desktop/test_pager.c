@@ -163,21 +163,22 @@ static void test_highlight_ends_when_window_unmaps(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"workspace_id_follows_workspace", test_workspace_id_follows_workspace},
+    {"send_to_monitor_moves_window", test_send_to_monitor_moves_window},
+    {"send_to_current_monitor_keeps_window", test_send_to_current_monitor_keeps_window},
+    {"keyboard_move_starts_at_window_center", test_keyboard_move_starts_at_window_center},
+    {"keyboard_move_ignores_hidden_window", test_keyboard_move_ignores_hidden_window},
+    {"keyboard_resize_starts_resize", test_keyboard_resize_starts_resize},
+    {"highlight_outlines_frame", test_highlight_outlines_frame},
+    {"unhighlight_hides_outline", test_unhighlight_hides_outline},
+    {"highlight_moves_to_new_window", test_highlight_moves_to_new_window},
+    {"highlight_follows_window", test_highlight_follows_window},
+    {"highlight_hidden_while_minimized", test_highlight_hidden_while_minimized},
+    {"highlight_ends_when_window_unmaps", test_highlight_ends_when_window_unmaps},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"workspace_id_follows_workspace", test_workspace_id_follows_workspace},
-        {"send_to_monitor_moves_window", test_send_to_monitor_moves_window},
-        {"send_to_current_monitor_keeps_window", test_send_to_current_monitor_keeps_window},
-        {"keyboard_move_starts_at_window_center", test_keyboard_move_starts_at_window_center},
-        {"keyboard_move_ignores_hidden_window", test_keyboard_move_ignores_hidden_window},
-        {"keyboard_resize_starts_resize", test_keyboard_resize_starts_resize},
-        {"highlight_outlines_frame", test_highlight_outlines_frame},
-        {"unhighlight_hides_outline", test_unhighlight_hides_outline},
-        {"highlight_moves_to_new_window", test_highlight_moves_to_new_window},
-        {"highlight_follows_window", test_highlight_follows_window},
-        {"highlight_hidden_while_minimized", test_highlight_hidden_while_minimized},
-        {"highlight_ends_when_window_unmaps", test_highlight_ends_when_window_unmaps},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

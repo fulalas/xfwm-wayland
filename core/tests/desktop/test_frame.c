@@ -165,9 +165,9 @@ static void test_title_scroll_shades(void)
     wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_window *window = fake_map(desktop, 1, small);
     fake_click title = fake_on_part(window, WM_PART_TITLE, 0);
-    fake_scroll(&world, desktop, &title, -1);
+    fake_scroll(&world, &title, -1);
     CHECK(wm_window_current_view(window).shaded);
-    fake_scroll(&world, desktop, &title, 1);
+    fake_scroll(&world, &title, 1);
     CHECK(!wm_window_current_view(window).shaded);
     wm_desktop_destroy(desktop);
 }
@@ -181,7 +181,7 @@ static void test_easy_click_scroll_on_title_changes_opacity(void)
     wm_window *window = fake_map(desktop, 1, small);
     fake_click title = fake_on_part(window, WM_PART_TITLE, 0);
     title.modifiers = WM_MOD_ALT;
-    fake_scroll(&world, desktop, &title, 1);
+    fake_scroll(&world, &title, 1);
     CHECK_DOUBLE_NEAR(1.0 - 0x16000000 / 4294967295.0,
                       wm_window_current_view(window).opacity.content, 1e-6);
     wm_desktop_destroy(desktop);
@@ -218,7 +218,7 @@ static void test_easy_click_right_resizes_nearest_edge(void)
     wm_config config = fake_config();
     wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_window *window = fake_map(desktop, 1, small);
-    fake_click where = {WM_TARGET_CLIENT, window, {1150, 540}, WM_MOUSE_RIGHT, WM_MOD_ALT};
+    fake_click where = {WM_TARGET_CLIENT, window, {1150, 540}, WM_MOUSE_RIGHT, WM_MOD_ALT, -1};
     fake_press(&world, desktop, &where);
     where.point.x += 40;
     fake_motion(&world, desktop, &where);
@@ -227,26 +227,27 @@ static void test_easy_click_right_resizes_nearest_edge(void)
     wm_desktop_destroy(desktop);
 }
 
+static const check_case CASES[] = {
+    {"double_click_on_title_maximizes", test_double_click_on_title_maximizes},
+    {"slow_clicks_do_not_maximize", test_slow_clicks_do_not_maximize},
+    {"close_button_acts_on_release_over_it", test_close_button_acts_on_release_over_it},
+    {"close_button_release_elsewhere_cancels",
+     test_close_button_release_elsewhere_cancels},
+    {"middle_click_maximize_button_is_vertical",
+     test_middle_click_maximize_button_is_vertical},
+    {"hover_uses_prelight_image", test_hover_uses_prelight_image},
+    {"menu_button_opens_menu_after_click", test_menu_button_opens_menu_after_click},
+    {"double_click_menu_button_closes", test_double_click_menu_button_closes},
+    {"right_click_on_title_opens_menu", test_right_click_on_title_opens_menu},
+    {"title_scroll_shades", test_title_scroll_shades},
+    {"easy_click_scroll_on_title_changes_opacity",
+     test_easy_click_scroll_on_title_changes_opacity},
+    {"corner_hover_sets_resize_cursor", test_corner_hover_sets_resize_cursor},
+    {"double_click_on_side_fills", test_double_click_on_side_fills},
+    {"easy_click_right_resizes_nearest_edge", test_easy_click_right_resizes_nearest_edge},
+};
+
 int main(void)
 {
-    static const check_case cases[] = {
-        {"double_click_on_title_maximizes", test_double_click_on_title_maximizes},
-        {"slow_clicks_do_not_maximize", test_slow_clicks_do_not_maximize},
-        {"close_button_acts_on_release_over_it", test_close_button_acts_on_release_over_it},
-        {"close_button_release_elsewhere_cancels",
-         test_close_button_release_elsewhere_cancels},
-        {"middle_click_maximize_button_is_vertical",
-         test_middle_click_maximize_button_is_vertical},
-        {"hover_uses_prelight_image", test_hover_uses_prelight_image},
-        {"menu_button_opens_menu_after_click", test_menu_button_opens_menu_after_click},
-        {"double_click_menu_button_closes", test_double_click_menu_button_closes},
-        {"right_click_on_title_opens_menu", test_right_click_on_title_opens_menu},
-        {"title_scroll_shades", test_title_scroll_shades},
-        {"easy_click_scroll_on_title_changes_opacity",
-         test_easy_click_scroll_on_title_changes_opacity},
-        {"corner_hover_sets_resize_cursor", test_corner_hover_sets_resize_cursor},
-        {"double_click_on_side_fills", test_double_click_on_side_fills},
-        {"easy_click_right_resizes_nearest_edge", test_easy_click_right_resizes_nearest_edge},
-    };
-    return check_run(cases, sizeof(cases) / sizeof(cases[0]));
+    return check_run(CASES, sizeof(CASES) / sizeof(CASES[0]));
 }

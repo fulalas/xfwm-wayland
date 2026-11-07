@@ -22,6 +22,7 @@ typedef struct listener {
 static void read_next(listener *listener);
 static void on_line(GObject *source, GAsyncResult *result, void *data);
 static void handle_line(listener *listener, const char *line);
+static void handle_icon(listener *listener, char **fields);
 static void write_field(const char *text);
 
 void protocol_listen(const request_handler *handler)
@@ -72,26 +73,27 @@ static void on_line(GObject *source, GAsyncResult *result, void *data)
 static void handle_line(listener *listener, const char *line)
 {
     char **fields = g_strsplit(line, "\t", ICON_FIELD_COUNT + 1);
-    char *app_id;
-    char *icon_name;
-    icon_query query;
 
-    if (g_strv_length(fields) != ICON_FIELD_COUNT || strcmp(fields[0], "icon") != 0) {
-        g_strfreev(fields);
-        return;
+    if (g_strv_length(fields) == ICON_FIELD_COUNT && strcmp(fields[0], "icon") == 0) {
+        handle_icon(listener, fields);
     }
-    app_id = protocol_unescape(fields[3]);
-    icon_name = protocol_unescape(fields[4]);
-    query = (icon_query) {
+    g_strfreev(fields);
+}
+
+static void handle_icon(listener *listener, char **fields)
+{
+    char *app_id = protocol_unescape(fields[3]);
+    char *icon_name = protocol_unescape(fields[4]);
+    icon_query query = {
         .id = (unsigned) strtoul(fields[1], NULL, DECIMAL),
         .size = atoi(fields[2]),
         .app_id = app_id,
         .icon_name = icon_name,
     };
+
     listener->handler.icon(listener->handler.self, &query);
     g_free(app_id);
     g_free(icon_name);
-    g_strfreev(fields);
 }
 
 static void write_field(const char *text)

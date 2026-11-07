@@ -1,6 +1,6 @@
 #include "wm/geometry.h"
 
-static int segment_overlap_length(int start_a, int end_a, int start_b, int end_b);
+static int segment_overlap_length(wm_segment a, wm_segment b);
 
 bool wm_rect_is_empty(const wm_rect *rect)
 {
@@ -59,8 +59,8 @@ long wm_rect_overlap_area(const wm_rect *a, const wm_rect *b)
     if (wm_rect_is_empty(a) || wm_rect_is_empty(b)) {
         return 0;
     }
-    int width = segment_overlap_length(a->x, wm_rect_right(a), b->x, wm_rect_right(b));
-    int height = segment_overlap_length(a->y, wm_rect_bottom(a), b->y, wm_rect_bottom(b));
+    int width = segment_overlap_length(wm_rect_columns(a), wm_rect_columns(b));
+    int height = segment_overlap_length(wm_rect_rows(a), wm_rect_rows(b));
     return (long) width * (long) height;
 }
 
@@ -89,9 +89,24 @@ wm_rect wm_rect_grow(const wm_rect *rect, const wm_extents *extents)
     };
 }
 
-bool wm_segments_overlap(int start_a, int end_a, int start_b, int end_b)
+wm_segment wm_rect_columns(const wm_rect *rect)
 {
-    return segment_overlap_length(start_a, end_a, start_b, end_b) > 0;
+    return (wm_segment) {rect->x, wm_rect_right(rect)};
+}
+
+wm_segment wm_rect_rows(const wm_rect *rect)
+{
+    return (wm_segment) {rect->y, wm_rect_bottom(rect)};
+}
+
+bool wm_segments_overlap(wm_segment a, wm_segment b)
+{
+    return segment_overlap_length(a, b) > 0;
+}
+
+bool wm_segments_touch(wm_segment a, wm_segment b)
+{
+    return a.start <= b.end && a.end >= b.start;
 }
 
 int wm_clamp(int value, int min, int max)
@@ -125,9 +140,9 @@ bool wm_size_is_empty(wm_size size)
     return size.width <= 0 || size.height <= 0;
 }
 
-static int segment_overlap_length(int start_a, int end_a, int start_b, int end_b)
+static int segment_overlap_length(wm_segment a, wm_segment b)
 {
-    int start = wm_max(start_a, start_b);
-    int end = wm_min(end_a, end_b);
+    int start = wm_max(a.start, b.start);
+    int end = wm_min(a.end, b.end);
     return end > start ? end - start : 0;
 }
