@@ -13,7 +13,7 @@ It supports:
 * HDR10, switched on and off without logging out, with a brightness slider
 * 10-bit color, variable refresh rate, and tearing (frames shown without
   waiting for the screen refresh, for lower input lag) in fullscreen
-  applications that ask for it
+  programs that ask for it
 * Xfce display profiles, fractional scaling and multiple monitors
 * screenshots and screen sharing (through `xdg-desktop-portal-wlr`),
   touchscreens, drawing tablets and VR headsets
@@ -24,8 +24,8 @@ It supports:
 
 [Xfwl4](https://gitlab.xfce.org/xfce/xfwl4/), the official Xfce Wayland compositor, only started
 development in January 2026 and is still not ready for daily use. Also,
-some differences seem to be intrinsic to the project so it doesn't seem
-it's going to change.
+some differences seem intrinsic to the project, so they're unlikely to
+change.
 
 Here's a quick comparison:
 
@@ -66,8 +66,8 @@ Pick "Xfce Session (xfwm-wayland)" at login, or start Xfce manually:
 
     startxfce4 --wayland xfwm-wayland
 
-Login managers remember the last session picked. To make it the default
-using, for example, LightDM, set it in `/etc/lightdm/lightdm.conf`:
+Login managers remember the last session picked. For example, to make it the
+default in LightDM, set it in `/etc/lightdm/lightdm.conf`:
 
     [Seat:*]
     user-session=xfwm-wayland
@@ -115,11 +115,11 @@ Input
   special keys (function, media, etc.) or keys with Ctrl, Alt or Super can be
   global. Xfce shortcuts win over them.
 * Without xfce4-power-manager running, displays still turn off after its
-  display sleep and off times (10 minutes by default). Battery times apply on
-  battery.
+  display sleep and off times (10 minutes by default). On battery, its battery
+  times are used.
 * Programs keep the screen on through Wayland's idle inhibit or
-  `org.freedesktop.ScreenSaver` (provided when no screensaver does). X11's own
-  screensaver calls don't work through `XWayland`.
+  `org.freedesktop.ScreenSaver` (xfwm-wayland provides it when no screensaver
+  does). X11's own screensaver calls don't work through `XWayland`.
 * X11 programs with global hotkeys (e.g. Audacious) still get those keys when
   a Wayland window has focus. Typed text isn't shared.
 
@@ -141,12 +141,13 @@ Other
 
 ## Scaling
 
-Unlike X11, Wayland programs stay sharp when scaled in the Display settings.
-Icons in xfdesktop, thunar and the panel may look bigger than on X11 with a
-similar font DPI. That's expected. There's no font DPI setting, so everything
-is scaled together with this setting:
+Unlike X11, Wayland programs stay sharp when scaled. There's no font DPI
+setting so everything is scaled with the Scale value in the Display settings:
 
-<img width="1083" height="740" alt="display" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
+<img width="1083" height="740" alt="Display settings" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
+
+Also, icons in xfdesktop, Thunar and the panel may look bigger than on X11 with
+a similar font DPI. That's expected.
 
 ## Issues and possible solutions
 
@@ -163,7 +164,7 @@ is scaled together with this setting:
 * Old Chromium-based browsers and Electron programs may need the parameter
   `--ozone-platform-hint=auto`
 * Window positions are restored only for Wayland programs that support the
-  `xdg-session-management` protocol; X11 programs won't work
+  `xdg-session-management` protocol; X11 programs don't get them back
 * Ctrl+Shift drag doesn't create symlinks (Wayland limitation)
 * No keyboard layout plugin in the panel (Xfce plugin is X11 only)
 * Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter)
