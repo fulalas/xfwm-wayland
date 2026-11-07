@@ -152,6 +152,37 @@ Other
   the settings until those are changed or the next login. `--replace` is
   accepted and ignored.
 
+## Scaling
+
+Unlike X11, Wayland programs stay sharp when scaled in the Display settings.
+There's no font DPI setting: everything is scaled together with this setting:
+
+![Display settings](...)
+
+Icons in xfdesktop, thunar and the panel may look bigger than on X11 with a
+similar font DPI. That's expected.
+
+## Issues and possible solutions
+
+* X11 programs are blurry when scaled (fix planned)
+* Many programs that support Wayland still use `XWayland` by default, so they
+  look blurry when scaled. Set these to make them use Wayland when they can:
+  ```sh
+  QT_QPA_PLATFORM="wayland;xcb"
+  GDK_BACKEND=wayland,x11
+  ELECTRON_OZONE_PLATFORM_HINT=auto
+  SDL_VIDEODRIVER=wayland,x11
+  ```
+* Old Chromium-based browsers and Electron programs may need the parameter
+  `--ozone-platform-hint=auto`
+* Window positions are restored only for Wayland programs that support the
+  `xdg-session-management` protocol; X11 programs won't work
+* Ctrl+Shift drag doesn't create symlinks (Wayland limitation)
+* No keyboard layout plugin in the panel (Xfce plugin is X11 only)
+* Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter)
+* Multimedia keys need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin)
+* Power manager shortcuts need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager)
+
 ## License
 
 Same as `xfwm4`: GNU General Public License, version 2 or later. See
