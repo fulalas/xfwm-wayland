@@ -27,6 +27,39 @@ static void test_click_on_client_focuses_and_raises(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_click_on_desktop_clears_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    fake_click click = {WM_TARGET_DESKTOP, NULL, {800, 500}, WM_MOUSE_LEFT, 0, -1};
+    CHECK_INT_EQ(WM_FORWARD, fake_press(&world, desktop, &click));
+    CHECK(world.focused == NULL);
+    CHECK_INT_EQ(WM_CONSUMED, fake_key(desktop, FAKE_KEY_F4, WM_MOD_ALT));
+    CHECK(world.closed == NULL);
+    CHECK_INT_EQ(1, world.logout_calls);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_click_on_desktop_cancels_delayed_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.focus.click_to_focus = false;
+    config.focus.focus_delay_ms = 100;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *first = fake_map(desktop, 1, small);
+    fake_map(desktop, 2, small);
+    fake_click over = {WM_TARGET_CLIENT, first, {10, 10}, 0, 0, -1};
+    fake_motion(&world, desktop, &over);
+    fake_click click = {WM_TARGET_DESKTOP, NULL, {800, 500}, WM_MOUSE_LEFT, 0, -1};
+    fake_press(&world, desktop, &click);
+    fake_advance(&world, desktop, 100);
+    CHECK(world.focused == NULL);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_unmap_passes_focus_to_parent(void)
 {
     fake_world world;
@@ -235,6 +268,8 @@ static const check_case CASES[] = {
     {"launched_window_ignores_old_user_time", test_launched_window_ignores_old_user_time},
     {"activating_parent_keeps_dialog_focused", test_activating_parent_keeps_dialog_focused},
     {"click_on_client_focuses_and_raises", test_click_on_client_focuses_and_raises},
+    {"click_on_desktop_clears_focus", test_click_on_desktop_clears_focus},
+    {"click_on_desktop_cancels_delayed_focus", test_click_on_desktop_cancels_delayed_focus},
     {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},
     {"unmap_passes_focus_to_top_most", test_unmap_passes_focus_to_top_most},
     {"focus_follows_mouse_after_delay", test_focus_follows_mouse_after_delay},

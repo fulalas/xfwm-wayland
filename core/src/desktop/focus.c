@@ -44,6 +44,13 @@ void focus_clear(wm_desktop *desktop)
     update_focus(desktop, NULL);
 }
 
+void focus_desktop_clicked(wm_desktop *desktop)
+{
+    timers_cancel_kind(desktop, TIMER_FOCUS);
+    desktop->focus.delayed = NULL;
+    update_focus(desktop, NULL);
+}
+
 void focus_pass(wm_desktop *desktop, wm_window *window)
 {
     wm_window *current = desktop->focus.focused;

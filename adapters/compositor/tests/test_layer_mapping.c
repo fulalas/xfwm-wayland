@@ -31,6 +31,15 @@ static void test_overlay_is_above_fullscreen_and_unmanaged(void)
     CHECK(overlay < SCENE_LAYER_OSD);
 }
 
+static void test_desktop_surfaces(void)
+{
+    CHECK(layer_mapping_is_desktop(SCENE_LAYER_BACKGROUND, NULL));
+    CHECK(layer_mapping_is_desktop(SCENE_LAYER_BOTTOM, "desktop-icons"));
+    CHECK(!layer_mapping_is_desktop(SCENE_LAYER_BOTTOM, "dock"));
+    CHECK(!layer_mapping_is_desktop(SCENE_LAYER_TOP, NULL));
+    CHECK(!layer_mapping_is_desktop(SCENE_LAYER_OVERLAY, "desktop-icons"));
+}
+
 static void test_lock_is_the_top_layer(void)
 {
     CHECK_INT_EQ(SCENE_LAYER_COUNT - 1, SCENE_LAYER_LOCK);
@@ -44,6 +53,7 @@ int main(void)
         {"shell_layers_surround_windows", test_shell_layers_surround_windows},
         {"overlay_is_above_fullscreen_and_unmanaged",
          test_overlay_is_above_fullscreen_and_unmanaged},
+        {"desktop_surfaces", test_desktop_surfaces},
         {"lock_is_the_top_layer", test_lock_is_the_top_layer},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));

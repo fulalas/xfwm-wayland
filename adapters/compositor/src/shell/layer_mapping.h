@@ -1,6 +1,7 @@
 #ifndef COMPOSITOR_LAYER_MAPPING_H
 #define COMPOSITOR_LAYER_MAPPING_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "wm/views.h"
@@ -26,5 +27,6 @@ typedef enum scene_layer {
 
 scene_layer layer_mapping_from_wm(wm_layer layer);
 scene_layer layer_mapping_from_shell(uint32_t shell_layer);
+bool layer_mapping_is_desktop(scene_layer layer, const char *name_space);
 
 #endif

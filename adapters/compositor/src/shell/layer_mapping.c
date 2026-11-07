@@ -1,4 +1,7 @@
 #include "layer_mapping.h"
+
+#include <string.h>
+
 #include "wlr-layer-shell-unstable-v1-protocol.h"
 
 scene_layer layer_mapping_from_wm(wm_layer layer)
@@ -34,4 +37,13 @@ scene_layer layer_mapping_from_shell(uint32_t shell_layer)
         break;
     }
     return SCENE_LAYER_TOP;
+}
+
+bool layer_mapping_is_desktop(scene_layer layer, const char *name_space)
+{
+    if (layer == SCENE_LAYER_BACKGROUND) {
+        return true;
+    }
+    return layer == SCENE_LAYER_BOTTOM && name_space != NULL
+           && strcmp(name_space, "desktop-icons") == 0;
 }

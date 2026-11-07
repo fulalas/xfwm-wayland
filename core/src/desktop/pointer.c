@@ -122,6 +122,9 @@ static wm_dispatch dispatch_button(wm_desktop *desktop, const wm_button_event *e
     if (grab != NULL) {
         return grab->button(desktop, event);
     }
+    if (event->pressed && event->pointer.target.kind == WM_TARGET_DESKTOP) {
+        focus_desktop_clicked(desktop);
+    }
     if (!event->pressed || !has_window_target(&event->pointer.target)) {
         return event->pointer.target.kind == WM_TARGET_FRAME ? WM_CONSUMED : WM_FORWARD;
     }

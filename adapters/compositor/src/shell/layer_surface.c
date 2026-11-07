@@ -16,7 +16,7 @@ static void handle_commit(struct wl_listener *listener, void *data);
 static void handle_destroy(struct wl_listener *listener, void *data);
 static void handle_new_popup(struct wl_listener *listener, void *data);
 static void move_to_layer(layer_surface *surface, scene_layer layer);
-static node_role role_for(scene_layer layer);
+static node_role role_for(const layer_surface *surface);
 static void update_shadow(layer_surface *surface);
 static bool wants_shadow(const layer_surface *surface);
 static wm_rect popup_constraint(void *root);
@@ -37,7 +37,7 @@ layer_surface *layer_surface_create(layer_shell *shell, struct wlr_layer_surface
         free(ls);
         return NULL;
     }
-    ls->owner = (node_owner){role_for(ls->layer), ls};
+    ls->owner = (node_owner){role_for(ls), ls};
     node_owner_attach(&ls->tree->node, &ls->owner);
     ls->popup_parent = (popup_parent){ls->popups, ls, popup_constraint};
     wlr->data = ls;
@@ -156,13 +156,14 @@ static void move_to_layer(layer_surface *ls, scene_layer layer)
         return;
     }
     ls->layer = layer;
-    ls->owner.role = role_for(layer);
+    ls->owner.role = role_for(ls);
     wlr_scene_node_reparent(&ls->tree->node, scene_layers_tree(ls->shell->server->layers, layer));
 }
 
-static node_role role_for(scene_layer layer)
+static node_role role_for(const layer_surface *ls)
 {
-    return layer == SCENE_LAYER_BACKGROUND ? NODE_DESKTOP_SURFACE : NODE_LAYER_SURFACE;
+    return layer_mapping_is_desktop(ls->layer, ls->wlr->namespace) ? NODE_DESKTOP_SURFACE
+                                                                   : NODE_LAYER_SURFACE;
 }
 
 static void update_shadow(layer_surface *ls)
@@ -180,7 +181,7 @@ static void update_shadow(layer_surface *ls)
 static bool wants_shadow(const layer_surface *ls)
 {
     bool dock_layer = ls->layer == SCENE_LAYER_TOP || ls->layer == SCENE_LAYER_BOTTOM;
-    return dock_layer && ls->wlr->surface->mapped &&
+    return dock_layer && ls->owner.role != NODE_DESKTOP_SURFACE && ls->wlr->surface->mapped &&
            ls->shell->server->config.compositing.show_dock_shadow;
 }
 

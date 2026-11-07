@@ -67,6 +67,7 @@ static wm_dispatch dispatch_button(pointer_input *pointer, const pointer_hit *hi
                                    const button_input *input);
 static void start_grab(pointer_input *pointer, const pointer_hit *hit);
 static void close_client_menus(pointer_input *pointer);
+static bool client_holds_pointer(const pointer_input *pointer);
 static void end_grab(pointer_input *pointer);
 static bool take_forwarded(pointer_input *pointer, uint32_t button);
 static void note_held(pointer_input *pointer, const button_input *input);
@@ -286,8 +287,9 @@ static void press(pointer_input *p, const button_input *input)
         press_grabbed(p, &hit, input);
         return;
     }
+    wm_dispatch result = dispatch_button(p, &hit, input);
     click_focus(p->seat, &hit);
-    if (dispatch_button(p, &hit, input) != WM_FORWARD || hit.surface == NULL) {
+    if (result != WM_FORWARD || hit.surface == NULL) {
         close_client_menus(p);
         return;
     }
@@ -346,6 +348,9 @@ static wm_dispatch dispatch_button(pointer_input *p, const pointer_hit *hit,
         .button = button,
         .pressed = input->pressed,
     };
+    if (event.pointer.target.kind == WM_TARGET_DESKTOP && client_holds_pointer(p)) {
+        event.pointer.target.kind = WM_TARGET_OTHER;
+    }
     return wm_pointer_button(p->seat->server->desktop, &event);
 }
 
@@ -355,6 +360,11 @@ static void close_client_menus(pointer_input *p)
     if (wlr_seat->drag == NULL && wlr_seat_pointer_has_grab(wlr_seat)) {
         wlr_seat_pointer_end_grab(wlr_seat);
     }
+}
+
+static bool client_holds_pointer(const pointer_input *p)
+{
+    return p->grab_surface != NULL || wlr_seat_pointer_has_grab(p->seat->wlr_seat);
 }
 
 static void start_grab(pointer_input *p, const pointer_hit *hit)

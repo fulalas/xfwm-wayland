@@ -16,6 +16,7 @@ typedef struct focus_state {
 bool focus_accepts(const wm_desktop *desktop, const wm_window *window);
 void focus_set(wm_desktop *desktop, wm_window *window);
 void focus_clear(wm_desktop *desktop);
+void focus_desktop_clicked(wm_desktop *desktop);
 void focus_pass(wm_desktop *desktop, wm_window *window);
 void focus_pass_after_hide(wm_desktop *desktop, wm_window *window, const window_list *gone);
 void focus_top(wm_desktop *desktop, wm_layer layer);
