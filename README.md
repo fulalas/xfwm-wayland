@@ -79,10 +79,12 @@ Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) 
 
 * its settings dialogs open on Wayland; the original ones check for an X11
   window manager and refuse to start
-* its Tweaks dialog has the HDR and HDR brightness options
 * it hides the options that do nothing on Wayland and renames the ones that
   work differently
 * its bundled themes are SVG, so window borders stay sharp at any scale
+* its Tweaks dialog has the HDR and HDR brightness options:
+
+<img width="926" height="785" alt="tweaks" src="https://github.com/user-attachments/assets/d054024e-a77c-4581-8961-37164a02b04f" />
 
 ## Differences from X11
 
