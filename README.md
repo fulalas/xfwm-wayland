@@ -116,9 +116,9 @@ Input
 * Programs get global shortcuts through the GlobalShortcuts portal. Only
   special keys (function, media, etc.) or keys with Ctrl, Alt or Super can be
   global. Xfce shortcuts win over them.
-* Without xfce4-power-manager running, displays still turn off after its
-  display sleep and off times (10 minutes by default). On battery, its battery
-  times are used.
+* Displays turn off when idle. The timeout is taken from
+  `~/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml`
+  (if the file is not found, 10 minutes on AC or 5 on battery).
 * Programs keep the screen on through Wayland's idle inhibit or
   `org.freedesktop.ScreenSaver` (xfwm-wayland provides it when no screensaver
   does). X11's own screensaver calls don't work through `XWayland`.
