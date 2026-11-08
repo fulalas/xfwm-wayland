@@ -279,14 +279,13 @@ static void test_svg_wins_over_bitmaps(void)
     fixture_dir_remove(dir);
 }
 
-static int scaled_title_height(char *dir, double dpi)
+static int scaled_title_height(char *dir)
 {
     appearance *appearance = appearance_create();
     compositor_painter painter = appearance_painter(appearance);
     ui_style style = appearance_fallback_style();
     theme_request request = { dir, "Sans 9", 1.5, &style };
 
-    style.font_dpi = dpi;
     CHECK(appearance_load(appearance, &request));
     int height = painter.measure_title(painter.self, "Title").height;
     appearance_destroy(appearance);
@@ -296,10 +295,7 @@ static int scaled_title_height(char *dir, double dpi)
 
 static void test_svg_theme_keeps_the_title_font_size(void)
 {
-    double dpi = 96.0 / 1.5;
-
-    CHECK_INT_EQ(scaled_title_height(make_theme(), dpi),
-                 scaled_title_height(make_svg_theme(), dpi));
+    CHECK_INT_EQ(scaled_title_height(make_theme()), scaled_title_height(make_svg_theme()));
 }
 
 static const char colored_line_svg[] =

@@ -148,8 +148,8 @@ setting, so everything is scaled with the Scale value in the Display settings:
 
 <img width="1083" height="740" alt="Display settings" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
 
-Also, icons in xfdesktop, Thunar and the panel may look bigger than on X11 with
-a similar font DPI. That's expected.
+Also, icons and mouse cursor may have different sizes compared to X11 with a
+similar font DPI. That's expected.
 
 ## Issues and possible solutions
 

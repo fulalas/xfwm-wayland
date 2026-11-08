@@ -1,6 +1,5 @@
 #include "xsettings_table.h"
 
-#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,12 +11,12 @@ enum {
 };
 
 static const char window_scaling_factor[] = "Gdk/WindowScalingFactor";
-static const char *const ignored_names[] = {window_scaling_factor, "Gdk/UnscaledDPI"};
+static const char *const ignored_names[] = {window_scaling_factor, "Gdk/UnscaledDPI",
+                                            X11_SETTING_XFT_DPI};
 
 struct xsettings_table {
     x11_setting items[TABLE_CAPACITY];
     size_t count;
-    double scale;
 };
 
 static bool is_ignored(const char *name);
@@ -29,7 +28,6 @@ xsettings_table *xsettings_table_create(void)
 {
     xsettings_table *table = calloc(1, sizeof(*table));
     if (table != NULL) {
-        table->scale = 1.0;
         xsettings_table_reset(table);
     }
     return table;
@@ -55,23 +53,12 @@ void xsettings_table_reset(xsettings_table *table)
     store(table, &dpi);
 }
 
-void xsettings_table_set_scale(xsettings_table *table, double scale)
-{
-    table->scale = scale > 0.0 ? scale : 1.0;
-}
-
 void xsettings_table_add(xsettings_table *table, const x11_setting *setting)
 {
     if (setting->name == NULL || is_ignored(setting->name)) {
         return;
     }
     if (setting->type == X11_SETTING_STRING && setting->string == NULL) {
-        return;
-    }
-    if (setting->type == X11_SETTING_INTEGER && strcmp(setting->name, X11_SETTING_XFT_DPI) == 0) {
-        x11_setting dpi = *setting;
-        dpi.integer = (int32_t) lround(setting->integer / table->scale);
-        store(table, &dpi);
         return;
     }
     store(table, setting);

@@ -83,11 +83,8 @@ static void apply_appearance(app *app)
 static ui_style current_style(app *app)
 {
     xfce_style xfce = xfce_environment_style(app->xfce);
-    ui_style style = style_from_xfce(&xfce);
-    int dpi = xfce_environment_font_dpi(app->xfce);
 
-    style.font_dpi = dpi > 0 ? dpi / app->max_output_scale : 0.0;
-    return style;
+    return style_from_xfce(&xfce);
 }
 
 static theme_request request_for(app *app, const ui_style *style)

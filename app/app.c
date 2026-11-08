@@ -164,7 +164,6 @@ static void on_output_scale_changed(void *self, double max_scale)
 
     app->max_output_scale = max_scale;
     app_reload_appearance(app);
-    compositor_x11_settings_changed(app->compositor);
 }
 
 static void on_quit_requested(void *self)

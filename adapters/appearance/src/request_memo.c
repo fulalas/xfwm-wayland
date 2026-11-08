@@ -47,8 +47,7 @@ static ui_style style_of(const theme_request *request)
 
 static bool styles_equal(const ui_style *a, const ui_style *b)
 {
-    return symbols_equal(a, b) && colors_equal(a, b) && g_strcmp0(a->font, b->font) == 0
-           && a->font_dpi == b->font_dpi;
+    return symbols_equal(a, b) && colors_equal(a, b) && g_strcmp0(a->font, b->font) == 0;
 }
 
 static bool symbols_equal(const ui_style *a, const ui_style *b)
