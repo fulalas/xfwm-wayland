@@ -18,6 +18,11 @@ enum {
     US_PER_MS = 1000,
 };
 
+typedef struct forwarded_button {
+    uint32_t button;
+    struct wl_client *client;
+} forwarded_button;
+
 typedef struct held_button {
     uint32_t button;
     const struct wlr_input_device *device;
@@ -27,7 +32,7 @@ struct pointer_input {
     seat *seat;
     struct wlr_scene_node *grab_node;
     struct wlr_surface *grab_surface;
-    uint32_t forwarded[FORWARDED_BUTTONS_MAX];
+    forwarded_button forwarded[FORWARDED_BUTTONS_MAX];
     size_t forwarded_count;
     held_button held[HELD_BUTTONS_MAX];
     size_t held_count;
@@ -69,7 +74,9 @@ static void start_grab(pointer_input *pointer, const pointer_hit *hit);
 static void close_client_menus(pointer_input *pointer);
 static bool client_holds_pointer(const pointer_input *pointer);
 static void end_grab(pointer_input *pointer);
-static bool take_forwarded(pointer_input *pointer, uint32_t button);
+static bool take_forwarded(pointer_input *pointer, uint32_t button, struct wl_client **client);
+static struct wl_client *focused_client(const pointer_input *pointer);
+static bool seat_holds_button(const struct wlr_seat *seat, uint32_t button);
 static void note_held(pointer_input *pointer, const button_input *input);
 static void release_held_at(pointer_input *pointer, size_t index, uint32_t time_ms);
 static void handle_button_input(pointer_input *pointer, const button_input *input);
@@ -315,7 +322,8 @@ static bool forward_press(pointer_input *p, const button_input *input)
     if (p->forwarded_count == FORWARDED_BUTTONS_MAX) {
         return false;
     }
-    p->forwarded[p->forwarded_count++] = input->button;
+    p->forwarded[p->forwarded_count++] =
+        (forwarded_button){input->button, focused_client(p)};
     wlr_seat_pointer_notify_button(p->seat->wlr_seat, input->time_ms, input->button,
                                    WL_POINTER_BUTTON_STATE_PRESSED);
     return true;
@@ -325,11 +333,18 @@ static void release(pointer_input *p, const button_input *input)
 {
     pointer_hit hit = seat_hit_at_cursor(p->seat);
     dispatch_button(p, &hit, input);
-    if (!take_forwarded(p, input->button)) {
+    struct wl_client *client = NULL;
+    if (!take_forwarded(p, input->button, &client)) {
         return;
     }
-    wlr_seat_pointer_notify_button(p->seat->wlr_seat, input->time_ms, input->button,
-                                   WL_POINTER_BUTTON_STATE_RELEASED);
+    struct wlr_seat *wlr_seat = p->seat->wlr_seat;
+    uint32_t serial = wlr_seat_pointer_notify_button(wlr_seat, input->time_ms, input->button,
+                                                     WL_POINTER_BUTTON_STATE_RELEASED);
+    if (serial == 0 && client != NULL && focused_client(p) == client &&
+        !seat_holds_button(wlr_seat, input->button)) {
+        wlr_seat_pointer_send_button(wlr_seat, input->time_ms, input->button,
+                                     WL_POINTER_BUTTON_STATE_RELEASED);
+    }
     if (p->forwarded_count == 0) {
         end_grab(p);
         pointer_input_motion(p, input->time_ms);
@@ -384,15 +399,33 @@ static void end_grab(pointer_input *p)
     p->grab_node = NULL;
 }
 
-static bool take_forwarded(pointer_input *p, uint32_t button)
+static bool take_forwarded(pointer_input *p, uint32_t button, struct wl_client **client)
 {
     for (size_t i = 0; i < p->forwarded_count; i++) {
-        if (p->forwarded[i] == button) {
+        if (p->forwarded[i].button == button) {
+            *client = p->forwarded[i].client;
             p->forwarded[i] = p->forwarded[--p->forwarded_count];
             return true;
         }
     }
     return false;
+}
+
+static bool seat_holds_button(const struct wlr_seat *seat, uint32_t button)
+{
+    const struct wlr_seat_pointer_state *state = &seat->pointer_state;
+    for (size_t i = 0; i < state->button_count; i++) {
+        if (state->buttons[i].button == button) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static struct wl_client *focused_client(const pointer_input *p)
+{
+    const struct wlr_seat_client *client = p->seat->wlr_seat->pointer_state.focused_client;
+    return client != NULL ? client->client : NULL;
 }
 
 static wm_dispatch dispatch_axis(pointer_input *p, const struct wlr_pointer_axis_event *event)
