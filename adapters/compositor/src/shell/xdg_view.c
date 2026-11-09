@@ -66,7 +66,7 @@ xdg_view *xdg_view_create(compositor *server, struct wlr_xdg_toplevel *toplevel)
     }
     xv->server = server;
     xv->toplevel = toplevel;
-    xv->popup_parent = (popup_parent){NULL, xv, popup_constraint};
+    xv->popup_parent = (popup_parent){NULL, xv, popup_constraint, NULL};
     wl_list_init(&xv->waiting_children);
     wl_list_init(&xv->waiting_link);
     xv->icon = icon_slot_create(server, &(icon_listener){xv, handle_icon_changed});
@@ -155,6 +155,7 @@ static void handle_map(struct wl_listener *listener, void *data)
     }
     wlr_scene_xdg_surface_create(view_content_tree(xv->view), xv->toplevel->base);
     xv->popup_parent.tree = view_popup_tree(xv->view);
+    xv->popup_parent.grab_tree = view_menu_tree(xv->view);
     xv->toplevel->base->data = &xv->popup_parent;
     wm_window_desc desc = xdg_view_describe(xv);
     xdg_sessions_apply_restore(xv->server->xdg_sessions, xv->toplevel, &desc);
@@ -288,6 +289,7 @@ static void unmap_view(xdg_view *xv)
     }
     xv->toplevel->base->data = NULL;
     xv->popup_parent.tree = NULL;
+    xv->popup_parent.grab_tree = NULL;
     view *v = xv->view;
     xv->view = NULL;
     xv->pending_serial = 0;

@@ -110,6 +110,7 @@ static void test_css_colors(void)
     CHECK_DOUBLE_NEAR(1.0, color.red, 1e-9);
     CHECK(appearance_color_parse("rgba(0, 0, 255, 0.5)", &color));
     CHECK_DOUBLE_NEAR(0.5, color.alpha, 1e-9);
+    CHECK(appearance_color_parse("rgb(10,20,30);", &color));
     CHECK(appearance_color_parse("#000000", &color));
     CHECK_DOUBLE_NEAR(1.0, color.alpha, 1e-9);
 }
@@ -121,6 +122,24 @@ static void test_named_ui_color(void)
     CHECK(appearance_color_parse("white", &color));
     CHECK_DOUBLE_NEAR(1.0, color.green, 1e-9);
     CHECK(!appearance_color_parse("None", &color));
+}
+
+static void test_svg_colors_follow_gtk(void)
+{
+    ui_color color;
+
+    CHECK(appearance_svg_color_parse("gray", &color));
+    CHECK_DOUBLE_NEAR(128.0 / 255.0, color.red, 1e-3);
+    CHECK(appearance_svg_color_parse("rgb(10%, 20%, 300)", &color));
+    CHECK_DOUBLE_NEAR(0.1, color.red, 1e-9);
+    CHECK_DOUBLE_NEAR(1.0, color.blue, 1e-9);
+    CHECK(appearance_svg_color_parse("rgb (1,2,3)", &color));
+    CHECK(appearance_svg_color_parse("#111122223333", &color));
+    CHECK_DOUBLE_NEAR(0x1111 / 65535.0, color.red, 1e-9);
+    CHECK(!appearance_svg_color_parse("transparent", &color));
+    CHECK(!appearance_svg_color_parse("rgba(1,2,3)", &color));
+    CHECK(!appearance_svg_color_parse("rgb(1,2,3) x", &color));
+    CHECK(!appearance_svg_color_parse("#11223344", &color));
 }
 
 int main(void)
@@ -137,6 +156,7 @@ int main(void)
         { "none_and_unknown_are_rejected", test_none_and_unknown_are_rejected },
         { "css_colors", test_css_colors },
         { "named_ui_color", test_named_ui_color },
+        { "svg_colors_follow_gtk", test_svg_colors_follow_gtk },
     };
 
     return check_run(cases, sizeof cases / sizeof cases[0]);

@@ -22,9 +22,9 @@
 #include <math.h>
 #include <string.h>
 #include <glib.h>
-#include <gdk/gdk.h>
 #include <librsvg/rsvg.h>
 
+#include "color.h"
 #include "mysvg.h"
 #include "mysvgparse.h"
 #include "mysvgsnap.h"
@@ -64,23 +64,23 @@ static const gchar *var_end (const gchar *, const gchar **);
 static const gchar *replace_var (Colorizer *, const gchar *, const gchar *);
 static void append_var (Colorizer *, const VarRef *);
 static const gchar *var_value (const VarRef *, xfwmColorSymbol *);
-static void append_rgb (GString *, const GdkRGBA *);
+static void append_rgb (GString *, const ui_color *);
 static guint channel_byte (gdouble);
 static void append_stripped (GString *, const gchar *, const gchar *);
-static GdkPixbuf *load_colored (const gchar *, gdouble);
+static cairo_surface_t *load_colored (const gchar *, gdouble);
 static void set_scale (SvgAxisScale *, gdouble);
 static gboolean get_size (const gchar *, SvgCanvas *, gboolean *);
 static gboolean read_size (const gchar *, SvgSize *);
 static gboolean size_from_tag (GArray *, SvgSize *);
 static gboolean size_from_rsvg (const gchar *, SvgSize *);
 static gboolean box_matches (const gdouble *, const SvgCanvas *);
-static GdkPixbuf *render (const gchar *, const SvgCanvas *);
+static cairo_surface_t *render (const gchar *, const SvgCanvas *);
 static gboolean render_document (RsvgHandle *, cairo_surface_t *, const SvgCanvas *);
 
-GdkPixbuf *
+cairo_surface_t *
 xfwmSvgLoad (const gchar *filename, xfwmColorSymbol *color_sym, gdouble scale)
 {
-    GdkPixbuf *pixbuf;
+    cairo_surface_t *surface;
     gchar *data, *colored;
 
     if (!g_file_get_contents (filename, &data, NULL, NULL))
@@ -89,10 +89,10 @@ xfwmSvgLoad (const gchar *filename, xfwmColorSymbol *color_sym, gdouble scale)
     }
     colored = apply_colors (data, color_sym);
     g_free (data);
-    pixbuf = load_colored (colored, scale);
+    surface = load_colored (colored, scale);
     g_free (colored);
 
-    return pixbuf;
+    return surface;
 }
 
 const gchar *
@@ -175,12 +175,12 @@ static void
 append_var (Colorizer *colorizer, const VarRef *var)
 {
     const gchar *value;
-    GdkRGBA rgba;
+    ui_color color;
 
     value = var_value (var, colorizer->color_sym);
-    if (value && gdk_rgba_parse (&rgba, value))
+    if (value && appearance_svg_color_parse (value, &color))
     {
-        append_rgb (colorizer->out, &rgba);
+        append_rgb (colorizer->out, &color);
     }
     else if (var->comma)
     {
@@ -208,12 +208,12 @@ var_value (const VarRef *var, xfwmColorSymbol *color_sym)
 }
 
 static void
-append_rgb (GString *out, const GdkRGBA *rgba)
+append_rgb (GString *out, const ui_color *color)
 {
     g_string_append_printf (out, "#%02x%02x%02x",
-                            channel_byte (rgba->red),
-                            channel_byte (rgba->green),
-                            channel_byte (rgba->blue));
+                            channel_byte (color->red),
+                            channel_byte (color->green),
+                            channel_byte (color->blue));
 }
 
 static guint
@@ -232,11 +232,11 @@ append_stripped (GString *out, const gchar *start, const gchar *end)
     g_free (text);
 }
 
-static GdkPixbuf *
+static cairo_surface_t *
 load_colored (const gchar *data, gdouble scale)
 {
     SvgCanvas canvas;
-    GdkPixbuf *pixbuf;
+    cairo_surface_t *surface;
     gchar *snapped;
     gboolean snap;
 
@@ -251,10 +251,10 @@ load_colored (const gchar *data, gdouble scale)
         return render (data, &canvas);
     }
     snapped = svgSnap (data, &canvas);
-    pixbuf = render (snapped, &canvas);
+    surface = render (snapped, &canvas);
     g_free (snapped);
 
-    return pixbuf;
+    return surface;
 }
 
 static void
@@ -340,12 +340,11 @@ box_matches (const gdouble *box, const SvgCanvas *canvas)
     return box[0] == 0 && box[1] == 0 && box[2] == canvas->x.size && box[3] == canvas->y.size;
 }
 
-static GdkPixbuf *
+static cairo_surface_t *
 render (const gchar *data, const SvgCanvas *canvas)
 {
     RsvgHandle *handle;
     cairo_surface_t *surface;
-    GdkPixbuf *pixbuf;
 
     handle = rsvg_handle_new_from_data ((const guint8 *) data, strlen (data), NULL);
     if (!handle)
@@ -353,15 +352,15 @@ render (const gchar *data, const SvgCanvas *canvas)
         return NULL;
     }
     surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, canvas->x.device_size, canvas->y.device_size);
-    pixbuf = NULL;
-    if (render_document (handle, surface, canvas))
+    if (cairo_surface_status (surface) != CAIRO_STATUS_SUCCESS
+        || !render_document (handle, surface, canvas))
     {
-        pixbuf = gdk_pixbuf_get_from_surface (surface, 0, 0, canvas->x.device_size, canvas->y.device_size);
+        cairo_surface_destroy (surface);
+        surface = NULL;
     }
     g_object_unref (handle);
-    cairo_surface_destroy (surface);
 
-    return pixbuf;
+    return surface;
 }
 
 static gboolean

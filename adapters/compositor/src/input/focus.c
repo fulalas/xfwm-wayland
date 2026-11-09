@@ -7,7 +7,7 @@
 #include "seat_private.h"
 
 static struct wlr_surface *focus_target(const seat *seat);
-static void keyboard_enter(seat *seat, struct wlr_surface *surface);
+static void keyboard_enter(seat *seat, struct wlr_surface *surface, bool past_grab);
 
 void seat_focus_view(seat *s, view *v)
 {
@@ -45,6 +45,31 @@ void seat_focus_layer(seat *s, struct wlr_surface *surface)
     seat_focus_refresh(s);
 }
 
+void seat_focus_popup_grab(seat *s, struct wlr_surface *root)
+{
+    if (root == NULL || !wlr_seat_keyboard_has_grab(s->wlr_seat)) {
+        return;
+    }
+    s->focus.popup = root;
+    seat_focus_refresh(s);
+}
+
+void seat_focus_grab_ended(seat *s)
+{
+    s->focus.popup = NULL;
+    seat_focus_refresh(s);
+}
+
+void seat_focus_reenter(seat *s)
+{
+    struct wlr_surface *surface = s->wlr_seat->keyboard_state.focused_surface;
+    if (surface == NULL) {
+        return;
+    }
+    wlr_seat_keyboard_clear_focus(s->wlr_seat);
+    keyboard_enter(s, surface, true);
+}
+
 void seat_focus_unmanaged(seat *s, struct wlr_surface *surface)
 {
     s->focus.unmanaged = surface;
@@ -55,6 +80,9 @@ void seat_surface_gone(seat *s, struct wlr_surface *surface)
 {
     if (s->focus.layer == surface) {
         s->focus.layer = NULL;
+    }
+    if (s->focus.popup == surface) {
+        s->focus.popup = NULL;
     }
     if (s->focus.unmanaged == surface) {
         s->focus.unmanaged = NULL;
@@ -87,7 +115,7 @@ void seat_focus_refresh(seat *s)
     if (target == s->focus.current && target == s->wlr_seat->keyboard_state.focused_surface) {
         return;
     }
-    keyboard_enter(s, target);
+    keyboard_enter(s, target, target != NULL && target == s->focus.popup);
     s->focus.current = target;
     shortcuts_focus_changed(s->shortcuts, target);
 }
@@ -106,6 +134,9 @@ static struct wlr_surface *focus_target(const seat *s)
     if (server->osd != NULL && osd_is_modal(server->osd)) {
         return s->focus.current;
     }
+    if (s->focus.popup != NULL) {
+        return s->focus.popup;
+    }
     if (s->focus.layer != NULL) {
         return s->focus.layer;
     }
@@ -115,18 +146,21 @@ static struct wlr_surface *focus_target(const seat *s)
     return s->focus.view != NULL ? view_surface(s->focus.view) : NULL;
 }
 
-static void keyboard_enter(seat *s, struct wlr_surface *surface)
+static void keyboard_enter(seat *s, struct wlr_surface *surface, bool past_grab)
 {
-    if (surface == NULL) {
-        wlr_seat_keyboard_notify_clear_focus(s->wlr_seat);
-        return;
-    }
     struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(s->wlr_seat);
-    if (keyboard == NULL) {
-        wlr_seat_keyboard_notify_enter(s->wlr_seat, surface, NULL, 0, NULL);
-        return;
-    }
     uint32_t keys[WLR_KEYBOARD_KEYS_CAP];
-    size_t count = keyboards_forwarded_keys(s->keyboards, keyboard, keys);
-    wlr_seat_keyboard_notify_enter(s->wlr_seat, surface, keys, count, &keyboard->modifiers);
+    size_t count = 0;
+    const struct wlr_keyboard_modifiers *modifiers = NULL;
+    if (surface != NULL && keyboard != NULL) {
+        count = keyboards_forwarded_keys(s->keyboards, keyboard, keys);
+        modifiers = &keyboard->modifiers;
+    }
+    if (past_grab) {
+        wlr_seat_keyboard_enter(s->wlr_seat, surface, keys, count, modifiers);
+    } else if (surface == NULL) {
+        wlr_seat_keyboard_notify_clear_focus(s->wlr_seat);
+    } else {
+        wlr_seat_keyboard_notify_enter(s->wlr_seat, surface, keys, count, modifiers);
+    }
 }

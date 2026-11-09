@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_cursor.h>
-#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/xcursor.h>
 
 #include "render/cairo_buffer.h"
@@ -26,16 +25,11 @@ struct cursor_sprite {
     size_t resized_count;
 };
 
-typedef struct xcursor_source {
-    struct wlr_xcursor *xcursor;
-    float load_scale;
-} xcursor_source;
-
 static int handle_timer(void *data);
 static size_t frame_count(const cursor_sprite *sprite);
 static bool show_scalable(cursor_sprite *sprite, const cursor_theme_view *theme, const char *name);
 static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, const char *name);
-static xcursor_source load_source(const cursor_theme_view *theme, const char *name, float scale);
+static xcursor_fit load_source(const cursor_theme_view *theme, const char *name, float scale);
 static void show_frame(cursor_sprite *sprite, size_t frame);
 static void show_animation_frame(cursor_sprite *sprite, size_t frame);
 static void show_xcursor_frame(cursor_sprite *sprite, size_t frame);
@@ -46,8 +40,6 @@ static struct wlr_buffer *resized_frame(cursor_sprite *sprite, size_t frame,
 static struct wlr_buffer *resize_image(const struct wlr_xcursor_image *image,
                                        const scalable_layout *layout);
 static void drop_resized(cursor_sprite *sprite);
-static struct wlr_xcursor *load_xcursor(const cursor_theme_view *theme, const char *name,
-                                        float load_scale);
 static bool shrink_into(cairo_surface_t *target, const struct wlr_xcursor_image *image);
 static void enlarge_into(cairo_surface_t *target, const struct wlr_xcursor_image *image);
 
@@ -120,7 +112,7 @@ static bool show_scalable(cursor_sprite *sprite, const cursor_theme_view *theme,
 static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, const char *name)
 {
     float scale = theme->scale > 0.0f ? theme->scale : 1.0f;
-    xcursor_source source = load_source(theme, name, scale);
+    xcursor_fit source = load_source(theme, name, scale);
     if (source.xcursor == NULL) {
         return false;
     }
@@ -137,16 +129,12 @@ static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, 
     return true;
 }
 
-static xcursor_source load_source(const cursor_theme_view *theme, const char *name, float scale)
+static xcursor_fit load_source(const cursor_theme_view *theme, const char *name, float scale)
 {
-    xcursor_source source = {load_xcursor(theme, name, scale), scale};
-    if (source.xcursor == NULL ||
-        source.xcursor->images[0]->width == (uint32_t) lroundf((float) theme->size * scale)) {
-        return source;
+    if (theme->xcursors == NULL) {
+        return (xcursor_fit) {NULL, scale};
     }
-    float load_scale = scale * SOURCE_OVERSAMPLE;
-    struct wlr_xcursor *larger = load_xcursor(theme, name, load_scale);
-    return larger != NULL ? (xcursor_source){larger, load_scale} : source;
+    return xcursor_cache_fit(theme->xcursors, name, scale, SOURCE_OVERSAMPLE);
 }
 
 static void show_frame(cursor_sprite *sprite, size_t frame)
@@ -175,7 +163,7 @@ static void show_xcursor_frame(cursor_sprite *sprite, size_t frame)
 {
     struct wlr_xcursor_image *image = sprite->xcursor->images[frame];
     if (!show_fitted_frame(sprite, frame)) {
-        wlr_cursor_set_buffer(sprite->cursor, wlr_xcursor_image_get_buffer(image),
+        wlr_cursor_set_buffer(sprite->cursor, xcursor_cache_image_buffer(image),
                               (int32_t) lroundf((float) image->hotspot_x / sprite->load_scale),
                               (int32_t) lroundf((float) image->hotspot_y / sprite->load_scale),
                               sprite->load_scale);
@@ -192,7 +180,7 @@ static bool show_fitted_frame(cursor_sprite *sprite, size_t frame)
     scalable_request request = {image->width, image->width, sprite->size, sprite->scale};
     scalable_layout layout = scalable_layout_for(&request);
     struct wlr_buffer *buffer = layout.pixels == (int) image->width
-                                    ? wlr_xcursor_image_get_buffer(image)
+                                    ? xcursor_cache_image_buffer(image)
                                     : resized_frame(sprite, frame, &layout);
     if (buffer == NULL) {
         return false;
@@ -274,17 +262,6 @@ static void enlarge_into(cairo_surface_t *target, const struct wlr_xcursor_image
     wm_size size = {cairo_image_surface_get_width(target), cairo_image_surface_get_height(target)};
     xcursor_resize(&source, (uint32_t *) cairo_image_surface_get_data(target), size);
     cairo_surface_mark_dirty(target);
-}
-
-static struct wlr_xcursor *load_xcursor(const cursor_theme_view *theme, const char *name,
-                                        float load_scale)
-{
-    if (theme->manager == NULL || !wlr_xcursor_manager_load(theme->manager, load_scale)) {
-        return NULL;
-    }
-    struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(theme->manager, name,
-                                                                  load_scale);
-    return xcursor != NULL && xcursor->image_count > 0 ? xcursor : NULL;
 }
 
 static void drop_resized(cursor_sprite *sprite)

@@ -28,6 +28,7 @@ void view_present(view *v, const wm_window_view *state)
     wlr_scene_node_set_enabled(&v->tree->node, state->visible);
     wlr_scene_node_set_enabled(&v->content->node, !state->shaded);
     wlr_scene_node_set_enabled(&v->popups->node, !state->shaded);
+    wlr_scene_node_set_enabled(&v->menus->node, state->visible && !state->shaded);
     apply_opacity(v, &previous);
     v->impl->send_states(v->self, &v->target.state);
     if (geometry_ready(v)) {
@@ -44,6 +45,7 @@ void view_apply_geometry(view *v)
     wlr_scene_node_set_position(&v->tree->node, s->frame.x, s->frame.y);
     wlr_scene_node_set_position(&v->content->node, content_x, content_y);
     wlr_scene_node_set_position(&v->popups->node, content_x, content_y);
+    wlr_scene_node_set_position(&v->menus->node, s->shown_client.x, s->shown_client.y);
     v->shown_frame = s->frame;
     apply_decorations(v);
     apply_shadow(v);

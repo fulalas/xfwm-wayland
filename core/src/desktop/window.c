@@ -213,6 +213,11 @@ void window_mark_dirty(wm_window *window)
     window->dirty = true;
 }
 
+void window_placed(wm_window *window)
+{
+    window->has_lost_output = false;
+}
+
 static char *copy_text(const char *text)
 {
     if (text == NULL) {

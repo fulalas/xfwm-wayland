@@ -12,7 +12,7 @@ struct wlr_cursor;
 struct wlr_seat;
 struct wlr_surface;
 struct wlr_input_device;
-struct wlr_xcursor_manager;
+struct xcursor_cache;
 
 typedef enum input_route {
     INPUT_ROUTE_NORMAL,
@@ -44,6 +44,6 @@ void seat_warp(seat *seat, wm_point point);
 wm_point seat_pointer_position(const seat *seat);
 uint32_t seat_modifiers(const seat *seat);
 void seat_notify_activity(seat *seat);
-struct wlr_xcursor_manager *seat_xcursors(const seat *seat);
+struct xcursor_cache *seat_xcursors(const seat *seat);
 
 #endif

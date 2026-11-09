@@ -106,6 +106,7 @@ static bool change_state(wm_desktop *desktop, wm_window *window, const maximize_
     }
     window->tile = TILE_NONE;
     window->client = rect;
+    window_placed(window);
     window_mark_dirty(window);
     return true;
 }

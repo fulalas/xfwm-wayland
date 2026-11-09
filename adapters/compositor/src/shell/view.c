@@ -231,9 +231,12 @@ static bool view_build_scene(view *v)
     v->decor = decorations_create(v->tree, server->painter);
     v->content = wlr_scene_tree_create(v->tree);
     v->popups = wlr_scene_tree_create(v->tree);
-    if (v->shadow == NULL || v->decor == NULL || v->content == NULL || v->popups == NULL) {
+    v->menus = wlr_scene_tree_create(scene_layers_tree(server->layers, SCENE_LAYER_POPUPS));
+    if (v->shadow == NULL || v->decor == NULL || v->content == NULL || v->popups == NULL
+        || v->menus == NULL) {
         return false;
     }
+    wlr_scene_node_set_enabled(&v->menus->node, false);
     node_owner_attach(&decorations_tree(v->decor)->node, &v->frame_owner);
     node_owner_attach(&v->content->node, &v->client_owner);
     return true;
@@ -246,6 +249,9 @@ static void view_free_scene(view *v)
     }
     if (v->decor != NULL) {
         decorations_destroy(v->decor);
+    }
+    if (v->menus != NULL) {
+        wlr_scene_node_destroy(&v->menus->node);
     }
     if (v->tree != NULL) {
         wlr_scene_node_destroy(&v->tree->node);

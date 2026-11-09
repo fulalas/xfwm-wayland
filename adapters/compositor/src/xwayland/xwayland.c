@@ -4,12 +4,12 @@
 #include <wlr/types/wlr_buffer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_output_layout.h>
-#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 #include <wlr/xcursor.h>
 #include <wlr/xwayland/server.h>
 #include <wlr/xwayland/xwayland.h>
 
+#include "cursor/xcursor_cache.h"
 #include "render/cairo_buffer.h"
 #include "input/keyboard_grabs.h"
 #include "util/listener.h"
@@ -223,9 +223,9 @@ static bool handle_x11_event(struct wlr_xwayland *wlr, xcb_generic_event_t *even
 
 static void set_default_cursor(xwayland_shell *shell)
 {
-    struct wlr_xcursor_manager *xcursors = seat_xcursors(shell->server->seat);
+    xcursor_cache *xcursors = seat_xcursors(shell->server->seat);
     struct wlr_xcursor *xcursor =
-        xcursors != NULL ? wlr_xcursor_manager_get_xcursor(xcursors, "default", 1.0f) : NULL;
+        xcursors != NULL ? xcursor_cache_get(xcursors, "default", 1.0f) : NULL;
     if (xcursor == NULL || xcursor->image_count == 0) {
         return;
     }

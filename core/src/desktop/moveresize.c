@@ -220,6 +220,7 @@ static void finish(wm_desktop *desktop)
     }
     window->frozen = false;
     window->moving_edges = 0;
+    window_placed(window);
     window_mark_dirty(window);
     end_session(desktop);
 }

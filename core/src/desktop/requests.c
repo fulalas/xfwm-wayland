@@ -44,12 +44,16 @@ void wm_request_window_menu(wm_desktop *desktop, wm_window *window, wm_point cli
 void wm_request_configure(wm_desktop *desktop, wm_window *window, const wm_rect *client)
 {
     if (accepts_configure(window)) {
+        size_t before = monitors_index_at(desktop, wm_rect_center(&window->client));
         window->client.x = client->x;
         window->client.y = client->y;
         window->client.width = size_hints_check_width(desktop, window, client->width);
         window->client.height = size_hints_check_height(desktop, window, client->height);
         window->moving_edges = 0;
         placement_constrain(desktop, window);
+        if (monitors_index_at(desktop, wm_rect_center(&window->client)) != before) {
+            window_placed(window);
+        }
         window_mark_dirty(window);
     }
     present_request_configure(window);

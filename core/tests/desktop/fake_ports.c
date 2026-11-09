@@ -121,9 +121,22 @@ wm_window_desc fake_desc(int id, wm_rect geometry)
     return desc;
 }
 
+wm_window_desc fake_desc_at(int id, wm_rect geometry)
+{
+    wm_window_desc desc = fake_desc(id, geometry);
+    desc.has_position = true;
+    return desc;
+}
+
 wm_window *fake_map(wm_desktop *desktop, int id, wm_rect geometry)
 {
     wm_window_desc desc = fake_desc(id, geometry);
+    return wm_window_map(desktop, &desc);
+}
+
+wm_window *fake_map_at(wm_desktop *desktop, int id, wm_rect geometry)
+{
+    wm_window_desc desc = fake_desc_at(id, geometry);
     return wm_window_map(desktop, &desc);
 }
 

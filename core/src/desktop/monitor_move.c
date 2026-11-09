@@ -24,6 +24,8 @@ static int midpoint_offset(const wm_rect *current, const wm_rect *other,
 static wm_point transform(wm_point point, const wm_rect *from, const wm_rect *to);
 static void move_remembered_geometry(wm_window *window, const wm_rect *from, const wm_rect *to);
 static void refit(wm_desktop *desktop, wm_window *window);
+static void move_between(wm_desktop *desktop, wm_window *window, const wm_rect *from,
+                         size_t target);
 
 bool monitor_move_possible(const wm_desktop *desktop, const wm_window *window,
                            monitor_direction direction)
@@ -41,16 +43,51 @@ void monitor_move(wm_desktop *desktop, wm_window *window, monitor_direction dire
 
 void monitor_move_to(wm_desktop *desktop, wm_window *window, size_t target)
 {
+    if (target >= monitors_count(desktop)) {
+        return;
+    }
+    window_placed(window);
     size_t current = current_monitor(desktop, window);
-    if (target >= monitors_count(desktop) || target == current) {
+    if (target == current) {
         return;
     }
     wm_rect from = monitors_work_area_of(desktop, current);
+    move_between(desktop, window, &from, target);
+}
+
+void monitor_move_follow_outputs(wm_desktop *desktop, wm_window *window)
+{
+    if (window->has_lost_output) {
+        size_t home;
+        if (monitors_find(desktop, &window->lost_output, &home)) {
+            monitor_move_to(desktop, window, home);
+            return;
+        }
+        if (monitors_overlap(desktop, &window->lost_output)) {
+            window_placed(window);
+        }
+    }
+    wm_point middle = wm_rect_center(&window->client);
+    wm_rect lost;
+    wm_rect from;
+    if (monitors_cover(desktop, middle) || !monitors_remembered_at(desktop, middle, &lost, &from)) {
+        return;
+    }
+    if (!window->has_lost_output) {
+        window->lost_output = lost;
+        window->has_lost_output = true;
+    }
+    move_between(desktop, window, &from, monitors_index_at(desktop, middle));
+}
+
+static void move_between(wm_desktop *desktop, wm_window *window, const wm_rect *from,
+                         size_t target)
+{
     wm_rect to = monitors_work_area_of(desktop, target);
-    wm_point position = transform((wm_point) {window->client.x, window->client.y}, &from, &to);
+    wm_point position = transform((wm_point) {window->client.x, window->client.y}, from, &to);
     window->client.x = position.x;
     window->client.y = position.y;
-    move_remembered_geometry(window, &from, &to);
+    move_remembered_geometry(window, from, &to);
     refit(desktop, window);
     window_mark_dirty(window);
 }

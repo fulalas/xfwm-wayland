@@ -25,6 +25,7 @@ enum {
 static cairo_surface_t *load_bitmap(const theme_image_source *source, const char *name);
 static cairo_surface_t *load_svg(const theme_image_source *source, const char *name);
 static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols);
+static void cut_out_surface(cairo_surface_t *surface);
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf);
 static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
 static GdkPixbuf *load_overlay(const char *dir, const char *name);
@@ -72,13 +73,11 @@ static cairo_surface_t *load_svg(const theme_image_source *source, const char *n
     char *file = g_strdup_printf("%s.%s", name, svg_extension);
     char *path = g_build_filename(source->dir, file, NULL);
     xfwmColorSymbol *colors = svg_colors(source->symbols);
-    GdkPixbuf *pixbuf = g_file_test(path, G_FILE_TEST_IS_REGULAR)
-                            ? xfwmSvgLoad(path, colors, source->scale)
-                            : NULL;
-    cairo_surface_t *surface = pixbuf != NULL ? surface_from_pixbuf(pixbuf) : NULL;
-
-    if (pixbuf != NULL) {
-        g_object_unref(pixbuf);
+    cairo_surface_t *surface = g_file_test(path, G_FILE_TEST_IS_REGULAR)
+                                   ? xfwmSvgLoad(path, colors, source->scale)
+                                   : NULL;
+    if (surface != NULL) {
+        cut_out_surface(surface);
     }
     g_free(colors);
     g_free(path);
@@ -96,6 +95,25 @@ static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols)
                                         symbols->items[i].value };
     }
     return colors;
+}
+
+static void cut_out_surface(cairo_surface_t *surface)
+{
+    int width = cairo_image_surface_get_width(surface);
+    int height = cairo_image_surface_get_height(surface);
+    int stride = cairo_image_surface_get_stride(surface);
+    unsigned char *data = cairo_image_surface_get_data(surface);
+
+    cairo_surface_flush(surface);
+    for (int y = 0; y < height; y++) {
+        uint32_t *row = (uint32_t *) (void *) (data + (size_t) y * (size_t) stride);
+        for (int x = 0; x < width; x++) {
+            if ((row[x] >> ALPHA_SHIFT) != OPAQUE) {
+                row[x] = 0;
+            }
+        }
+    }
+    cairo_surface_mark_dirty(surface);
 }
 
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf)

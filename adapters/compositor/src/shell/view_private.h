@@ -43,6 +43,7 @@ struct view {
     struct wlr_scene_tree *tree;
     struct wlr_scene_tree *content;
     struct wlr_scene_tree *popups;
+    struct wlr_scene_tree *menus;
     decorations *decor;
     shadow *shadow;
     view_target target;

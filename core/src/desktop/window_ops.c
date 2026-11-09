@@ -72,6 +72,7 @@ void window_ops_send_to_workspace(wm_desktop *desktop, wm_window *window, int wo
     if (workspace >= 0 && workspace < desktop->workspaces.count) {
         stack_raise(desktop, window);
         visibility_set_workspace(desktop, window, workspace);
+        window_placed(window);
     }
 }
 

@@ -9,6 +9,7 @@ const session_variable session_vars_defaults[] = {
     { "DESKTOP_SESSION", "xfce" },
     { "XDG_MENU_PREFIX", "xfce-" },
     { "QT_QPA_PLATFORM", "wayland;xcb" },
+    { "MOZ_GTK_TITLEBAR_DECORATION", "none" },
     { NULL, NULL },
 };
 
@@ -23,6 +24,7 @@ static const char *const exported_names[] = {
     "XDG_CONFIG_DIRS",
     "XDG_DATA_DIRS",
     "QT_QPA_PLATFORM",
+    "MOZ_GTK_TITLEBAR_DECORATION",
     NULL,
 };
 

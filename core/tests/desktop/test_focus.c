@@ -42,6 +42,45 @@ static void test_click_on_desktop_clears_focus(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_right_click_on_desktop_keeps_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    fake_click click = {WM_TARGET_DESKTOP, NULL, {800, 500}, WM_MOUSE_RIGHT, 0, -1};
+    CHECK_INT_EQ(WM_FORWARD, fake_press(&world, desktop, &click));
+    CHECK(world.focused == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_right_click_on_client_focuses_with_any_button(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *first = fake_map(desktop, 1, small);
+    fake_map(desktop, 2, small);
+    fake_click click = {WM_TARGET_CLIENT, first, {800, 500}, WM_MOUSE_RIGHT, 0, -1};
+    CHECK_INT_EQ(WM_FORWARD, fake_press(&world, desktop, &click));
+    CHECK(world.focused == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_right_click_on_client_keeps_focus_without_any_button(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.focus.raise_with_any_button = false;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *first = fake_map(desktop, 1, small);
+    fake_map(desktop, 2, small);
+    fake_click click = {WM_TARGET_CLIENT, first, {800, 500}, WM_MOUSE_RIGHT, 0, -1};
+    CHECK_INT_EQ(WM_FORWARD, fake_press(&world, desktop, &click));
+    CHECK(world.focused == fake_handle(2));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_click_on_desktop_cancels_delayed_focus(void)
 {
     fake_world world;
@@ -270,6 +309,11 @@ static const check_case CASES[] = {
     {"click_on_client_focuses_and_raises", test_click_on_client_focuses_and_raises},
     {"click_on_desktop_clears_focus", test_click_on_desktop_clears_focus},
     {"click_on_desktop_cancels_delayed_focus", test_click_on_desktop_cancels_delayed_focus},
+    {"right_click_on_desktop_keeps_focus", test_right_click_on_desktop_keeps_focus},
+    {"right_click_on_client_focuses_with_any_button",
+     test_right_click_on_client_focuses_with_any_button},
+    {"right_click_on_client_keeps_focus_without_any_button",
+     test_right_click_on_client_keeps_focus_without_any_button},
     {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},
     {"unmap_passes_focus_to_top_most", test_unmap_passes_focus_to_top_most},
     {"focus_follows_mouse_after_delay", test_focus_follows_mouse_after_delay},

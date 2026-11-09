@@ -32,6 +32,7 @@ void view_map(view *view, const wm_window_desc *desc);
 
 struct wlr_scene_tree *view_content_tree(const view *view);
 struct wlr_scene_tree *view_popup_tree(const view *view);
+struct wlr_scene_tree *view_menu_tree(const view *view);
 wm_rect view_shown_frame(const view *view);
 wm_window *view_window(const view *view);
 struct wlr_surface *view_surface(const view *view);

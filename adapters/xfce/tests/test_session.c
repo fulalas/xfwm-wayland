@@ -59,6 +59,7 @@ static void test_argv_exports_desktop_variables(void)
     CHECK(g_strv_contains((const char *const *) argv, "XDG_MENU_PREFIX"));
     CHECK(g_strv_contains((const char *const *) argv, "DISPLAY"));
     CHECK(g_strv_contains((const char *const *) argv, "QT_QPA_PLATFORM"));
+    CHECK(g_strv_contains((const char *const *) argv, "MOZ_GTK_TITLEBAR_DECORATION"));
     g_strfreev(argv);
 }
 
@@ -79,6 +80,7 @@ static void test_defaults_describe_an_xfce_session(void)
     CHECK(strcmp(default_of("DESKTOP_SESSION"), "xfce") == 0);
     CHECK(strcmp(default_of("XDG_MENU_PREFIX"), "xfce-") == 0);
     CHECK(strcmp(default_of("QT_QPA_PLATFORM"), "wayland;xcb") == 0);
+    CHECK(strcmp(default_of("MOZ_GTK_TITLEBAR_DECORATION"), "none") == 0);
     CHECK(default_of("WAYLAND_DISPLAY") == NULL);
 }
 
@@ -96,6 +98,14 @@ static void test_logout_keeps_other_errors(void)
     CHECK(!logout_manager_unavailable(NULL));
 }
 
+static void test_logout_waits_only_during_startup(void)
+{
+    CHECK(logout_waits_for_state(0));
+    CHECK(!logout_waits_for_state(1));
+    CHECK(!logout_waits_for_state(2));
+    CHECK(!logout_waits_for_state(3));
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -105,6 +115,7 @@ int main(void)
         { "defaults_describe_an_xfce_session", test_defaults_describe_an_xfce_session },
         { "logout_falls_back_when_manager_missing", test_logout_falls_back_when_manager_missing },
         { "logout_keeps_other_errors", test_logout_keeps_other_errors },
+        { "logout_waits_only_during_startup", test_logout_waits_only_during_startup },
     };
 
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));

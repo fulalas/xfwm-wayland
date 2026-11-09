@@ -39,7 +39,7 @@ layer_surface *layer_surface_create(layer_shell *shell, struct wlr_layer_surface
     }
     ls->owner = (node_owner){role_for(ls), ls};
     node_owner_attach(&ls->tree->node, &ls->owner);
-    ls->popup_parent = (popup_parent){ls->popups, ls, popup_constraint};
+    ls->popup_parent = (popup_parent){ls->popups, ls, popup_constraint, NULL};
     wlr->data = ls;
     connect_listeners(ls);
     wl_list_insert(&shell->surfaces, &ls->link);

@@ -40,6 +40,7 @@ void fill_window(wm_desktop *desktop, wm_window *window, unsigned mode)
         window->client.y = target.y;
         window->client.height = target.height;
     }
+    window_placed(window);
     window_mark_dirty(window);
 }
 

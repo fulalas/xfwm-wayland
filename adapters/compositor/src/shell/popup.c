@@ -31,6 +31,7 @@ static void handle_reposition(struct wl_listener *listener, void *data);
 static void handle_destroy(struct wl_listener *listener, void *data);
 static void handle_wrap_destroy(struct wl_listener *listener, void *data);
 static void unconstrain(popup *popup);
+static struct wlr_surface *root_surface(const struct wlr_xdg_popup *xdg_popup);
 static void update_shadow(popup *popup);
 
 void popup_create(compositor *server, struct wlr_xdg_popup *xdg_popup, const popup_parent *parent)
@@ -47,13 +48,14 @@ void popup_create(compositor *server, struct wlr_xdg_popup *xdg_popup, const pop
     p->xdg_popup = xdg_popup;
     build_scene(p, parent);
     p->owner = (node_owner){NODE_POPUP, p};
-    p->as_parent = (popup_parent){p->content, parent->root, parent->constraint};
+    p->as_parent = (popup_parent){p->content, parent->root, parent->constraint, NULL};
     xdg_popup->base->data = &p->as_parent;
     connect_events(p);
 }
 
 static void build_scene(popup *p, const popup_parent *parent)
 {
+    wlr_scene_node_raise_to_top(&parent->tree->node);
     p->wrap = wlr_scene_tree_create(parent->tree);
     p->shadow = p->wrap != NULL ? shadow_create(p->wrap) : NULL;
     p->content =
@@ -92,6 +94,23 @@ static void handle_commit(struct wl_listener *listener, void *data)
         popup_style_buffers(p->server, p->content);
         update_shadow(p);
     }
+}
+
+struct wlr_surface *popup_grabbed(struct wlr_xdg_popup *xdg_popup)
+{
+    popup_parent *as_parent = xdg_popup->base->data;
+    struct wlr_xdg_surface *parent = xdg_popup->parent != NULL
+                                         ? wlr_xdg_surface_try_from_wlr_surface(xdg_popup->parent)
+                                         : NULL;
+    const popup_parent *owner = parent != NULL ? parent->data : NULL;
+    if (as_parent != NULL && owner != NULL && owner->grab_tree != NULL) {
+        popup *p = wl_container_of(as_parent, p, as_parent);
+        if (p->wrap != NULL) {
+            wlr_scene_node_reparent(&p->wrap->node, owner->grab_tree);
+            wlr_scene_node_raise_to_top(&owner->grab_tree->node);
+        }
+    }
+    return root_surface(xdg_popup);
 }
 
 static void handle_reposition(struct wl_listener *listener, void *data)
@@ -138,6 +157,16 @@ static void unconstrain(popup *p)
     wm_rect area = p->as_parent.constraint(p->as_parent.root);
     struct wlr_box box = {area.x, area.y, area.width, area.height};
     wlr_xdg_popup_unconstrain_from_box(p->xdg_popup, &box);
+}
+
+static struct wlr_surface *root_surface(const struct wlr_xdg_popup *xdg_popup)
+{
+    struct wlr_surface *surface = xdg_popup->parent;
+    struct wlr_xdg_popup *parent = NULL;
+    while (surface != NULL && (parent = wlr_xdg_popup_try_from_wlr_surface(surface)) != NULL) {
+        surface = parent->parent;
+    }
+    return surface;
 }
 
 static void update_shadow(popup *p)

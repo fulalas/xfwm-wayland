@@ -6,7 +6,6 @@ appearance_deps = [
   dependency('cairo'),
   dependency('pangocairo'),
   dependency('gdk-pixbuf-2.0'),
-  dependency('gdk-3.0'),
   dependency('glib-2.0'),
   dependency('librsvg-2.0', version: '>= 2.52'),
   meson.get_compiler('c').find_library('m', required: false),

@@ -4,6 +4,12 @@
 
 #include "desktop_state.h"
 
+typedef bool (*monitor_match)(const wm_rect *monitor, const wm_rect *wanted);
+
+static bool find_monitor(const wm_desktop *desktop, monitor_match match, const wm_rect *wanted,
+                         size_t *index);
+static wm_rect spot(wm_point point);
+static size_t nearest(const wm_desktop *desktop, wm_point point);
 static wm_output_info output_at(const wm_desktop *desktop, size_t index);
 static long distance_squared(const wm_rect *rect, wm_point point);
 static wm_rect margin_box(const wm_desktop *desktop);
@@ -20,21 +26,23 @@ wm_rect monitors_full_rect(const wm_desktop *desktop, size_t index)
 
 size_t monitors_index_at(const wm_desktop *desktop, wm_point point)
 {
-    size_t count = monitors_count(desktop);
-    size_t nearest = 0;
-    long best = LONG_MAX;
-    for (size_t i = 0; i < count; i++) {
-        wm_rect full = monitors_full_rect(desktop, i);
-        if (wm_rect_contains(&full, point)) {
-            return i;
-        }
-        long distance = distance_squared(&full, point);
-        if (distance < best) {
-            best = distance;
-            nearest = i;
-        }
-    }
-    return nearest;
+    size_t index;
+    wm_rect around = spot(point);
+    return find_monitor(desktop, wm_rect_intersects, &around, &index) ? index
+                                                                      : nearest(desktop, point);
+}
+
+bool monitors_cover(const wm_desktop *desktop, wm_point point)
+{
+    size_t index;
+    wm_rect around = spot(point);
+    return find_monitor(desktop, wm_rect_intersects, &around, &index);
+}
+
+bool monitors_overlap(const wm_desktop *desktop, const wm_rect *full)
+{
+    size_t index;
+    return find_monitor(desktop, wm_rect_intersects, full, &index);
 }
 
 wm_rect monitors_full_at(const wm_desktop *desktop, wm_point point)
@@ -87,6 +95,71 @@ wm_rect monitors_screen_bounds(const wm_desktop *desktop)
 wm_point monitors_pointer(const wm_desktop *desktop)
 {
     return desktop->ports.environment.pointer_position(desktop->ports.environment.self);
+}
+
+void monitors_remember(wm_desktop *desktop)
+{
+    monitor_memory *memory = &desktop->remembered_monitors;
+    size_t count = monitors_count(desktop);
+    memory->count = count < MONITORS_REMEMBERED_MAX ? count : MONITORS_REMEMBERED_MAX;
+    for (size_t i = 0; i < memory->count; i++) {
+        memory->full[i] = monitors_full_rect(desktop, i);
+        memory->work[i] = monitors_work_area_of(desktop, i);
+    }
+}
+
+bool monitors_remembered_at(const wm_desktop *desktop, wm_point point, wm_rect *full,
+                            wm_rect *work)
+{
+    const monitor_memory *memory = &desktop->remembered_monitors;
+    for (size_t i = 0; i < memory->count; i++) {
+        if (wm_rect_contains(&memory->full[i], point)) {
+            *full = memory->full[i];
+            *work = memory->work[i];
+            return true;
+        }
+    }
+    return false;
+}
+
+bool monitors_find(const wm_desktop *desktop, const wm_rect *full, size_t *index)
+{
+    return find_monitor(desktop, wm_rect_equals, full, index);
+}
+
+static bool find_monitor(const wm_desktop *desktop, monitor_match match, const wm_rect *wanted,
+                         size_t *index)
+{
+    size_t count = monitors_count(desktop);
+    for (size_t i = 0; i < count; i++) {
+        wm_rect full = monitors_full_rect(desktop, i);
+        if (match(&full, wanted)) {
+            *index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+static wm_rect spot(wm_point point)
+{
+    return (wm_rect) {point.x, point.y, 1, 1};
+}
+
+static size_t nearest(const wm_desktop *desktop, wm_point point)
+{
+    size_t count = monitors_count(desktop);
+    size_t found = 0;
+    long best = LONG_MAX;
+    for (size_t i = 0; i < count; i++) {
+        wm_rect full = monitors_full_rect(desktop, i);
+        long distance = distance_squared(&full, point);
+        if (distance < best) {
+            best = distance;
+            found = i;
+        }
+    }
+    return found;
 }
 
 static wm_output_info output_at(const wm_desktop *desktop, size_t index)

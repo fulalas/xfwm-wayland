@@ -31,6 +31,17 @@ static void test_overlay_is_above_fullscreen_and_unmanaged(void)
     CHECK(overlay < SCENE_LAYER_OSD);
 }
 
+static void test_popups_are_above_windows_panels_and_unmanaged(void)
+{
+    for (int layer = WM_LAYER_DESKTOP; layer < WM_LAYER_COUNT; layer++) {
+        CHECK(SCENE_LAYER_POPUPS > layer_mapping_from_wm((wm_layer) layer));
+    }
+    CHECK(SCENE_LAYER_POPUPS > layer_mapping_from_shell(ZWLR_LAYER_SHELL_V1_LAYER_TOP));
+    CHECK(SCENE_LAYER_POPUPS > layer_mapping_from_shell(ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY));
+    CHECK(SCENE_LAYER_POPUPS > SCENE_LAYER_UNMANAGED);
+    CHECK(SCENE_LAYER_POPUPS < SCENE_LAYER_OSD);
+}
+
 static void test_desktop_surfaces(void)
 {
     CHECK(layer_mapping_is_desktop(SCENE_LAYER_BACKGROUND, NULL));
@@ -53,6 +64,8 @@ int main(void)
         {"shell_layers_surround_windows", test_shell_layers_surround_windows},
         {"overlay_is_above_fullscreen_and_unmanaged",
          test_overlay_is_above_fullscreen_and_unmanaged},
+        {"popups_are_above_windows_panels_and_unmanaged",
+         test_popups_are_above_windows_panels_and_unmanaged},
         {"desktop_surfaces", test_desktop_surfaces},
         {"lock_is_the_top_layer", test_lock_is_the_top_layer},
     };

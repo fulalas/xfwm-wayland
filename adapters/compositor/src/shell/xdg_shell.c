@@ -142,6 +142,19 @@ static void handle_new_popup(struct wl_listener *listener, void *data)
     }
 }
 
+struct wlr_surface *xdg_shell_popup_grabbed(const xdg_shell *shell,
+                                            const struct wlr_seat_keyboard_grab *grab)
+{
+    struct wlr_xdg_popup_grab *popup_grab;
+    wl_list_for_each(popup_grab, &shell->wlr_shell->popup_grabs, link) {
+        if (&popup_grab->keyboard_grab == grab && !wl_list_empty(&popup_grab->popups)) {
+            struct wlr_xdg_popup *top = wl_container_of(popup_grab->popups.next, top, grab_link);
+            return popup_grabbed(top);
+        }
+    }
+    return NULL;
+}
+
 static void handle_new_decoration(struct wl_listener *listener, void *data)
 {
     (void) listener;

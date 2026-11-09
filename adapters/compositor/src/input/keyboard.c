@@ -7,6 +7,7 @@
 
 #include "input_mapping.h"
 #include "keymap_cache.h"
+#include "osd/osd.h"
 #include "util/listener.h"
 #include "seat_private.h"
 #include "xwayland/xwayland.h"
@@ -62,6 +63,7 @@ static key_chord chord_for(struct wlr_keyboard *keyboard, uint32_t keycode);
 static bool key_list_take(key_list *list, uint32_t keycode);
 static bool key_list_has(const key_list *list, uint32_t keycode);
 static void key_list_add(key_list *list, uint32_t keycode);
+static void hide_held_keys(keyboard *keyboard);
 static void forward_key(keyboard *keyboard, const struct wlr_keyboard_key_event *event);
 static void share_with_x11(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
                            const key_chord *chord);
@@ -224,8 +226,11 @@ static void handle_key(struct wl_listener *listener, void *data)
     if (switch_vt(kb, event, &chord)) {
         return;
     }
-    if (dispatch_key(kb, event, &chord) == WM_FORWARD) {
+    wm_dispatch result = dispatch_key(kb, event, &chord);
+    if (result == WM_FORWARD) {
         forward_key(kb, event);
+    }
+    if (result == WM_FORWARD || event->state != WL_KEYBOARD_KEY_STATE_PRESSED) {
         share_with_x11(kb, event, &chord);
     }
 }
@@ -282,9 +287,26 @@ static wm_dispatch dispatch_key(keyboard *kb, const struct wlr_keyboard_key_even
         wm_key_released(s->server->desktop, &key);
         return press_was_consumed ? WM_CONSUMED : WM_FORWARD;
     }
+    struct wlr_surface *focused = s->wlr_seat->keyboard_state.focused_surface;
+    size_t consumed_count = kb->consumed.count;
+    key_list_add(&kb->consumed, event->keycode);
+    if (chord->modifiers != 0) {
+        hide_held_keys(kb);
+    }
     wm_dispatch result = wm_key_pressed(s->server->desktop, &key);
-    if (result == WM_CONSUMED) {
-        key_list_add(&kb->consumed, event->keycode);
+    if (result != WM_CONSUMED) {
+        kb->consumed.count = consumed_count;
+        return result;
+    }
+    bool hid_keys = kb->consumed.count > consumed_count + 1;
+    if (!hid_keys || s->wlr_seat->keyboard_state.focused_surface != focused) {
+        return result;
+    }
+    if (s->server->osd != NULL && osd_is_modal(s->server->osd)) {
+        wlr_seat_set_keyboard(s->wlr_seat, kb->wlr_keyboard);
+        seat_focus_reenter(s);
+    } else {
+        kb->consumed.count = consumed_count + 1;
     }
     return result;
 }
@@ -350,6 +372,16 @@ static void key_list_add(key_list *list, uint32_t keycode)
 {
     if (list->count < HELD_KEYS_MAX) {
         list->keys[list->count++] = keycode;
+    }
+}
+
+static void hide_held_keys(keyboard *kb)
+{
+    for (size_t i = 0; i < kb->wlr_keyboard->num_keycodes; i++) {
+        uint32_t keycode = kb->wlr_keyboard->keycodes[i];
+        if (!key_list_has(&kb->consumed, keycode)) {
+            key_list_add(&kb->consumed, keycode);
+        }
     }
 }
 

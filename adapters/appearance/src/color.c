@@ -1,16 +1,21 @@
 #include "color.h"
 
-#include <stdio.h>
+#include <errno.h>
+#include <math.h>
+#include <string.h>
 
 #include <glib.h>
 #include <pango/pango.h>
 
 enum {
     RGB_COMPONENTS = 3,
-    RGBA_COMPONENTS = 4,
     COMPONENT_MAX_16 = 0xFFFF,
     COMPONENT_MAX_8 = 0xFF,
+    PERCENT_MAX = 100,
 };
+
+static const char rgb_prefix[] = "rgb";
+static const char rgba_prefix[] = "rgba";
 
 typedef struct x11_color {
     const char *name;
@@ -27,7 +32,12 @@ static const x11_color css_conflicts[] = {
 
 static const char *x11_spec(const char *spec);
 static bool is_named(const char *spec, const char *name);
-static bool parse_css_rgb(const char *spec, ui_color *color);
+static bool parse_function_rgb(const char *spec, bool whole, ui_color *color);
+static bool parse_channel(const char **p, double *channel);
+static bool parse_number(const char **p, double *number);
+static bool expect(const char **p, char c);
+static const char *skip_spaces(const char *p);
+static ui_color opaque(uint16_t red, uint16_t green, uint16_t blue);
 static double component_fraction(uint16_t value);
 
 bool appearance_xpm_color_parse(const char *spec, xpm_rgb *rgb)
@@ -45,19 +55,105 @@ bool appearance_color_parse(const char *spec, ui_color *color)
 {
     xpm_rgb rgb;
 
-    if (parse_css_rgb(spec, color)) {
+    if (parse_function_rgb(spec, false, color)) {
         return true;
     }
     if (!appearance_xpm_color_parse(spec, &rgb)) {
         return false;
     }
+    *color = opaque(rgb.red, rgb.green, rgb.blue);
+    return true;
+}
+
+bool appearance_svg_color_parse(const char *spec, ui_color *color)
+{
+    PangoColor pango;
+
+    if (parse_function_rgb(spec, true, color)) {
+        return true;
+    }
+    if (!pango_color_parse(&pango, spec)) {
+        return false;
+    }
+    *color = opaque(pango.red, pango.green, pango.blue);
+    return true;
+}
+
+static bool parse_function_rgb(const char *spec, bool whole, ui_color *color)
+{
+    const char *p = skip_spaces(spec);
+    bool has_alpha = strncmp(p, rgba_prefix, strlen(rgba_prefix)) == 0;
+    double channels[RGB_COMPONENTS];
+    double alpha = 1.0;
+
+    if (!has_alpha && strncmp(p, rgb_prefix, strlen(rgb_prefix)) != 0) {
+        return false;
+    }
+    p = skip_spaces(p + strlen(has_alpha ? rgba_prefix : rgb_prefix));
+    if (!expect(&p, '(')) {
+        return false;
+    }
+    for (int i = 0; i < RGB_COMPONENTS; i++) {
+        if ((i > 0 && !expect(&p, ',')) || !parse_channel(&p, &channels[i])) {
+            return false;
+        }
+        p = skip_spaces(p);
+    }
+    if (has_alpha && (!expect(&p, ',') || !parse_number(&p, &alpha))) {
+        return false;
+    }
+    p = skip_spaces(p);
+    if (!expect(&p, ')') || (whole && *p != '\0')) {
+        return false;
+    }
     *color = (ui_color) {
-        .red = component_fraction(rgb.red),
-        .green = component_fraction(rgb.green),
-        .blue = component_fraction(rgb.blue),
-        .alpha = 1.0,
+        channels[0], channels[1], channels[2], CLAMP(alpha, 0.0, 1.0),
     };
     return true;
+}
+
+static bool expect(const char **p, char c)
+{
+    if (**p != c) {
+        return false;
+    }
+    *p = skip_spaces(*p + 1);
+    return true;
+}
+
+static bool parse_channel(const char **p, double *channel)
+{
+    if (!parse_number(p, channel)) {
+        return false;
+    }
+    const char *after = skip_spaces(*p);
+    if (*after == '%') {
+        *p = after + 1;
+        *channel = CLAMP(*channel / PERCENT_MAX, 0.0, 1.0);
+    } else {
+        *channel = CLAMP(*channel / COMPONENT_MAX_8, 0.0, 1.0);
+    }
+    return true;
+}
+
+static bool parse_number(const char **p, double *number)
+{
+    char *end;
+
+    *number = g_ascii_strtod(*p, &end);
+    if (errno == ERANGE || end == *p || isinf(*number) || isnan(*number)) {
+        return false;
+    }
+    *p = end;
+    return true;
+}
+
+static const char *skip_spaces(const char *p)
+{
+    while (g_ascii_isspace(*p)) {
+        p++;
+    }
+    return p;
 }
 
 static const char *x11_spec(const char *spec)
@@ -86,23 +182,11 @@ static bool is_named(const char *spec, const char *name)
     return equal;
 }
 
-static bool parse_css_rgb(const char *spec, ui_color *color)
+static ui_color opaque(uint16_t red, uint16_t green, uint16_t blue)
 {
-    double red;
-    double green;
-    double blue;
-    double alpha = 1.0;
-
-    int rgba = sscanf(spec, " rgba ( %lf , %lf , %lf , %lf )", &red, &green, &blue, &alpha);
-
-    if (rgba != RGBA_COMPONENTS
-        && sscanf(spec, " rgb ( %lf , %lf , %lf )", &red, &green, &blue) != RGB_COMPONENTS) {
-        return false;
-    }
-    *color = (ui_color) {
-        red / COMPONENT_MAX_8, green / COMPONENT_MAX_8, blue / COMPONENT_MAX_8, alpha,
+    return (ui_color) {
+        component_fraction(red), component_fraction(green), component_fraction(blue), 1.0,
     };
-    return true;
 }
 
 static double component_fraction(uint16_t value)

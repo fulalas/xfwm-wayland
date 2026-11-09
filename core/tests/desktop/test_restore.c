@@ -1,20 +1,12 @@
 #include "check.h"
-#include "fake_ports.h"
-
-static wm_window_desc saved_desc(int id, wm_rect geometry)
-{
-    wm_window_desc desc = fake_desc(id, geometry);
-    desc.has_position = true;
-    return desc;
-}
+#include "fake_input.h"
 
 static void test_saved_workspace_is_used(void)
 {
     fake_world world;
-    fake_world_init(&world);
     wm_config config = fake_config();
-    wm_desktop *desktop = fake_desktop_create(&world, &config);
-    wm_window_desc desc = saved_desc(1, (wm_rect) {100, 100, 400, 300});
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc desc = fake_desc_at(1, (wm_rect) {100, 100, 400, 300});
     desc.has_workspace = true;
     desc.workspace = 2;
     wm_window *window = wm_window_map(desktop, &desc);
@@ -28,11 +20,10 @@ static void test_saved_workspace_is_used(void)
 static void test_unknown_saved_workspace_falls_back_to_current(void)
 {
     fake_world world;
-    fake_world_init(&world);
     wm_config config = fake_config();
-    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_desktop_switch_workspace(desktop, 1);
-    wm_window_desc desc = saved_desc(1, (wm_rect) {100, 100, 400, 300});
+    wm_window_desc desc = fake_desc_at(1, (wm_rect) {100, 100, 400, 300});
     desc.has_workspace = true;
     desc.workspace = 9;
     wm_window *window = wm_window_map(desktop, &desc);
@@ -43,9 +34,8 @@ static void test_unknown_saved_workspace_falls_back_to_current(void)
 static void test_transient_ignores_saved_workspace(void)
 {
     fake_world world;
-    fake_world_init(&world);
     wm_config config = fake_config();
-    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
     wm_window *parent = fake_map(desktop, 1, (wm_rect) {0, 0, 400, 300});
     wm_window_desc desc = fake_dialog_desc(2, parent);
     desc.has_workspace = true;
@@ -58,11 +48,9 @@ static void test_transient_ignores_saved_workspace(void)
 static void test_saved_geometry_is_kept(void)
 {
     fake_world world;
-    fake_world_init(&world);
     wm_config config = fake_config();
-    wm_desktop *desktop = fake_desktop_create(&world, &config);
-    wm_window_desc desc = saved_desc(1, (wm_rect) {120, 140, 400, 300});
-    wm_window *window = wm_window_map(desktop, &desc);
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map_at(desktop, 1, (wm_rect) {120, 140, 400, 300});
     CHECK_RECT_EQ(((wm_rect) {120, 140, 400, 300}), fake_client_of(window));
     CHECK_RECT_EQ(((wm_rect) {120, 140, 400, 300}), wm_window_current_view(window).restore_client);
     wm_desktop_destroy(desktop);
@@ -71,10 +59,9 @@ static void test_saved_geometry_is_kept(void)
 static void test_saved_maximized_window_restores_to_saved_geometry(void)
 {
     fake_world world;
-    fake_world_init(&world);
     wm_config config = fake_config();
-    wm_desktop *desktop = fake_desktop_create(&world, &config);
-    wm_window_desc desc = saved_desc(1, (wm_rect) {120, 140, 400, 300});
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc desc = fake_desc_at(1, (wm_rect) {120, 140, 400, 300});
     desc.states = WM_STATE_MAXIMIZED;
     wm_window *window = wm_window_map(desktop, &desc);
     wm_window_view view = wm_window_current_view(window);
@@ -89,11 +76,9 @@ static void test_saved_maximized_window_restores_to_saved_geometry(void)
 static void test_fullscreen_window_reports_geometry_before_fullscreen(void)
 {
     fake_world world;
-    fake_world_init(&world);
     wm_config config = fake_config();
-    wm_desktop *desktop = fake_desktop_create(&world, &config);
-    wm_window_desc desc = saved_desc(1, (wm_rect) {120, 140, 400, 300});
-    wm_window *window = wm_window_map(desktop, &desc);
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map_at(desktop, 1, (wm_rect) {120, 140, 400, 300});
     wm_state_change change = {.set = WM_STATE_FULLSCREEN};
     wm_request_state(desktop, window, &change);
     wm_window_view view = wm_window_current_view(window);

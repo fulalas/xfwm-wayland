@@ -8,7 +8,7 @@
 #include "seat.h"
 
 struct wlr_keyboard;
-struct wlr_xcursor_manager;
+struct xcursor_cache;
 
 typedef struct cursor_image cursor_image;
 typedef struct keyboards keyboards;
@@ -42,6 +42,7 @@ typedef struct layout_point_fraction {
 typedef struct seat_focus {
     view *view;
     struct wlr_surface *layer;
+    struct wlr_surface *popup;
     struct wlr_surface *unmanaged;
     struct wlr_surface *current;
 } seat_focus;
@@ -65,11 +66,16 @@ struct seat {
     struct wl_list devices;
     struct wl_listener new_input;
     struct wl_listener session_active;
+    struct wl_listener keyboard_grab_begin;
+    struct wl_listener keyboard_grab_end;
     struct wl_event_source *warp_motion;
 };
 
 void seat_track_device(seat *seat, struct wlr_input_device *device);
 pointer_hit seat_hit_at_cursor(const seat *seat);
+void seat_focus_reenter(seat *seat);
+void seat_focus_popup_grab(seat *seat, struct wlr_surface *root);
+void seat_focus_grab_ended(seat *seat);
 wm_pointer_event seat_core_event(const seat *seat, const pointer_hit *hit, uint32_t time_ms);
 
 keyboards *keyboards_create(seat *seat);
@@ -110,7 +116,7 @@ void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape);
 void cursor_image_use_core(cursor_image *image);
 void cursor_image_use_client(cursor_image *image);
 void cursor_image_set_busy(cursor_image *image, bool busy);
-struct wlr_xcursor_manager *cursor_image_xcursors(const cursor_image *image);
+struct xcursor_cache *cursor_image_xcursors(const cursor_image *image);
 
 touch_input *touch_input_create(seat *seat);
 void touch_input_destroy(touch_input *touch);

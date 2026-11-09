@@ -196,6 +196,32 @@ static void test_tiled_edge_does_not_wrap(void)
     cairo_surface_destroy(surface);
 }
 
+static const char red_blue_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
+                                        "\"6 1 2 1\",\n\". c #FF0000\",\n\"# c #0000FF\",\n"
+                                        "\".....#\"};\n";
+
+static void test_side_fills_band_at_any_alignment(void)
+{
+    enum { RED = 0xFFFF0000u, BLUE = 0xFF0000FFu };
+    wm_pixmap_ref right_side = { WM_PIXMAP_SIDE, WM_SIDE_RIGHT, WM_FRAME_ACTIVE };
+    one_op_frame frame = {
+        .file = "right-active.xpm",
+        .content = red_blue_side_xpm,
+        .theme_scale = 1.25,
+        .op = op_at(right_side, (wm_rect) { 0, 0, 5, 2 }, WM_FILL_TILE),
+        .band = { 0, 0, 5, 2 },
+        .scale = 1.25,
+        .origin = { 1, 0 },
+    };
+    cairo_surface_t *surface = paint_one_op(&frame);
+
+    CHECK_INT_EQ(7, cairo_image_surface_get_width(surface));
+    CHECK_INT_EQ(RED, pixel_at(surface, 0, 1));
+    CHECK_INT_EQ(RED, pixel_at(surface, 5, 1));
+    CHECK_INT_EQ(BLUE, pixel_at(surface, 6, 1));
+    cairo_surface_destroy(surface);
+}
+
 static const char three_color_side_xpm[] = "/* XPM */\nstatic char *s[] = {\n"
                                            "\"3 1 3 1\",\n\"a c #000000\",\n"
                                            "\"b c #FF0000\",\n\"c c #00FF00\",\n"
@@ -390,6 +416,7 @@ int main(void)
         { "right_corner_follows_screen_alignment", test_right_corner_follows_screen_alignment },
         { "svg_border_keeps_its_width_when_moved", test_svg_border_keeps_its_width_when_moved },
         { "tiled_edge_does_not_wrap", test_tiled_edge_does_not_wrap },
+        { "side_fills_band_at_any_alignment", test_side_fills_band_at_any_alignment },
         { "tile_starts_at_its_origin", test_tile_starts_at_its_origin },
         { "title_measure_grows_with_text", test_title_measure_grows_with_text },
         { "cycle_surface_matches_size", test_cycle_surface_matches_size },

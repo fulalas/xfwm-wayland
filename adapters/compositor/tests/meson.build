@@ -94,6 +94,16 @@ test(
   ),
 )
 
+test(
+  'compositor_xcursor_file',
+  executable(
+    'test_compositor_xcursor_file',
+    ['test_xcursor_file.c', '../src/cursor/xcursor_file.c'],
+    include_directories: compositor_test_inc,
+    dependencies: [check_dep, glib_dep],
+  ),
+)
+
 compositor_x11_tests = {
   'x11_gravity': ['../src/xwayland/x11_gravity.c'],
   'x11_motif': ['../src/xwayland/x11_motif.c'],

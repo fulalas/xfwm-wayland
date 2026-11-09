@@ -71,6 +71,7 @@ static pattern_axis horizontal_axis(const pixmap_op *pixmap, const device_map *m
                                     const wm_rect *box);
 static pattern_axis vertical_axis(const pixmap_op *pixmap, const device_map *map,
                                   const wm_rect *box);
+static bool fills_once(wm_fill_mode mode, int dest_length, int logical_length);
 static double axis_scale(const pattern_axis *axis);
 static double axis_start(const pattern_axis *axis);
 static cairo_extend_t extend_for(wm_fill_mode mode);
@@ -302,7 +303,8 @@ static pattern_axis horizontal_axis(const pixmap_op *pixmap, const device_map *m
         .origin = device_x(map, op->origin.x),
         .zoom = pixmap->source->zoom,
         .anchored_end = pixmap->anchor.right,
-        .stretched = op->mode == WM_FILL_STRETCH_HORIZONTAL,
+        .stretched = op->mode == WM_FILL_STRETCH_HORIZONTAL
+                     || fills_once(op->mode, op->dest.width, pixmap->source->logical.width),
         .plain = op->mode == WM_FILL_PLAIN,
     };
 }
@@ -319,9 +321,15 @@ static pattern_axis vertical_axis(const pixmap_op *pixmap, const device_map *map
         .origin = device_y(map, op->origin.y),
         .zoom = pixmap->source->zoom,
         .anchored_end = pixmap->anchor.bottom,
-        .stretched = op->mode == WM_FILL_STRETCH_VERTICAL,
+        .stretched = op->mode == WM_FILL_STRETCH_VERTICAL
+                     || fills_once(op->mode, op->dest.height, pixmap->source->logical.height),
         .plain = op->mode == WM_FILL_PLAIN,
     };
+}
+
+static bool fills_once(wm_fill_mode mode, int dest_length, int logical_length)
+{
+    return mode != WM_FILL_PLAIN && dest_length == logical_length;
 }
 
 static double axis_scale(const pattern_axis *axis)

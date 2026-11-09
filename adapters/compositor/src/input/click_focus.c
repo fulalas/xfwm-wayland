@@ -8,6 +8,9 @@ void click_focus(seat *s, const pointer_hit *hit)
         return;
     }
     node_role role = hit->owner->role;
+    if (role == NODE_DESKTOP_SURFACE && s->focus.view != NULL) {
+        return;
+    }
     if (role == NODE_LAYER_SURFACE || role == NODE_DESKTOP_SURFACE) {
         if (layer_surface_accepts_click_focus(hit->owner->object)) {
             seat_focus_layer(s, layer_surface_wlr_surface(hit->owner->object));

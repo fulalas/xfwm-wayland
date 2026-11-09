@@ -284,6 +284,8 @@ compositor_sources = files(
   'src/xwayland/x11_link.c',
   'src/xwayland/x11_motif.c',
   'src/xwayland/x11_pixmap_icon.c',
+  'src/cursor/xcursor_cache.c',
+  'src/cursor/xcursor_file.c',
   'src/cursor/xcursor_resize.c',
   'src/shell/xdg_decorations.c',
   'src/session/xdg_session.c',

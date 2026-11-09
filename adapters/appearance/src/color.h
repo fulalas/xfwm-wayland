@@ -14,5 +14,6 @@ typedef struct xpm_rgb {
 
 bool appearance_xpm_color_parse(const char *spec, xpm_rgb *rgb);
 bool appearance_color_parse(const char *spec, ui_color *color);
+bool appearance_svg_color_parse(const char *spec, ui_color *color);
 
 #endif

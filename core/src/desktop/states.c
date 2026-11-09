@@ -92,6 +92,7 @@ void states_enter_fullscreen(wm_desktop *desktop, wm_window *window)
     window->pre_fullscreen = window->client;
     window->states |= WM_STATE_FULLSCREEN;
     window->tile = TILE_NONE;
+    window_placed(window);
     states_update_fullscreen_size(desktop, window);
     stack_update_layers(desktop);
 }
@@ -102,6 +103,7 @@ void states_leave_fullscreen(wm_desktop *desktop, wm_window *window)
         return;
     }
     window->states &= ~(uint32_t) WM_STATE_FULLSCREEN;
+    window_placed(window);
     states_update_fullscreen_size(desktop, window);
     stack_update_layers(desktop);
 }

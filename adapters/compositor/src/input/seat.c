@@ -17,6 +17,7 @@
 #include "server/lock.h"
 #include "pointer_prefs_compare.h"
 #include "seat_private.h"
+#include "shell/xdg_shell.h"
 
 typedef struct input_device {
     seat *seat;
@@ -36,6 +37,8 @@ static void destroy_pointer_devices(seat *seat);
 static void handle_new_input(struct wl_listener *listener, void *data);
 static void handle_device_destroy(struct wl_listener *listener, void *data);
 static void handle_session_active(struct wl_listener *listener, void *data);
+static void handle_keyboard_grab_begin(struct wl_listener *listener, void *data);
+static void handle_keyboard_grab_end(struct wl_listener *listener, void *data);
 static void release_presses(seat *seat);
 static void release_device_presses(seat *seat, struct wlr_input_device *device);
 static void add_device(seat *seat, struct wlr_input_device *device);
@@ -56,6 +59,8 @@ seat *seat_create(compositor *server)
     wl_list_init(&s->devices);
     wl_list_init(&s->new_input.link);
     wl_list_init(&s->session_active.link);
+    wl_list_init(&s->keyboard_grab_begin.link);
+    wl_list_init(&s->keyboard_grab_end.link);
     s->wlr_seat = wlr_seat_create(server->display, "seat0");
     s->cursor = wlr_cursor_create();
     if (s->wlr_seat == NULL || s->cursor == NULL || !seat_create_modules(s)) {
@@ -73,6 +78,10 @@ static void connect_events(seat *s)
     compositor *server = s->server;
     wlr_cursor_attach_output_layout(s->cursor, server->layout);
     listener_connect(&s->new_input, &server->backend->events.new_input, handle_new_input);
+    listener_connect(&s->keyboard_grab_begin, &s->wlr_seat->events.keyboard_grab_begin,
+                     handle_keyboard_grab_begin);
+    listener_connect(&s->keyboard_grab_end, &s->wlr_seat->events.keyboard_grab_end,
+                     handle_keyboard_grab_end);
     if (server->session != NULL) {
         listener_connect(&s->session_active, &server->session->events.active,
                          handle_session_active);
@@ -83,6 +92,8 @@ void seat_destroy(seat *s)
 {
     listener_disconnect(&s->new_input);
     listener_disconnect(&s->session_active);
+    listener_disconnect(&s->keyboard_grab_begin);
+    listener_disconnect(&s->keyboard_grab_end);
     input_device *device;
     input_device *tmp;
     wl_list_for_each_safe(device, tmp, &s->devices, link) {
@@ -199,7 +210,7 @@ void seat_notify_activity(seat *s)
     }
 }
 
-struct wlr_xcursor_manager *seat_xcursors(const seat *s)
+struct xcursor_cache *seat_xcursors(const seat *s)
 {
     return cursor_image_xcursors(s->image);
 }
@@ -298,6 +309,21 @@ static void handle_session_active(struct wl_listener *listener, void *data)
     if (!s->server->session->active) {
         release_presses(s);
     }
+}
+
+static void handle_keyboard_grab_begin(struct wl_listener *listener, void *data)
+{
+    seat *s = wl_container_of(listener, s, keyboard_grab_begin);
+    if (s->server->xdg != NULL) {
+        seat_focus_popup_grab(s, xdg_shell_popup_grabbed(s->server->xdg, data));
+    }
+}
+
+static void handle_keyboard_grab_end(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    seat *s = wl_container_of(listener, s, keyboard_grab_end);
+    seat_focus_grab_ended(s);
 }
 
 static void release_presses(seat *s)

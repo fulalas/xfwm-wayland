@@ -163,12 +163,8 @@ static void test_fill_key_grows_to_neighbours(void)
     fake_world world;
     wm_config config = fake_config();
     wm_desktop *desktop = fake_desktop_start(&world, &config);
-    wm_window_desc desc = fake_desc(1, (wm_rect) {100, 100, 200, 200});
-    desc.has_position = true;
-    wm_window_map(desktop, &desc);
-    wm_window_desc other = fake_desc(2, (wm_rect) {500, 120, 200, 200});
-    other.has_position = true;
-    wm_window *window = wm_window_map(desktop, &other);
+    fake_map_at(desktop, 1, (wm_rect) {100, 100, 200, 200});
+    wm_window *window = fake_map_at(desktop, 2, (wm_rect) {500, 120, 200, 200});
     fake_click click = {WM_TARGET_CLIENT, window, {600, 200}, WM_MOUSE_LEFT, 0, -1};
     fake_press(&world, desktop, &click);
     fake_key(desktop, FAKE_KEY_F, WM_MOD_SUPER);

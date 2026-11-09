@@ -3,6 +3,8 @@
 
 #include "desktop_state.h"
 #include "maximize.h"
+#include "monitor_move.h"
+#include "monitors.h"
 #include "placement.h"
 #include "present.h"
 #include "states.h"
@@ -171,7 +173,13 @@ static void refit_window(wm_desktop *desktop, wm_window *window)
 
 static void refit_all(wm_desktop *desktop)
 {
-    for (size_t i = 0; i < desktop->stack.count; i++) {
-        refit_window(desktop, desktop->stack.items[i]);
+    if (monitors_count(desktop) == 0) {
+        return;
     }
+    for (size_t i = 0; i < desktop->stack.count; i++) {
+        wm_window *window = desktop->stack.items[i];
+        monitor_move_follow_outputs(desktop, window);
+        refit_window(desktop, window);
+    }
+    monitors_remember(desktop);
 }

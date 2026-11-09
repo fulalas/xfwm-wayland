@@ -6,12 +6,12 @@
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_seat.h>
-#include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
 
 #include "cursor/cursor_names.h"
 #include "cursor/cursor_owner.h"
 #include "cursor/cursor_sprite.h"
+#include "cursor/xcursor_cache.h"
 #include "util/listener.h"
 #include "output/output.h"
 #include "seat_private.h"
@@ -24,7 +24,7 @@ enum {
 struct cursor_image {
     seat *seat;
     cursor_prefs prefs;
-    struct wlr_xcursor_manager *xcursors;
+    xcursor_cache *xcursors;
     scalable_theme *scalable;
     scalable_theme_request scalable_key;
     cursor_sprite *sprite;
@@ -42,7 +42,7 @@ struct cursor_image {
 static void connect_requests(cursor_image *image);
 static cursor_prefs current_prefs(const seat *seat);
 static bool same_prefs(const cursor_prefs *a, const cursor_prefs *b);
-static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs);
+static xcursor_cache *load_theme(const cursor_prefs *prefs);
 static int theme_size(const cursor_prefs *prefs);
 static cursor_theme_view theme_view(cursor_image *image);
 static void refresh_scalable(cursor_image *image, int size, double scale);
@@ -100,9 +100,7 @@ void cursor_image_destroy(cursor_image *image)
     listener_disconnect(&image->client_surface_destroy);
     cursor_sprite_destroy(image->sprite);
     close_scalable(image);
-    if (image->xcursors != NULL) {
-        wlr_xcursor_manager_destroy(image->xcursors);
-    }
+    xcursor_cache_destroy(image->xcursors);
     free(image);
 }
 
@@ -115,9 +113,7 @@ void cursor_image_reload(cursor_image *image)
     image->prefs = prefs;
     cursor_sprite_stop(image->sprite);
     close_scalable(image);
-    if (image->xcursors != NULL) {
-        wlr_xcursor_manager_destroy(image->xcursors);
-    }
+    xcursor_cache_destroy(image->xcursors);
     image->xcursors = load_theme(&image->prefs);
     image->showing_busy = false;
     apply_current(image);
@@ -168,7 +164,7 @@ void cursor_image_use_client(cursor_image *image)
     image->client_mode = true;
 }
 
-struct wlr_xcursor_manager *cursor_image_xcursors(const cursor_image *image)
+xcursor_cache *cursor_image_xcursors(const cursor_image *image)
 {
     return image->xcursors;
 }
@@ -184,7 +180,7 @@ static bool same_prefs(const cursor_prefs *a, const cursor_prefs *b)
     return a->size == b->size && strcmp(a->theme, b->theme) == 0;
 }
 
-static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs)
+static xcursor_cache *load_theme(const cursor_prefs *prefs)
 {
     int size = theme_size(prefs);
     const char *theme = prefs->theme[0] != '\0' ? prefs->theme : NULL;
@@ -196,11 +192,11 @@ static struct wlr_xcursor_manager *load_theme(const cursor_prefs *prefs)
     } else {
         unsetenv("XCURSOR_THEME");
     }
-    struct wlr_xcursor_manager *manager = wlr_xcursor_manager_create(theme, (uint32_t) size);
-    if (manager == NULL || !wlr_xcursor_manager_load(manager, 1.0f)) {
-        wlr_log(WLR_ERROR, "cannot load cursor theme %s", theme != NULL ? theme : "default");
+    xcursor_cache *cache = xcursor_cache_create(theme, (uint32_t) size);
+    if (theme != NULL && !xcursor_cache_has_theme(cache)) {
+        wlr_log(WLR_ERROR, "cursor theme %s not found, using the default cursors", theme);
     }
-    return manager;
+    return cache;
 }
 
 static int theme_size(const cursor_prefs *prefs)
@@ -215,7 +211,7 @@ static cursor_theme_view theme_view(cursor_image *image)
     refresh_scalable(image, size, scale);
     return (cursor_theme_view) {
         .scalable = image->scalable,
-        .manager = image->xcursors,
+        .xcursors = image->xcursors,
         .scale = (float) scale,
         .size = size,
     };

@@ -60,9 +60,7 @@ static void test_given_position_is_kept_visible(void)
     fake_world_init(&world);
     wm_config config = fake_config();
     wm_desktop *desktop = fake_desktop_create(&world, &config);
-    wm_window_desc desc = fake_desc(1, (wm_rect) {1800, 50, 400, 300});
-    desc.has_position = true;
-    wm_window *window = wm_window_map(desktop, &desc);
+    wm_window *window = fake_map_at(desktop, 1, (wm_rect) {1800, 50, 400, 300});
     CHECK_RECT_EQ(((wm_rect) {1516, 50, 400, 300}), fake_client_of(window));
     wm_desktop_destroy(desktop);
 }

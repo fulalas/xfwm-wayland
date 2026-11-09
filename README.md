@@ -35,6 +35,7 @@ Here's a quick comparison:
 | Dependencies built                   | 286                | 23                       |
 | Build time (release)                 | 138 s              | 4 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
+| Memory consumption (fresh boot)      | 149.5 MB           | 156.4 MB                 |
 | Average power                        | 9.6 W              | 8.6 W                    |
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |

@@ -5,15 +5,15 @@
 #include <wayland-server-core.h>
 
 #include "scalable_cursor.h"
+#include "xcursor_cache.h"
 
 struct wlr_cursor;
-struct wlr_xcursor_manager;
 
 typedef struct cursor_sprite cursor_sprite;
 
 typedef struct cursor_theme_view {
     scalable_theme *scalable;
-    struct wlr_xcursor_manager *manager;
+    xcursor_cache *xcursors;
     float scale;
     int size;
 } cursor_theme_view;

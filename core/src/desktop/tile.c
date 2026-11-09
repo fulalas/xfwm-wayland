@@ -44,6 +44,7 @@ void tile_toggle(wm_desktop *desktop, wm_window *window, tile_mode mode)
     }
     window->tile = TILE_NONE;
     maximize_restore_geometry(window);
+    window_placed(window);
     window_mark_dirty(window);
 }
 
@@ -78,6 +79,7 @@ static bool tile(wm_desktop *desktop, wm_window *window, const tile_request *req
     window->restore_size_pos = true;
     window->tile = request->mode;
     window->client = fit.client;
+    window_placed(window);
     window_mark_dirty(window);
     return true;
 }

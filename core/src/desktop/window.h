@@ -45,6 +45,8 @@ struct wm_window {
     wm_rect pre_fullscreen;
     wm_rect fullscreen_area;
     wm_rect configured;
+    wm_rect lost_output;
+    bool has_lost_output;
     bool configure_pending;
     bool frozen;
     wm_rect frozen_client;
@@ -114,5 +116,6 @@ bool window_can_tile(const wm_window *window);
 bool window_can_resize(const wm_window *window);
 bool window_is_constrained(const wm_window *window);
 void window_mark_dirty(wm_window *window);
+void window_placed(wm_window *window);
 
 #endif

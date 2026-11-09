@@ -19,7 +19,7 @@
 #define INC_MYSVG_H
 
 #include <glib.h>
-#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <cairo.h>
 
 typedef struct
 {
@@ -30,7 +30,7 @@ xfwmColorSymbol;
 
 const gchar             *xfwmColorSymbolFind                    (const gchar *,
                                                                  xfwmColorSymbol *);
-GdkPixbuf               *xfwmSvgLoad                            (const gchar *,
+cairo_surface_t         *xfwmSvgLoad                            (const gchar *,
                                                                  xfwmColorSymbol *,
                                                                  gdouble);
 

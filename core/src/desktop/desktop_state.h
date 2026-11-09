@@ -8,6 +8,7 @@
 #include "keybindings.h"
 #include "launches.h"
 #include "menu.h"
+#include "monitors.h"
 #include "moveresize.h"
 #include "present.h"
 #include "timers.h"
@@ -36,6 +37,7 @@ struct wm_desktop {
     cycle_session cycle;
     menu_session menu;
     zoom_state zoom;
+    monitor_memory remembered_monitors;
     launch_set launches;
     wm_window *highlighted;
     wm_point pointer;

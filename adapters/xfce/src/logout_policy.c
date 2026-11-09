@@ -23,3 +23,10 @@ bool logout_manager_unavailable(const char *remote_error)
     }
     return false;
 }
+
+bool logout_waits_for_state(uint32_t manager_state)
+{
+    enum { MANAGER_STARTUP = 0 };
+
+    return manager_state == MANAGER_STARTUP;
+}

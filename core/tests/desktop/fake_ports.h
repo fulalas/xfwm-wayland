@@ -78,7 +78,9 @@ wm_theme_metrics fake_theme(void);
 wm_desktop *fake_desktop_create(fake_world *world, const wm_config *config);
 void *fake_handle(int id);
 wm_window_desc fake_desc(int id, wm_rect geometry);
+wm_window_desc fake_desc_at(int id, wm_rect geometry);
 wm_window *fake_map(wm_desktop *desktop, int id, wm_rect geometry);
+wm_window *fake_map_at(wm_desktop *desktop, int id, wm_rect geometry);
 wm_window *fake_map_with_hints(wm_desktop *desktop, wm_rect geometry,
                                const wm_size_hints *hints);
 wm_window_desc fake_dialog_desc(int id, wm_window *parent);
