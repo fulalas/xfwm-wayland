@@ -1,6 +1,23 @@
 wayland_scanner = find_program('wayland-scanner', native: true)
 
-wlroots_dep = dependency('wlroots-0.20')
+pkg_config_env = environment()
+if get_option('pkg_config_path').length() > 0
+  pkg_config_env.prepend('PKG_CONFIG_PATH', get_option('pkg_config_path'))
+endif
+wlroots_name = ''
+pkg_config_list = run_command(find_program('pkg-config', 'pkgconf'), '--list-all', env: pkg_config_env, check: true)
+foreach line : pkg_config_list.stdout().split('\n')
+  name = line.split(' ')[0]
+  if name.startswith('wlroots-') and name.substring(8).version_compare('>=0.20')
+    if wlroots_name == '' or name.substring(8).version_compare('>' + wlroots_name.substring(8))
+      wlroots_name = name
+    endif
+  endif
+endforeach
+if wlroots_name == ''
+  error('wlroots 0.20 or newer not found')
+endif
+wlroots_dep = dependency(wlroots_name)
 wayland_server_dep = dependency('wayland-server')
 xkbcommon_dep = dependency('xkbcommon')
 libinput_dep = dependency('libinput')
