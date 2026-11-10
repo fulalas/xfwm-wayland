@@ -35,7 +35,7 @@ Here's a quick comparison:
 | Dependencies built                   | 286                | 23                       |
 | Build time (release)                 | 138 s              | 4 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
-| Memory consumption (fresh boot)      | 149.5 MB           | 156.4 MB                 |
+| Memory consumption                   | 158.5 MB           | 168.7 MB                 |
 | Average power                        | 9.6 W              | 8.6 W                    |
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
@@ -47,14 +47,14 @@ Here's a quick comparison:
 | Busy cursor while apps start         | no                 | yes                      |
 | xfwm4 compositing settings           | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
-| Sharp X11 programs when scaling      | yes                | no                       |
+| Sharp X11 programs when scaling      | yes, uneven sizes  | no, consistent sizes     |
 
 Power, CPU time and delay come from [wmbench](https://github.com/fulalas/wmbench) on an AMD Ryzen 7 7840HS at
-3840x2160, 60 Hz.
+3840x2160, 60 Hz. Memory is the compositor's total resident memory at scale 1.
 
 ## Build
 
-Needs `wlroots` 0.20, wayland, xkbcommon, libinput, pixman, cairo, pango,
+Needs `wlroots` 0.20+, wayland, xkbcommon, libinput, pixman, cairo, pango,
 gdk-pixbuf, glib, json-glib, librsvg, `xfconf` and GTK 3.
 
     meson setup build
