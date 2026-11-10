@@ -26,6 +26,7 @@ static const pointer_grab frame_button_grab = {frame_buttons_motion, frame_butto
 static const pointer_grab *active_grab(const wm_desktop *desktop);
 static wm_dispatch dispatch_motion(wm_desktop *desktop, const wm_pointer_event *event);
 static wm_dispatch free_motion(wm_desktop *desktop, const wm_pointer_event *event);
+static wm_dispatch hover(wm_desktop *desktop, const wm_pointer_event *event);
 static void update_hover_cursor(wm_desktop *desktop, const wm_pointer_event *event);
 static void follow_focus(wm_desktop *desktop, const wm_pointer_event *event);
 static wm_dispatch dispatch_button(wm_desktop *desktop, const wm_button_event *event);
@@ -39,6 +40,17 @@ wm_dispatch wm_pointer_motion(wm_desktop *desktop, const wm_pointer_event *event
     wm_dispatch result = dispatch_motion(desktop, event);
     present_flush(desktop);
     return result;
+}
+
+bool wm_pointer_repick(wm_desktop *desktop, const wm_pointer_event *event, wm_dispatch *result)
+{
+    if (active_grab(desktop) != NULL) {
+        return false;
+    }
+    desktop->pointer = event->position;
+    *result = hover(desktop, event);
+    present_flush(desktop);
+    return true;
 }
 
 wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event)
@@ -85,11 +97,17 @@ static wm_dispatch dispatch_motion(wm_desktop *desktop, const wm_pointer_event *
 
 static wm_dispatch free_motion(wm_desktop *desktop, const wm_pointer_event *event)
 {
-    update_hover_cursor(desktop, event);
+    wm_dispatch result = hover(desktop, event);
     follow_focus(desktop, event);
     if (desktop->config.move.wrap_workspaces) {
         wrap_at_screen_edges(desktop, NULL, event->time_ms);
     }
+    return result;
+}
+
+static wm_dispatch hover(wm_desktop *desktop, const wm_pointer_event *event)
+{
+    update_hover_cursor(desktop, event);
     return event->target.kind == WM_TARGET_FRAME ? WM_CONSUMED : WM_FORWARD;
 }
 

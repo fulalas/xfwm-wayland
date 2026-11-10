@@ -69,6 +69,7 @@ struct seat {
     struct wl_listener keyboard_grab_begin;
     struct wl_listener keyboard_grab_end;
     struct wl_event_source *warp_motion;
+    struct wl_event_source *repick;
 };
 
 void seat_track_device(seat *seat, struct wlr_input_device *device);
@@ -94,6 +95,7 @@ void libinput_config_apply(struct wlr_input_device *device, const pointer_prefs 
 pointer_input *pointer_input_create(seat *seat);
 void pointer_input_destroy(pointer_input *pointer);
 void pointer_input_motion(pointer_input *pointer, uint32_t time_ms);
+void pointer_input_repick(pointer_input *pointer, uint32_t time_ms);
 void pointer_input_button(pointer_input *pointer, const button_input *input);
 void pointer_input_surface_gone(pointer_input *pointer, struct wlr_surface *surface);
 void pointer_input_release_device(pointer_input *pointer, const struct wlr_input_device *device,

@@ -212,6 +212,7 @@ void wm_request_unhighlight(wm_desktop *desktop);
 void wm_request_workspace(wm_desktop *desktop, wm_window *window, int workspace);
 
 wm_dispatch wm_pointer_motion(wm_desktop *desktop, const wm_pointer_event *event);
+bool wm_pointer_repick(wm_desktop *desktop, const wm_pointer_event *event, wm_dispatch *result);
 wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event);
 wm_dispatch wm_pointer_axis(wm_desktop *desktop, const wm_axis_event *event);
 wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event);

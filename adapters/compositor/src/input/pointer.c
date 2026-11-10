@@ -32,6 +32,8 @@ struct pointer_input {
     seat *seat;
     struct wlr_scene_node *grab_node;
     struct wlr_surface *grab_surface;
+    pointer_hit last_hit;
+    bool has_last_hit;
     forwarded_button forwarded[FORWARDED_BUTTONS_MAX];
     size_t forwarded_count;
     held_button held[HELD_BUTTONS_MAX];
@@ -63,6 +65,9 @@ static bool core_receives_pointer(const pointer_input *pointer);
 static void deliver_motion(pointer_input *pointer, const pointer_hit *hit, uint32_t time_ms);
 static void deliver_grab_motion(pointer_input *pointer, uint32_t time_ms);
 static void leave_surfaces(pointer_input *pointer);
+static void apply_hit(pointer_input *pointer, const pointer_hit *hit, wm_dispatch result,
+                      uint32_t time_ms);
+static bool same_hit(const pointer_hit *a, const pointer_hit *b);
 static void press(pointer_input *pointer, const button_input *input);
 static void press_grabbed(pointer_input *pointer, const pointer_hit *hit,
                           const button_input *input);
@@ -129,11 +134,9 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
         wm_pointer_event event = seat_core_event(p->seat, &hit, time_ms);
         result = wm_pointer_motion(s->server->desktop, &event);
     }
-    if (result == WM_FORWARD && hit.surface != NULL) {
-        deliver_motion(p, &hit, time_ms);
-    } else {
-        leave_surfaces(p);
-    }
+    p->last_hit = hit;
+    p->has_last_hit = true;
+    apply_hit(p, &hit, result, time_ms);
 }
 
 void pointer_input_button(pointer_input *p, const button_input *input)
@@ -142,8 +145,34 @@ void pointer_input_button(pointer_input *p, const button_input *input)
     handle_button_input(p, input);
 }
 
+void pointer_input_repick(pointer_input *p, uint32_t time_ms)
+{
+    seat *s = p->seat;
+    if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
+        pointer_input_release_grab(p);
+    }
+    if (client_holds_pointer(p) || s->wlr_seat->drag != NULL) {
+        return;
+    }
+    pointer_hit hit = seat_hit_at_cursor(s);
+    if (p->has_last_hit && same_hit(&hit, &p->last_hit)) {
+        return;
+    }
+    wm_dispatch result = WM_FORWARD;
+    if (core_receives_pointer(p)) {
+        wm_pointer_event event = seat_core_event(s, &hit, time_ms);
+        if (!wm_pointer_repick(s->server->desktop, &event, &result)) {
+            return;
+        }
+    }
+    p->last_hit = hit;
+    p->has_last_hit = true;
+    apply_hit(p, &hit, result, time_ms);
+}
+
 void pointer_input_surface_gone(pointer_input *p, struct wlr_surface *surface)
 {
+    p->has_last_hit = false;
     if (p->grab_surface == surface) {
         end_grab(p);
     }
@@ -279,6 +308,23 @@ static void deliver_grab_motion(pointer_input *p, uint32_t time_ms)
     struct wlr_cursor *cursor = p->seat->cursor;
     wlr_seat_pointer_notify_motion(p->seat->wlr_seat, time_ms, cursor->x - node_x,
                                    cursor->y - node_y);
+}
+
+static void apply_hit(pointer_input *p, const pointer_hit *hit, wm_dispatch result,
+                      uint32_t time_ms)
+{
+    if (result == WM_FORWARD && hit->surface != NULL) {
+        deliver_motion(p, hit, time_ms);
+    } else {
+        leave_surfaces(p);
+    }
+}
+
+static bool same_hit(const pointer_hit *a, const pointer_hit *b)
+{
+    return a->node == b->node && a->surface == b->surface && a->sx == b->sx && a->sy == b->sy &&
+           a->target.kind == b->target.kind && a->target.window == b->target.window &&
+           a->target.item == b->target.item;
 }
 
 static void leave_surfaces(pointer_input *p)

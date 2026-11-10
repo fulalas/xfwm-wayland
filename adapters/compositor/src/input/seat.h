@@ -41,6 +41,7 @@ void seat_set_core_cursor(seat *seat, wm_cursor_shape shape);
 void seat_set_busy(seat *seat, bool busy);
 void seat_refresh_cursor(seat *seat);
 void seat_warp(seat *seat, wm_point point);
+void seat_repick_pointer(seat *seat);
 wm_point seat_pointer_position(const seat *seat);
 uint32_t seat_modifiers(const seat *seat);
 void seat_notify_activity(seat *seat);

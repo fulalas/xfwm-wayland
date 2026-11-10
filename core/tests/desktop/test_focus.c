@@ -99,6 +99,26 @@ static void test_click_on_desktop_cancels_delayed_focus(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_repick_keeps_focus_until_motion(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.focus.click_to_focus = false;
+    config.focus.focus_delay_ms = 0;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *first = fake_map(desktop, 1, small);
+    fake_map(desktop, 2, small);
+    wm_pointer_event under = {{10, 10}, 0, 0, {WM_TARGET_CLIENT, first, -1}};
+    wm_dispatch result = WM_CONSUMED;
+    CHECK(wm_pointer_repick(desktop, &under, &result));
+    CHECK(result == WM_FORWARD);
+    CHECK(world.focused == fake_handle(2));
+    fake_click over = {WM_TARGET_CLIENT, first, {12, 10}, 0, 0, -1};
+    fake_motion(&world, desktop, &over);
+    CHECK(world.focused == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_unmap_passes_focus_to_parent(void)
 {
     fake_world world;
@@ -317,6 +337,7 @@ static const check_case CASES[] = {
     {"unmap_passes_focus_to_parent", test_unmap_passes_focus_to_parent},
     {"unmap_passes_focus_to_top_most", test_unmap_passes_focus_to_top_most},
     {"focus_follows_mouse_after_delay", test_focus_follows_mouse_after_delay},
+    {"repick_keeps_focus_until_motion", test_repick_keeps_focus_until_motion},
     {"prevented_focus_stealing_marks_urgent", test_prevented_focus_stealing_marks_urgent},
     {"modal_dialog_takes_focus_from_parent", test_modal_dialog_takes_focus_from_parent},
     {"window_without_focus_capability_is_skipped",

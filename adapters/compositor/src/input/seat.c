@@ -48,6 +48,7 @@ static void configure_pointer(input_device *device);
 static bool takes_pointer_prefs(const struct wlr_input_device *device);
 static void update_capabilities(seat *seat);
 static void handle_warp_motion(void *data);
+static void handle_repick(void *data);
 
 seat *seat_create(compositor *server)
 {
@@ -102,6 +103,9 @@ void seat_destroy(seat *s)
     seat_destroy_modules(s);
     if (s->warp_motion != NULL) {
         wl_event_source_remove(s->warp_motion);
+    }
+    if (s->repick != NULL) {
+        wl_event_source_remove(s->repick);
     }
     if (s->cursor != NULL) {
         wlr_cursor_destroy(s->cursor);
@@ -158,6 +162,13 @@ void seat_set_busy(seat *s, bool busy)
 void seat_refresh_cursor(seat *s)
 {
     cursor_image_refresh(s->image);
+}
+
+void seat_repick_pointer(seat *s)
+{
+    if (s != NULL && s->repick == NULL) {
+        s->repick = wl_event_loop_add_idle(s->server->loop, handle_repick, s);
+    }
 }
 
 void seat_warp(seat *s, wm_point point)
@@ -425,6 +436,13 @@ static void update_capabilities(seat *s)
         }
     }
     wlr_seat_set_capabilities(s->wlr_seat, caps);
+}
+
+static void handle_repick(void *data)
+{
+    seat *s = data;
+    s->repick = NULL;
+    pointer_input_repick(s->pointer, (uint32_t) clock_now_ms());
 }
 
 static void handle_warp_motion(void *data)

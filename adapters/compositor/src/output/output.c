@@ -12,6 +12,7 @@
 
 #include "color_preference.h"
 #include "displays.h"
+#include "input/seat.h"
 #include "shell/layer_shell.h"
 #include "util/listener.h"
 #include "output_brightness.h"
@@ -198,6 +199,7 @@ static void handle_frame(struct wl_listener *listener, void *data)
 {
     (void) data;
     output *o = wl_container_of(listener, o, frame);
+    seat_repick_pointer(o->server->seat);
     output_repaint_frame(o);
 }
 
