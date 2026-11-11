@@ -19,6 +19,7 @@
 #include "shortcuts.h"
 #include "shortcuts_portal.h"
 #include "spawn.h"
+#include "window_rules.h"
 #include "x11_settings.h"
 #include "xfconf_source.h"
 
@@ -125,6 +126,19 @@ wm_config xfce_environment_config(xfce_environment *environment,
                                   const xfce_setting_source *theme)
 {
     return settings_load(environment->channels, theme);
+}
+
+xfce_window_rules xfce_environment_window_rules(xfce_environment *environment)
+{
+    XfconfChannel *xfwm4 = channels_get(environment->channels, CHANNEL_XFWM4);
+    GHashTable *properties = xfwm4 ? xfconf_channel_get_properties(xfwm4, window_rules_root) : NULL;
+    xfce_window_rules rules = { NULL, 0 };
+
+    if (properties) {
+        rules = window_rules_from(properties);
+        g_hash_table_destroy(properties);
+    }
+    return rules;
 }
 
 wm_keymap xfce_environment_keymap(xfce_environment *environment)
@@ -272,6 +286,7 @@ static void notify_changes(xfce_environment *environment, unsigned flags)
         { CHANGE_X11_SETTINGS, listener->x11_settings_changed },
         { CHANGE_DISPLAYS, listener->displays_changed },
         { CHANGE_POWER, listener->power_changed },
+        { CHANGE_WINDOW_RULES, listener->window_rules_changed },
     };
 
     for (size_t i = 0; i < G_N_ELEMENTS(notices); i++) {

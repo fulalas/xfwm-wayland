@@ -5,6 +5,7 @@
 #include <wayland-server-core.h>
 #include <xcb/xcb.h>
 
+#include "render/scaled_surface.h"
 #include "server/restart_policy.h"
 #include "x11_link.h"
 #include "xwayland.h"
@@ -48,6 +49,8 @@ struct xwayland_shell {
     xwayland_ewmh *ewmh;
     xwayland_xsettings *xsettings;
     keyboard_grabs *grabs;
+    scaled_surfaces *scaled;
+    double scale;
     restart_state restart;
     char display_name[DISPLAY_NAME_MAX];
     struct wl_listener ready;

@@ -50,18 +50,23 @@ static bool output_update_usable(output *o)
 static void update_max_scale(outputs *outs)
 {
     double max_scale = 1.0;
+    bool any_enabled = false;
     output *o;
     wl_list_for_each(o, &outs->list, link) {
+        any_enabled |= o->wlr_output->enabled;
         if (o->wlr_output->enabled && o->wlr_output->scale > max_scale) {
             max_scale = o->wlr_output->scale;
         }
     }
-    if (max_scale == outs->max_scale) {
+    if (!any_enabled || max_scale == outs->max_scale) {
         return;
     }
     outs->max_scale = max_scale;
     if (outs->server->seat != NULL) {
         seat_refresh_cursor(outs->server->seat);
+    }
+    if (outs->server->xwayland != NULL) {
+        xwayland_shell_update_scale(outs->server->xwayland);
     }
     const compositor_listener *listener = outs->server->listener;
     if (listener != NULL && listener->output_scale_changed != NULL) {

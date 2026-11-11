@@ -14,6 +14,7 @@ static void on_output_scale_changed(void *self, double max_scale);
 static void on_quit_requested(void *self);
 static void on_theme_changed(void *self);
 static void on_settings_changed(void *self);
+static void on_window_rules_changed(void *self);
 static void on_shortcuts_changed(void *self);
 static void on_input_changed(void *self);
 static void on_displays_changed(void *self);
@@ -94,6 +95,7 @@ static xfce_listener xfce_listener_for(app *app)
         .self = app,
         .theme_changed = on_theme_changed,
         .settings_changed = on_settings_changed,
+        .window_rules_changed = on_window_rules_changed,
         .shortcuts_changed = on_shortcuts_changed,
         .input_changed = on_input_changed,
         .displays_changed = on_displays_changed,
@@ -140,6 +142,7 @@ static bool create_desktop(app *app)
     }
     app_push_appearance(app);
     app_reload_keymap(app);
+    app_reload_window_rules(app);
     return true;
 }
 
@@ -181,6 +184,11 @@ static void on_theme_changed(void *self)
 static void on_settings_changed(void *self)
 {
     app_reload_config(self);
+}
+
+static void on_window_rules_changed(void *self)
+{
+    app_reload_window_rules(self);
 }
 
 static void on_shortcuts_changed(void *self)

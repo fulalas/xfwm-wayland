@@ -52,6 +52,7 @@ void app_reload_appearance(app *app);
 void app_reload_theme(app *app);
 void app_reload_config(app *app);
 void app_reload_keymap(app *app);
+void app_reload_window_rules(app *app);
 wm_commands app_commands(app *app);
 GSource *app_wayland_source_new(compositor *compositor);
 void app_start_session(app *app);

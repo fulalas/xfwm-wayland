@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "window_rules.h"
+
 static const char *const channel_names[CHANNEL_COUNT] = {
     [CHANNEL_XFWM4] = "xfwm4",
     [CHANNEL_XSETTINGS] = "xsettings",
@@ -59,6 +61,10 @@ static unsigned xfwm4_flags(const char *property)
 {
     if (is_theme_property(property)) {
         return CHANGE_THEME;
+    }
+    size_t root_length = strlen(window_rules_root);
+    if (strncmp(property, window_rules_root, root_length) == 0 && property[root_length] == '/') {
+        return CHANGE_WINDOW_RULES;
     }
     return g_str_has_prefix(property, "/general/") ? CHANGE_SETTINGS : 0;
 }

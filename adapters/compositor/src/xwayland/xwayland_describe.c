@@ -7,6 +7,7 @@
 #include "toplevel/icon_convert.h"
 #include "x11_motif.h"
 #include "x11_pixmap_icon.h"
+#include "x11_scale.h"
 #include "xwayland.h"
 #include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
@@ -51,12 +52,14 @@ wm_window_desc xwayland_view_describe(const xwayland_view *xv)
 {
     const struct wlr_xwayland_surface *xs = xv->xsurface;
     bool positioned = has_position(xs);
-    wm_point position = positioned ? xwayland_view_initial_position(xv) : (wm_point){xs->x, xs->y};
+    wm_rect geometry = xwayland_shell_logical_rect(xv->server->xwayland, xs);
+    wm_point position =
+        positioned ? xwayland_view_initial_position(xv) : (wm_point){geometry.x, geometry.y};
     return (wm_window_desc){
         .type = xwayland_view_type(xv),
         .capabilities = xwayland_view_capabilities(xv),
         .states = current_states(xs),
-        .geometry = {position.x, position.y, xs->width, xs->height},
+        .geometry = {position.x, position.y, geometry.width, geometry.height},
         .has_position = positioned,
         .size_hints = xwayland_view_size_hints(xv),
         .parent = xwayland_view_parent_window(xv),
@@ -92,7 +95,13 @@ wm_size_hints xwayland_view_size_hints(const xwayland_view *xv)
     if (size_hints == NULL) {
         return (wm_size_hints){0};
     }
-    return size_steps_and_ratios(size_limits(size_hints), size_hints);
+    wm_size_hints hints = size_steps_and_ratios(size_limits(size_hints), size_hints);
+    double scale = xwayland_view_scale(xv);
+    hints.min = x11_scale_size_from_x_up(scale, hints.min);
+    hints.max = x11_scale_size_from_x_down(scale, hints.max);
+    hints.base = x11_scale_size_from_x(scale, hints.base);
+    hints.step = x11_scale_size_from_x(scale, hints.step);
+    return hints;
 }
 
 static wm_size_hints size_limits(const xcb_size_hints_t *size_hints)
@@ -244,7 +253,8 @@ void xwayland_view_send_states(void *self, const wm_window_view *state)
         wlr_xwayland_surface_set_shaded(xs, state->shaded);
     }
     set_layer_states(xs, state);
-    x11_window_target target = {xwayland_shell_link(xv->server->xwayland), xs->window_id};
+    x11_window_target target = {xwayland_shell_link(xv->server->xwayland), xs->window_id,
+                                xwayland_view_scale(xv)};
     x11_window_props_publish(&xv->published, &target, state);
 }
 

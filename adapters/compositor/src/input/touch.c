@@ -7,6 +7,7 @@
 
 #include "absolute_input.h"
 #include "util/listener.h"
+#include "xwayland/xwayland.h"
 #include "pointer_target.h"
 #include "seat_private.h"
 
@@ -135,11 +136,11 @@ static void handle_motion(struct wl_listener *listener, void *data)
     }
     layout_point_fraction where = {event->x, event->y};
     layout_point position = to_layout(touch, event->touch, where);
-    int node_x = 0;
-    int node_y = 0;
-    wlr_scene_node_coords(point->node, &node_x, &node_y);
-    wlr_seat_touch_notify_motion(touch->seat->wlr_seat, event->time_msec, event->touch_id,
-                                 position.x - node_x, position.y - node_y);
+    double sx = 0.0;
+    double sy = 0.0;
+    xwayland_node_local(touch->seat->server, point->node, position.x, position.y, &sx, &sy);
+    wlr_seat_touch_notify_motion(touch->seat->wlr_seat, event->time_msec, event->touch_id, sx,
+                                 sy);
 }
 
 static void handle_cancel(struct wl_listener *listener, void *data)

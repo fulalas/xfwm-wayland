@@ -182,6 +182,7 @@ typedef struct wm_compositing_config {
     bool hdr;
     int hdr_brightness_percent;
     wm_render_time max_render_time;
+    bool xwayland_zero_scaling;
 } wm_compositing_config;
 
 typedef struct wm_config {

@@ -37,13 +37,18 @@ static const state_rule RULES[] = {
 
 void wm_request_state(wm_desktop *desktop, wm_window *window, const wm_state_change *change)
 {
-    request_maximize(desktop, window, change);
-    apply_rules(desktop, window, change);
-    apply_plain_flags(desktop, window, change);
+    states_apply_change(desktop, window, change);
     if (!only_minimizes(change)) {
         present_request_configure(window);
     }
     present_flush(desktop);
+}
+
+void states_apply_change(wm_desktop *desktop, wm_window *window, const wm_state_change *change)
+{
+    request_maximize(desktop, window, change);
+    apply_rules(desktop, window, change);
+    apply_plain_flags(desktop, window, change);
 }
 
 static bool only_minimizes(const wm_state_change *change)

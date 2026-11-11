@@ -65,8 +65,36 @@ static void test_reset_keeps_only_pinned_settings(void)
 {
     xsettings_table *table = xsettings_table_create();
     add_string(table, "Net/ThemeName", "Greybird");
-    xsettings_table_reset(table);
+    xsettings_table_reset(table, 1.0);
     CHECK_INT_EQ(2, xsettings_table_count(table));
+    xsettings_table_destroy(table);
+}
+
+static void test_cursor_size_follows_window_scale(void)
+{
+    xsettings_table *table = xsettings_table_create();
+    xsettings_table_reset(table, 2.0);
+    x11_setting size = {"Gtk/CursorThemeSize", X11_SETTING_INTEGER, 24, NULL};
+    xsettings_table_add(table, &size);
+    CHECK_INT_EQ(12, xsettings_table_find(table, "Gtk/CursorThemeSize")->integer);
+    CHECK_INT_EQ(24, xsettings_table_cursor_size(table));
+    char *resources = xresources_merge(NULL, table);
+    CHECK(strstr(resources, "Xcursor.size:\t24\n") != NULL);
+    g_free(resources);
+    xsettings_table_destroy(table);
+}
+
+static void test_unscaled_xwayland_gets_scaled_dpi(void)
+{
+    xsettings_table *table = xsettings_table_create();
+    xsettings_table_reset(table, 1.5);
+    CHECK_INT_EQ(1, xsettings_table_find(table, "Gdk/WindowScalingFactor")->integer);
+    CHECK_INT_EQ(144 * 1024, xsettings_table_find(table, "Xft/DPI")->integer);
+    CHECK_INT_EQ(144 * 1024, xsettings_table_find(table, "Gdk/UnscaledDPI")->integer);
+    xsettings_table_reset(table, 2.0);
+    CHECK_INT_EQ(2, xsettings_table_find(table, "Gdk/WindowScalingFactor")->integer);
+    CHECK_INT_EQ(192 * 1024, xsettings_table_find(table, "Xft/DPI")->integer);
+    CHECK_INT_EQ(96 * 1024, xsettings_table_find(table, "Gdk/UnscaledDPI")->integer);
     xsettings_table_destroy(table);
 }
 
@@ -111,6 +139,8 @@ int main(void)
         {"dpi_is_pinned_to_96", test_dpi_is_pinned_to_96},
         {"dpi_defaults_to_96", test_dpi_defaults_to_96},
         {"reset_keeps_only_pinned_settings", test_reset_keeps_only_pinned_settings},
+        {"unscaled_xwayland_gets_scaled_dpi", test_unscaled_xwayland_gets_scaled_dpi},
+        {"cursor_size_follows_window_scale", test_cursor_size_follows_window_scale},
         {"wire_layout_of_string_setting", test_wire_layout_of_string_setting},
         {"xresources_replace_managed_lines", test_xresources_replace_managed_lines},
     };

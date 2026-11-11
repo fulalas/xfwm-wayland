@@ -7,6 +7,8 @@
 
 #include "ewmh_payload.h"
 #include "output/output.h"
+#include "x11_scale.h"
+#include "xwayland.h"
 
 enum {
     RECT_FIELDS = 4,
@@ -210,13 +212,17 @@ static void read_screen(const compositor *server, screen_state *state)
 {
     struct wlr_box box = {0};
     wlr_output_layout_get_box(server->layout, NULL, &box);
+    double scale = xwayland_shell_scale(server->xwayland);
     size_t count = outputs_count(server->outputs);
     count = count < OUTPUT_MAX ? count : OUTPUT_MAX;
     for (size_t i = 0; i < count; i++) {
         output *o = outputs_at_index(server->outputs, i);
-        state->outputs[i] = (wm_output_info){output_full(o), output_usable(o), false};
+        state->outputs[i] = (wm_output_info){x11_scale_rect_to_x(scale, output_full(o)),
+                                             x11_scale_rect_to_x(scale, output_usable(o)), false,
+                                             NULL};
     }
-    state->screen = (ewmh_screen){{box.x, box.y, box.width, box.height}, state->outputs, count};
+    wm_rect root = x11_scale_rect_to_x(scale, (wm_rect){box.x, box.y, box.width, box.height});
+    state->screen = (ewmh_screen){root, state->outputs, count};
 }
 
 static bool same_screen(const screen_state *a, const screen_state *b)

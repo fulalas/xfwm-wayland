@@ -1,34 +1,42 @@
 #include "xsettings_table.h"
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "wm/geometry.h"
+
 enum {
     TABLE_CAPACITY = 128,
-    XWAYLAND_WINDOW_SCALE = 1,
     XWAYLAND_DPI = X11_SETTING_UNSCALED_DPI * X11_SETTING_XFT_DPI_UNIT,
 };
 
+static const double WHOLE_SCALE_SLACK = 1e-6;
 static const char window_scaling_factor[] = "Gdk/WindowScalingFactor";
-static const char *const ignored_names[] = {window_scaling_factor, "Gdk/UnscaledDPI",
+static const char unscaled_dpi[] = "Gdk/UnscaledDPI";
+const char xsettings_cursor_size[] = "Gtk/CursorThemeSize";
+static const char *const ignored_names[] = {window_scaling_factor, unscaled_dpi,
                                             X11_SETTING_XFT_DPI};
 
 struct xsettings_table {
     x11_setting items[TABLE_CAPACITY];
     size_t count;
+    int window_scale;
+    int cursor_size;
 };
 
 static bool is_ignored(const char *name);
 static void release(x11_setting *setting);
 static x11_setting copy_of(const x11_setting *setting);
 static void store(xsettings_table *table, const x11_setting *setting);
+static void store_integer(xsettings_table *table, const char *name, int value);
 
 xsettings_table *xsettings_table_create(void)
 {
     xsettings_table *table = calloc(1, sizeof(*table));
     if (table != NULL) {
-        xsettings_table_reset(table);
+        xsettings_table_reset(table, 1.0);
     }
     return table;
 }
@@ -41,16 +49,20 @@ void xsettings_table_destroy(xsettings_table *table)
     free(table);
 }
 
-void xsettings_table_reset(xsettings_table *table)
+void xsettings_table_reset(xsettings_table *table, double scale)
 {
     for (size_t i = 0; i < table->count; i++) {
         release(&table->items[i]);
     }
     table->count = 0;
-    x11_setting scale = {window_scaling_factor, X11_SETTING_INTEGER, XWAYLAND_WINDOW_SCALE, NULL};
-    x11_setting dpi = {X11_SETTING_XFT_DPI, X11_SETTING_INTEGER, XWAYLAND_DPI, NULL};
-    store(table, &scale);
-    store(table, &dpi);
+    int window_scale = wm_max((int) floor(scale + WHOLE_SCALE_SLACK), 1);
+    table->window_scale = window_scale;
+    table->cursor_size = 0;
+    store_integer(table, window_scaling_factor, window_scale);
+    store_integer(table, X11_SETTING_XFT_DPI, (int) lround(XWAYLAND_DPI * scale));
+    if (scale != 1.0) {
+        store_integer(table, unscaled_dpi, (int) lround(XWAYLAND_DPI * scale / window_scale));
+    }
 }
 
 void xsettings_table_add(xsettings_table *table, const x11_setting *setting)
@@ -61,7 +73,18 @@ void xsettings_table_add(xsettings_table *table, const x11_setting *setting)
     if (setting->type == X11_SETTING_STRING && setting->string == NULL) {
         return;
     }
+    if (setting->type == X11_SETTING_INTEGER && strcmp(setting->name, xsettings_cursor_size) == 0) {
+        table->cursor_size = setting->integer;
+        int per_window_scale = (int) lround((double) setting->integer / table->window_scale);
+        store_integer(table, xsettings_cursor_size, per_window_scale);
+        return;
+    }
     store(table, setting);
+}
+
+int xsettings_table_cursor_size(const xsettings_table *table)
+{
+    return table->cursor_size;
 }
 
 size_t xsettings_table_count(const xsettings_table *table)
@@ -121,4 +144,10 @@ static void store(xsettings_table *table, const x11_setting *setting)
     } else {
         release(&copy);
     }
+}
+
+static void store_integer(xsettings_table *table, const char *name, int value)
+{
+    x11_setting setting = {name, X11_SETTING_INTEGER, value, NULL};
+    store(table, &setting);
 }

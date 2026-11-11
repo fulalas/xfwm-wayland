@@ -1,4 +1,5 @@
 #include <xkbcommon/xkbcommon.h>
+#include <wlr/types/wlr_output.h>
 
 #include "util/clock.h"
 #include "output/output.h"
@@ -39,9 +40,10 @@ static wm_output_info environment_output_at_index(void *self, size_t index)
     compositor *c = self;
     output *o = c->outputs != NULL ? outputs_at_index(c->outputs, index) : NULL;
     if (o == NULL) {
-        return (wm_output_info){{0, 0, 0, 0}, {0, 0, 0, 0}, false};
+        return (wm_output_info){{0, 0, 0, 0}, {0, 0, 0, 0}, false, NULL};
     }
-    return (wm_output_info){output_full(o), output_usable(o), output_display_of(o)->is_primary};
+    return (wm_output_info){output_full(o), output_usable(o), output_display_of(o)->is_primary,
+                            output_wlr(o)->name};
 }
 
 static wm_point environment_pointer_position(void *self)

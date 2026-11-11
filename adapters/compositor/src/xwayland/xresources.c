@@ -26,7 +26,7 @@ static const resource_rule rules[] = {
     {"Xft.lcdfilter", "Xft/Lcdfilter"},
     {"Xft.dpi", X11_SETTING_XFT_DPI},
     {"Xcursor.theme", "Gtk/CursorThemeName"},
-    {"Xcursor.size", "Gtk/CursorThemeSize"},
+    {"Xcursor.size", xsettings_cursor_size},
 };
 
 static void keep_foreign_lines(GString *out, const char *existing);
@@ -87,6 +87,12 @@ static bool line_has_key(const char *line, size_t length, const char *key)
 static void append_rule(GString *out, const resource_rule *rule, const xsettings_table *settings)
 {
     const x11_setting *setting = xsettings_table_find(settings, rule->setting);
+    x11_setting unscaled;
+    if (setting != NULL && strcmp(rule->setting, xsettings_cursor_size) == 0) {
+        unscaled = *setting;
+        unscaled.integer = xsettings_table_cursor_size(settings);
+        setting = &unscaled;
+    }
     char value[VALUE_MAX];
     if (setting != NULL && format_value(setting, value, sizeof(value))) {
         append_entry(out, rule->key, value);

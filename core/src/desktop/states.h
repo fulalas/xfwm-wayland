@@ -10,6 +10,7 @@ void states_stick(wm_desktop *desktop, wm_window *window);
 void states_unstick(wm_desktop *desktop, wm_window *window);
 void states_toggle_stick(wm_desktop *desktop, wm_window *window);
 void states_toggle_above(wm_desktop *desktop, wm_window *window);
+void states_apply_change(wm_desktop *desktop, wm_window *window, const wm_state_change *change);
 void states_toggle_below(wm_desktop *desktop, wm_window *window);
 void states_set_normal_layer(wm_desktop *desktop, wm_window *window);
 void states_enter_fullscreen(wm_desktop *desktop, wm_window *window);

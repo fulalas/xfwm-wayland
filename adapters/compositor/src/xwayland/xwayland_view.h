@@ -10,6 +10,7 @@ typedef struct xwayland_view xwayland_view;
 
 xwayland_view *xwayland_view_create(compositor *server, struct wlr_xwayland_surface *xsurface,
                                     struct wl_list *views);
+void xwayland_views_rescale(struct wl_list *views);
 wm_rect xwayland_views_apply_struts(const struct wl_list *views, const strut_context *context,
                                     wm_rect usable);
 

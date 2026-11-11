@@ -237,7 +237,7 @@ static void test_defaults_visit_stored_keys_only(void)
     config_default_visitor visitor = { .self = &count, .visit = count_default };
 
     config_visit_defaults(&visitor);
-    CHECK_INT_EQ(85, count.stored);
+    CHECK_INT_EQ(86, count.stored);
     CHECK_INT_EQ(12, count.texts);
     CHECK(!count.has_margin);
 }

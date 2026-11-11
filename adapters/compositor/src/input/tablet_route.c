@@ -6,6 +6,7 @@
 #include "click_focus.h"
 #include "input_mapping.h"
 #include "util/listener.h"
+#include "xwayland/xwayland.h"
 #include "pointer_target.h"
 #include "tablet_private.h"
 
@@ -78,11 +79,12 @@ static bool holds_grab(const tablet_tool *tool)
 
 static void move_grabbed(tablet_tool *tool)
 {
-    int node_x = 0;
-    int node_y = 0;
-    wlr_scene_node_coords(tool->grab_node, &node_x, &node_y);
     struct wlr_cursor *cursor = tool->owner->seat->cursor;
-    wlr_tablet_v2_tablet_tool_notify_motion(tool->v2, cursor->x - node_x, cursor->y - node_y);
+    double sx = 0.0;
+    double sy = 0.0;
+    xwayland_node_local(tool->owner->seat->server, tool->grab_node, cursor->x, cursor->y, &sx,
+                        &sy);
+    wlr_tablet_v2_tablet_tool_notify_motion(tool->v2, sx, sy);
 }
 
 static bool accepts_tablet(const tablet_tool *tool, const pointer_hit *hit,

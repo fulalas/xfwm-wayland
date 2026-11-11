@@ -114,6 +114,7 @@ session_protocol_files = []
 foreach protocol : [
   ['staging/xdg-session-management', 'xdg-session-management-v1', ['server-header', 'private-code']],
   ['stable/xdg-shell', 'xdg-shell', ['private-code']],
+  ['unstable/xdg-output', 'xdg-output-unstable-v1', ['server-header', 'private-code']],
 ]
   foreach kind : protocol[2]
     suffix = kind == 'server-header' ? '-protocol.h' : '-protocol.c'
@@ -301,6 +302,9 @@ compositor_sources = files(
   'src/xwayland/x11_link.c',
   'src/xwayland/x11_motif.c',
   'src/xwayland/x11_pixmap_icon.c',
+  'src/xwayland/x11_scale.c',
+  'src/render/scaled_surface.c',
+  'src/output/xdg_output.c',
   'src/cursor/xcursor_cache.c',
   'src/cursor/xcursor_file.c',
   'src/cursor/xcursor_resize.c',

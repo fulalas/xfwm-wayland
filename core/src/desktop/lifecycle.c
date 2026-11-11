@@ -10,6 +10,7 @@
 #include "moveresize.h"
 #include "placement.h"
 #include "present.h"
+#include "rules.h"
 #include "stack.h"
 #include "transients.h"
 
@@ -120,6 +121,7 @@ static map_request launch_request(wm_desktop *desktop, const wm_window_desc *des
 static void show_new(wm_desktop *desktop, wm_window *window)
 {
     placement_init_position(desktop, window);
+    rules_apply_to_new(desktop, window);
     window->saved = window->client;
     window->pre_fullscreen = window->client;
     initial_state_apply(desktop, window);

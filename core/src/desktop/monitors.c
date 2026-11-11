@@ -1,6 +1,7 @@
 #include "monitors.h"
 
 #include <limits.h>
+#include <string.h>
 
 #include "desktop_state.h"
 
@@ -125,6 +126,19 @@ bool monitors_remembered_at(const wm_desktop *desktop, wm_point point, wm_rect *
 bool monitors_find(const wm_desktop *desktop, const wm_rect *full, size_t *index)
 {
     return find_monitor(desktop, wm_rect_equals, full, index);
+}
+
+bool monitors_find_named(const wm_desktop *desktop, const char *name, size_t *index)
+{
+    size_t count = monitors_count(desktop);
+    for (size_t i = 0; i < count; i++) {
+        const char *output_name = output_at(desktop, i).name;
+        if (output_name != NULL && strcmp(output_name, name) == 0) {
+            *index = i;
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool find_monitor(const wm_desktop *desktop, monitor_match match, const wm_rect *wanted,

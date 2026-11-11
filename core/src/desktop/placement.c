@@ -10,7 +10,14 @@
 enum {
     PERCENT = 100,
     CENTERED_TOLERANCE = 25,
+    ANCHOR_COLUMNS = 3,
 };
+
+typedef enum anchor_align {
+    ALIGN_START,
+    ALIGN_MIDDLE,
+    ALIGN_END,
+} anchor_align;
 
 static bool is_placed_by_client(const wm_window *window);
 static void position_given(wm_desktop *desktop, wm_window *window);
@@ -21,6 +28,7 @@ static bool below_ratio(const wm_desktop *desktop, const wm_window *window, cons
 static void center_placement(const wm_desktop *desktop, wm_window *window, const wm_rect *area);
 static void mouse_placement(const wm_desktop *desktop, wm_window *window, const wm_rect *area);
 static void auto_maximize(wm_desktop *desktop, wm_window *window, const wm_rect *area);
+static int align(int start, int length, int size, anchor_align part, int margin);
 
 void placement_init_position(wm_desktop *desktop, wm_window *window)
 {
@@ -35,6 +43,26 @@ void placement_init_position(wm_desktop *desktop, wm_window *window)
     if (window_is_regular_focusable(window)) {
         auto_maximize(desktop, window, &area);
     }
+}
+
+void placement_place_in(wm_desktop *desktop, wm_window *window, const wm_rect *area)
+{
+    place(desktop, window, area);
+}
+
+void placement_anchor(const wm_desktop *desktop, wm_window *window, const wm_rect *area,
+                      wm_rule_anchor anchor, int margin)
+{
+    if (anchor == WM_ANCHOR_NONE) {
+        return;
+    }
+    int cell = (int) anchor - WM_ANCHOR_TOP_LEFT;
+    wm_extents extents = frame_extents(desktop, window);
+    wm_rect frame = frame_rect(desktop, window);
+    anchor_align column = (anchor_align) (cell % ANCHOR_COLUMNS);
+    anchor_align row = (anchor_align) (cell / ANCHOR_COLUMNS);
+    window->client.x = align(area->x, area->width, frame.width, column, margin) + extents.left;
+    window->client.y = align(area->y, area->height, frame.height, row, margin) + extents.top;
 }
 
 static bool is_placed_by_client(const wm_window *window)
@@ -116,12 +144,7 @@ static bool below_ratio(const wm_desktop *desktop, const wm_window *window, cons
 
 static void center_placement(const wm_desktop *desktop, wm_window *window, const wm_rect *area)
 {
-    wm_extents extents = frame_extents(desktop, window);
-    wm_rect frame = frame_rect(desktop, window);
-    window->client.x = wm_max(area->x + extents.left + (area->width - frame.width) / 2,
-                              area->x + extents.left);
-    window->client.y = wm_max(area->y + extents.top + (area->height - frame.height) / 2,
-                              area->y + extents.top);
+    placement_anchor(desktop, window, area, WM_ANCHOR_CENTER, 0);
 }
 
 static void mouse_placement(const wm_desktop *desktop, wm_window *window, const wm_rect *area)
@@ -148,4 +171,15 @@ static void auto_maximize(wm_desktop *desktop, wm_window *window, const wm_rect 
         window->states |= WM_STATE_MAXIMIZED;
         window->restore_size_pos = true;
     }
+}
+
+static int align(int start, int length, int size, anchor_align part, int margin)
+{
+    int position = start + margin;
+    if (part == ALIGN_MIDDLE) {
+        position = start + (length - size) / 2;
+    } else if (part == ALIGN_END) {
+        position = start + length - size - margin;
+    }
+    return wm_max(position, start);
 }

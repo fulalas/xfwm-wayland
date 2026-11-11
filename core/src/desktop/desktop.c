@@ -48,6 +48,7 @@ void wm_desktop_destroy(wm_desktop *desktop)
     window_list_free(&desktop->mru);
     timers_free(&desktop->timers);
     keybindings_free(&desktop->keys);
+    rules_free(&desktop->rules);
     free(desktop);
 }
 

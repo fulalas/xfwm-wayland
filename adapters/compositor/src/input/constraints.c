@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_seat.h>
 
 #include "util/listener.h"
+#include "xwayland/xwayland.h"
 #include "seat_private.h"
 
 struct constraints {
@@ -138,16 +139,18 @@ static void warp_to_hint(constraints *c)
         return;
     }
     struct wlr_cursor *cursor = c->seat->cursor;
-    double origin_x = cursor->x - pointer->sx;
-    double origin_y = cursor->y - pointer->sy;
-    wlr_cursor_warp(cursor, NULL, origin_x + active->current.cursor_hint.x,
-                    origin_y + active->current.cursor_hint.y);
+    double scale = xwayland_surface_scale(c->seat->server, active->surface);
+    double origin_x = cursor->x - pointer->sx / scale;
+    double origin_y = cursor->y - pointer->sy / scale;
+    wlr_cursor_warp(cursor, NULL, origin_x + active->current.cursor_hint.x / scale,
+                    origin_y + active->current.cursor_hint.y / scale);
 }
 
 static bool region_allows(const constraints *c, double dx, double dy)
 {
     const struct wlr_seat_pointer_state *pointer = &c->seat->wlr_seat->pointer_state;
-    int x = (int) floor(pointer->sx + dx);
-    int y = (int) floor(pointer->sy + dy);
+    double scale = xwayland_surface_scale(c->seat->server, c->active->surface);
+    int x = (int) floor(pointer->sx + dx * scale);
+    int y = (int) floor(pointer->sy + dy * scale);
     return pixman_region32_contains_point(&c->active->region, x, y, NULL);
 }

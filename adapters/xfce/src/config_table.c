@@ -148,6 +148,8 @@ static const config_setting config_settings[] = {
     { "wrap_resistance", CONFIG_INT, "10", apply_int, AT(move.wrap_resistance) },
     { "wrap_windows", CONFIG_BOOL, "true", apply_bool, AT(move.wrap_windows) },
     { "wrap_workspaces", CONFIG_BOOL, "false", apply_bool, AT(move.wrap_workspaces) },
+    { "xwayland_zero_scaling", CONFIG_BOOL, "true", apply_bool,
+      AT(compositing.xwayland_zero_scaling) },
     { "zoom_desktop", CONFIG_BOOL, "true", apply_bool, AT(mouse.zoom_desktop) },
     { "zoom_pointer", CONFIG_BOOL, "true", apply_bool, AT(mouse.zoom_pointer) },
 };

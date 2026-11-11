@@ -3,6 +3,7 @@
 
 #include "ewmh_payload.h"
 #include "output/output.h"
+#include "x11_scale.h"
 #include "xwayland_ewmh.h"
 #include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
@@ -134,8 +135,8 @@ static void request_extents(xwayland_shell *shell, const xcb_client_message_even
     xwayland_view *xv = find_view(shell, message->window);
     uint32_t capabilities = xv != NULL ? xwayland_view_capabilities(xv) : WM_CAP_ALL;
     wm_extents estimate = wm_desktop_frame_extents(shell->server->desktop, capabilities);
-    ewmh_frame_extents extents = ewmh_frame_extents_from(&estimate);
-    x11_window_target target = {&shell->link, message->window};
+    x11_window_target target = {&shell->link, message->window, xwayland_shell_scale(shell)};
+    ewmh_frame_extents extents = x11_window_props_extents(&target, &estimate);
     x11_window_props_publish_extents(&target, &extents);
 }
 
@@ -146,7 +147,9 @@ static void show_window_menu(xwayland_shell *shell, const xcb_client_message_eve
         return;
     }
     wm_rect client = wm_window_current_view(window).client;
-    wm_point root = {(int32_t) message->data.data32[1], (int32_t) message->data.data32[2]};
+    double scale = xwayland_shell_scale(shell);
+    wm_point root = {x11_scale_from_x(scale, (int32_t) message->data.data32[1]),
+                     x11_scale_from_x(scale, (int32_t) message->data.data32[2])};
     wm_point inside = {root.x - client.x, root.y - client.y};
     wm_request_window_menu(shell->server->desktop, window, inside);
 }

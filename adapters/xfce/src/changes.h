@@ -23,6 +23,7 @@ enum change_flag {
     CHANGE_DISPLAYS = 1 << 4,
     CHANGE_X11_SETTINGS = 1 << 5,
     CHANGE_POWER = 1 << 6,
+    CHANGE_WINDOW_RULES = 1 << 7,
 };
 
 const char *channel_name(channel_id id);

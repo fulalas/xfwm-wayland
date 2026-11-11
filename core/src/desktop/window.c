@@ -154,7 +154,7 @@ bool window_is_regular_focusable(const wm_window *window)
 
 bool window_is_dont_focus(const wm_window *window)
 {
-    return window->type == WM_TYPE_SPLASH || window->type == WM_TYPE_DOCK;
+    return window->no_focus || window->type == WM_TYPE_SPLASH || window->type == WM_TYPE_DOCK;
 }
 
 bool window_is_dont_place(const wm_window *window)

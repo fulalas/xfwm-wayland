@@ -95,6 +95,9 @@ void compositor_set_config(compositor *c, const wm_config *config)
     if (color_changed) {
         renderer_follow_config(c);
     }
+    if (c->xwayland != NULL) {
+        xwayland_shell_update_scale(c->xwayland);
+    }
     outputs_brightness_changed(c->outputs);
     apply_scanout(c);
     outputs_schedule_frames(c->outputs);

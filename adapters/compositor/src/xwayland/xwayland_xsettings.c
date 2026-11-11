@@ -6,6 +6,7 @@
 #include <wlr/util/log.h>
 
 #include "xresources.h"
+#include "xwayland.h"
 #include "xsettings_table.h"
 #include "xsettings_wire.h"
 
@@ -129,7 +130,7 @@ static void collect(xwayland_xsettings *xsettings)
 {
     const compositor_services *services = xsettings->server->services;
     x11_setting_sink sink = {xsettings->table, add_to_table};
-    xsettings_table_reset(xsettings->table);
+    xsettings_table_reset(xsettings->table, xwayland_shell_scale(xsettings->server->xwayland));
     services->x11_settings(services->self, &sink);
 }
 

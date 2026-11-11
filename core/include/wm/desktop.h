@@ -10,6 +10,7 @@
 #include "wm/geometry.h"
 #include "wm/keys.h"
 #include "wm/ports.h"
+#include "wm/rules.h"
 #include "wm/views.h"
 
 typedef struct wm_desktop wm_desktop;
@@ -166,6 +167,7 @@ void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace);
 void wm_desktop_set_workspace_count(wm_desktop *desktop, int count);
 void wm_desktop_rename_workspaces(wm_desktop *desktop, const char *const *names, size_t count);
 void wm_desktop_set_workspace_layout(wm_desktop *desktop, int rows, int columns);
+void wm_desktop_set_window_rules(wm_desktop *desktop, const wm_window_rule *rules, size_t count);
 wm_extents wm_desktop_frame_extents(const wm_desktop *desktop, uint32_t capabilities);
 wm_size wm_desktop_client_bounds(const wm_desktop *desktop, uint32_t capabilities);
 

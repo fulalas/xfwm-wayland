@@ -49,6 +49,18 @@ static const value_name vblank_modes[] = {
     { "adaptive", WM_VBLANK_ADAPTIVE },
 };
 
+static const value_name rule_anchors[] = {
+    { "top-left", WM_ANCHOR_TOP_LEFT },       { "top", WM_ANCHOR_TOP },
+    { "top-right", WM_ANCHOR_TOP_RIGHT },     { "left", WM_ANCHOR_LEFT },
+    { "center", WM_ANCHOR_CENTER },           { "right", WM_ANCHOR_RIGHT },
+    { "bottom-left", WM_ANCHOR_BOTTOM_LEFT }, { "bottom", WM_ANCHOR_BOTTOM },
+    { "bottom-right", WM_ANCHOR_BOTTOM_RIGHT },
+};
+
+static const value_name rule_matches[] = {
+    { "glob", WM_MATCH_GLOB },
+};
+
 typedef struct value_table {
     const value_name *names;
     size_t count;
@@ -63,6 +75,8 @@ static const value_table placement_table = TABLE(placement_modes, WM_PLACE_CENTE
 static const value_table alignment_table = TABLE(alignments, WM_ALIGN_CENTER);
 static const value_table title_shadow_table = TABLE(title_shadows, WM_TITLE_SHADOW_NONE);
 static const value_table vblank_table = TABLE(vblank_modes, WM_VBLANK_AUTO);
+static const value_table rule_anchor_table = TABLE(rule_anchors, WM_ANCHOR_NONE);
+static const value_table rule_match_table = TABLE(rule_matches, WM_MATCH_EXACT);
 
 static int lookup_value(const value_table *table, const char *text);
 
@@ -108,6 +122,19 @@ wm_title_shadow config_title_shadow(const char *text)
 wm_vblank_mode config_vblank_mode(const char *text)
 {
     return lookup_value(&vblank_table, text);
+}
+
+wm_rule_anchor config_rule_anchor(const char *text)
+{
+    char *name = g_strdelimit(g_strdup(text), "_ ", '-');
+    wm_rule_anchor anchor = lookup_value(&rule_anchor_table, name);
+    g_free(name);
+    return anchor;
+}
+
+wm_rule_match config_rule_match(const char *text)
+{
+    return lookup_value(&rule_match_table, text);
 }
 
 wm_render_time config_render_time(const char *text)

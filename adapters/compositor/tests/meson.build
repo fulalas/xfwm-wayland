@@ -28,6 +28,7 @@ compositor_pure_tests = {
   'xcursor_resize': ['../src/cursor/xcursor_resize.c'],
   'repaint_timing': ['../src/render/repaint_timing.c', '../src/render/present_rules.c'],
   'scale_guess': ['../src/output/scale_guess.c'],
+  'x11_scale': ['../src/xwayland/x11_scale.c'],
 }
 
 foreach name, sources : compositor_pure_tests

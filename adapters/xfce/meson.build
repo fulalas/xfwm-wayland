@@ -39,6 +39,8 @@ xfce_logic = static_library(
     'src/shortcut_defaults.c',
     'src/shortcut_property.c',
     'src/style_state.c',
+    'src/value_text.c',
+    'src/window_rules.c',
     'src/workspace_rows.c',
     '../../helper/protocol_text.c',
   ),
@@ -106,7 +108,7 @@ xfce_dep = declare_dependency(
   ],
 )
 
-xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'display_off', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts', 'workspace_rows']
+xfce_tests = ['accelerator', 'app_shortcuts', 'accessibility', 'config', 'display_off', 'displays', 'input', 'pointer_prefs', 'protocol', 'session', 'shortcuts', 'window_rules', 'workspace_rows']
 
 foreach name : xfce_tests
   test(

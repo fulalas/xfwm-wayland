@@ -11,6 +11,7 @@
 #include "monitors.h"
 #include "moveresize.h"
 #include "present.h"
+#include "rules.h"
 #include "timers.h"
 #include "window.h"
 #include "window_list.h"
@@ -39,6 +40,7 @@ struct wm_desktop {
     zoom_state zoom;
     monitor_memory remembered_monitors;
     launch_set launches;
+    rule_set rules;
     wm_window *highlighted;
     wm_point pointer;
     uint32_t modifiers;

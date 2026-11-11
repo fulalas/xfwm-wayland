@@ -33,6 +33,7 @@ typedef struct device_list device_list;
 typedef struct drm_lease drm_lease;
 typedef struct xdg_sessions xdg_sessions;
 typedef struct present_sync present_sync;
+typedef struct xdg_outputs xdg_outputs;
 
 typedef struct protocol_globals {
     struct wlr_compositor *compositor;
@@ -103,6 +104,7 @@ struct compositor {
     xdg_shell *xdg;
     layer_shell *layer_shell;
     xwayland_shell *xwayland;
+    xdg_outputs *xdg_outputs;
     session_lock *lock;
     osd *osd;
     zoom *zoom;

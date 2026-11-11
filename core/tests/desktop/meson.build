@@ -17,6 +17,7 @@ desktop_tests = [
   'pager',
   'restore',
   'outputs',
+  'rules',
 ]
 
 foreach name : desktop_tests

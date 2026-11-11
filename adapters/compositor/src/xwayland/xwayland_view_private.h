@@ -80,6 +80,7 @@ void xwayland_requests_disconnect(xwayland_view *view);
 void xwayland_properties_connect(xwayland_view *view);
 void xwayland_properties_disconnect(xwayland_view *view);
 wm_window *xwayland_view_window(const xwayland_view *view);
+double xwayland_view_scale(const xwayland_view *view);
 wm_window_desc xwayland_view_describe(const xwayland_view *view);
 uint32_t xwayland_view_capabilities(const xwayland_view *view);
 void xwayland_view_read_properties(xwayland_view *view);

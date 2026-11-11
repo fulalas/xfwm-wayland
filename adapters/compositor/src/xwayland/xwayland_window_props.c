@@ -2,7 +2,9 @@
 
 #include <string.h>
 
-static x11_window_props props_of(const wm_window_view *state);
+#include "x11_scale.h"
+
+static x11_window_props props_of(const x11_window_target *target, const wm_window_view *state);
 static void publish_desktop(const x11_window_target *target, uint32_t desktop);
 static void publish_actions(const x11_window_target *target, uint32_t actions);
 
@@ -12,7 +14,7 @@ void x11_window_props_publish(x11_window_props *last, const x11_window_target *t
     if (x11_link_connection(target->link) == NULL) {
         return;
     }
-    x11_window_props next = props_of(state);
+    x11_window_props next = props_of(target, state);
     if (!last->published || last->desktop != next.desktop) {
         publish_desktop(target, next.desktop);
     }
@@ -36,14 +38,20 @@ void x11_window_props_publish_extents(const x11_window_target *target,
     x11_link_flush(target->link);
 }
 
-static x11_window_props props_of(const wm_window_view *state)
+ewmh_frame_extents x11_window_props_extents(const x11_window_target *target,
+                                            const wm_extents *logical)
+{
+    wm_extents extents = x11_scale_extents_to_x(target->scale, *logical);
+    return ewmh_frame_extents_from(&extents);
+}
+
+static x11_window_props props_of(const x11_window_target *target, const wm_window_view *state)
 {
     wm_extents none = {0, 0, 0, 0};
-    const wm_extents *extents = state->decor != NULL ? &state->decor->extents : &none;
     x11_window_props props = {
         .published = true,
         .desktop = ewmh_window_desktop(state),
-        .extents = ewmh_frame_extents_from(extents),
+        .extents = x11_window_props_extents(target, state->decor ? &state->decor->extents : &none),
         .actions = state->allowed_actions,
     };
     return props;

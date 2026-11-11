@@ -18,11 +18,14 @@ typedef struct x11_window_props {
 typedef struct x11_window_target {
     const x11_link *link;
     xcb_window_t window;
+    double scale;
 } x11_window_target;
 
 void x11_window_props_publish(x11_window_props *last, const x11_window_target *target,
                               const wm_window_view *state);
 void x11_window_props_publish_extents(const x11_window_target *target,
                                       const ewmh_frame_extents *extents);
+ewmh_frame_extents x11_window_props_extents(const x11_window_target *target,
+                                            const wm_extents *logical);
 
 #endif

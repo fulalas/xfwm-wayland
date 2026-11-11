@@ -8,6 +8,7 @@
 #include "click_focus.h"
 #include "input_mapping.h"
 #include "util/listener.h"
+#include "xwayland/xwayland.h"
 #include "pointer_target.h"
 #include "seat_private.h"
 
@@ -276,10 +277,12 @@ static void move_cursor(pointer_input *p, struct wlr_input_device *device,
     seat_notify_activity(s);
     struct wlr_relative_pointer_manager_v1 *relative = s->server->globals.relative_pointer;
     if (relative != NULL) {
+        double scale =
+            xwayland_surface_scale(s->server, s->wlr_seat->pointer_state.focused_surface);
         wlr_relative_pointer_manager_v1_send_relative_motion(
             relative, s->wlr_seat, (uint64_t) motion->time_ms * US_PER_MS,
-            motion->accelerated.dx, motion->accelerated.dy, motion->unaccelerated.dx,
-            motion->unaccelerated.dy);
+            motion->accelerated.dx * scale, motion->accelerated.dy * scale,
+            motion->unaccelerated.dx * scale, motion->unaccelerated.dy * scale);
     }
     motion_delta allowed = constraints_filter_motion(s->constraints, motion->accelerated);
     wlr_cursor_move(s->cursor, device, allowed.dx, allowed.dy);
@@ -302,12 +305,11 @@ static void deliver_motion(pointer_input *p, const pointer_hit *hit, uint32_t ti
 
 static void deliver_grab_motion(pointer_input *p, uint32_t time_ms)
 {
-    int node_x = 0;
-    int node_y = 0;
-    wlr_scene_node_coords(p->grab_node, &node_x, &node_y);
     struct wlr_cursor *cursor = p->seat->cursor;
-    wlr_seat_pointer_notify_motion(p->seat->wlr_seat, time_ms, cursor->x - node_x,
-                                   cursor->y - node_y);
+    double sx = 0.0;
+    double sy = 0.0;
+    xwayland_node_local(p->seat->server, p->grab_node, cursor->x, cursor->y, &sx, &sy);
+    wlr_seat_pointer_notify_motion(p->seat->wlr_seat, time_ms, sx, sy);
 }
 
 static void apply_hit(pointer_input *p, const pointer_hit *hit, wm_dispatch result,

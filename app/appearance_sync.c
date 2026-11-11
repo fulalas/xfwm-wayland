@@ -66,6 +66,14 @@ void app_reload_keymap(app *app)
     wm_desktop_set_keymap(app->desktop, &keymap);
 }
 
+void app_reload_window_rules(app *app)
+{
+    xfce_window_rules rules = xfce_environment_window_rules(app->xfce);
+
+    wm_desktop_set_window_rules(app->desktop, rules.items, rules.count);
+    xfce_window_rules_free(&rules);
+}
+
 static bool theme_is_current(app *app)
 {
     ui_style style = current_style(app);

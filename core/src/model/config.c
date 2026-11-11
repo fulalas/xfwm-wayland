@@ -172,6 +172,7 @@ static wm_compositing_config compositing_defaults(void)
         .enabled = true,
         .use_gl = true,
         .max_render_time = {WM_RENDER_TIME_AUTO, 0},
+        .xwayland_zero_scaling = true,
         .frame_opacity_percent = DEFAULT_OPAQUE_PERCENT,
         .inactive_opacity_percent = DEFAULT_OPAQUE_PERCENT,
         .move_opacity_percent = DEFAULT_OPAQUE_PERCENT,

@@ -27,12 +27,14 @@
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
-#include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_system_bell_v1.h>
 #include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
 #include <wlr/util/log.h>
 
+#include "output/xdg_output.h"
 #include "protocols.h"
+#include "xwayland/x11_scale.h"
+#include "xwayland/xwayland.h"
 
 enum {
     COMPOSITOR_VERSION = 6,
@@ -121,10 +123,16 @@ static void create_dmabuf(compositor *server)
     }
 }
 
+static wm_rect client_box(void *self, struct wl_client *client, wm_rect logical)
+{
+    return x11_scale_rect_to_x(xwayland_client_scale(self, client), logical);
+}
+
 static void create_capture(compositor *server)
 {
     struct wl_display *display = server->display;
-    wlr_xdg_output_manager_v1_create(display, server->layout);
+    xdg_output_scaler scaler = {server, client_box};
+    server->xdg_outputs = xdg_outputs_create(display, server->layout, &scaler);
     wlr_screencopy_manager_v1_create(display);
     wlr_export_dmabuf_manager_v1_create(display);
     struct wlr_gamma_control_manager_v1 *gamma = wlr_gamma_control_manager_v1_create(display);

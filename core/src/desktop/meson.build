@@ -40,6 +40,7 @@ desktop_sources = files(
   'present.c',
   'requests.c',
   'resize_motion.c',
+  'rules.c',
   'size_hints.c',
   'smart_placement.c',
   'snap.c',

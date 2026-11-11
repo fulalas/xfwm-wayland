@@ -73,6 +73,7 @@ struct wm_window {
     bool has_icon;
     bool activation_allowed;
     bool skip_initial_focus;
+    bool no_focus;
     bool opacity_locked;
     bool opaque;
     bool has_position;

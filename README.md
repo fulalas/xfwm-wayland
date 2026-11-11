@@ -18,6 +18,7 @@ It supports:
 * screenshots and screen sharing (through `xdg-desktop-portal-wlr`),
   touchscreens, drawing tablets and VR headsets
 * restoring window size and position for programs that support it
+* window rules, set from scripts through `xfconf`
 * 69 languages
 
 ## Why this exists
@@ -47,7 +48,7 @@ Here's a quick comparison:
 | Busy cursor while apps start         | no                 | yes                      |
 | xfwm4 compositing settings           | some ignored       | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, software |
-| Sharp X11 programs when scaling      | yes, uneven sizes  | no, consistent sizes     |
+| Sharp X11 programs when scaling      | yes, uneven sizes  | yes                      |
 
 Power, CPU time and delay come from [wmbench](https://github.com/fulalas/wmbench) on an AMD Ryzen 7 7840HS at
 3840x2160, 60 Hz. Memory is the compositor's total resident memory at scale 1.
@@ -152,10 +153,56 @@ setting, so everything is scaled with the Scale value in the Display settings:
 Also, icons and mouse cursor may have different sizes compared to X11 with a
 similar font DPI. That's expected.
 
+X11 programs draw at full resolution and scale themselves, so they stay
+sharp (`xwayland_zero_scaling`, like Hyprland's `xwayland:force_zero_scaling`).
+`Xft.dpi` and the X11 DPI setting become 96 × the largest output scale, which
+GTK and Qt programs follow. On outputs with a lower scale, X11 programs are
+shrunk. Running programs may need a restart after the option or the scale
+changes.
+
+## Window rules
+
+Window rules are kept in the `xfwm4` channel under `/window-rules/<n>/`,
+where `<n>` is a number. They apply when a window opens, and again to open
+windows whenever a rule changes, so a script can move a window by editing its
+rule. When several rules match, the higher number wins for each property.
+
+| Property       | Type   | Value                                                       |
+|----------------|--------|-------------------------------------------------------------|
+| `title`        | string | window title                                                |
+| `app_id`       | string | Wayland app id, or X11 class (second value of `xprop WM_CLASS`) |
+| `match`        | string | `exact` (default) or `glob` (`*`, `?`, `[...]`)             |
+| `position`     | string | `top-left`, `top`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`, `bottom-right` |
+| `margin`       | int    | gap to the screen edges, in pixels at scale 1               |
+| `output`       | string | output name, e.g. `DP-1` (see `wlr-randr`)                  |
+| `workspace`    | int    | workspace number, from 1                                    |
+| `above`        | bool   | keep above other windows                                    |
+| `skip_taskbar` | bool   | hide from the taskbar                                       |
+| `no_focus`     | bool   | never take the keyboard focus                               |
+
+A rule needs a `title` or an `app_id`. `position` places the window in the
+work area (screen minus panels) of its output and keeps its size. Maximized
+and fullscreen windows keep their place. Rules don't run again when a window
+changes its title.
+
+Add a rule, then move the window:
+
+    xfconf-query -c xfwm4 -p /window-rules/0/app_id -n -t string -s org.xfce.mousepad
+    xfconf-query -c xfwm4 -p /window-rules/0/position -n -t string -s bottom-right
+    xfconf-query -c xfwm4 -p /window-rules/0/margin -n -t int -s 10
+    xfconf-query -c xfwm4 -p /window-rules/0/position -s top-left
+
+Remove it with `xfconf-query -c xfwm4 -p /window-rules/0 -r -R`. Open windows
+keep what the rule gave them (position, above, taskbar, focus).
+
 ## Issues and possible solutions
 
-* X11 programs are blurry when scaled: `wlroots` 0.20 can't scale `XWayland`
-  sharply (fix planned, see [wlroots !2064](https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/2064))
+* X11 programs that ignore the DPI (Java, old toolkits) look small when
+  scaled. Turning off `xwayland_zero_scaling` makes the compositor scale them
+  instead, but blurry:
+  ```sh
+  xfconf-query -c xfwm4 -p /general/xwayland_zero_scaling -n -t bool -s false
+  ```
 * Many programs that support Wayland still use `XWayland` by default, so they
   look blurry when scaled. Set these to make them use Wayland when they can:
   ```sh

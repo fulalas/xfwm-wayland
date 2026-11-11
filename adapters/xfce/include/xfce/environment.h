@@ -8,6 +8,7 @@
 #include "wm/config.h"
 #include "wm/keys.h"
 #include "wm/ports.h"
+#include "wm/rules.h"
 
 enum {
     XFCE_SYMBOL_MAX = 32,
@@ -46,6 +47,11 @@ typedef struct xfce_setting_source {
     const char *(*lookup)(void *self, const char *key);
 } xfce_setting_source;
 
+typedef struct xfce_window_rules {
+    wm_window_rule *items;
+    size_t count;
+} xfce_window_rules;
+
 typedef struct xfce_session_display {
     const char *wayland_display;
     const char *x11_display;
@@ -55,6 +61,7 @@ typedef struct xfce_listener {
     void *self;
     void (*theme_changed)(void *self);
     void (*settings_changed)(void *self);
+    void (*window_rules_changed)(void *self);
     void (*shortcuts_changed)(void *self);
     void (*input_changed)(void *self);
     void (*style_changed)(void *self);
@@ -76,6 +83,8 @@ const char *xfce_environment_title_font(xfce_environment *environment);
 wm_config xfce_environment_config(xfce_environment *environment,
                                   const xfce_setting_source *theme);
 wm_keymap xfce_environment_keymap(xfce_environment *environment);
+xfce_window_rules xfce_environment_window_rules(xfce_environment *environment);
+void xfce_window_rules_free(xfce_window_rules *rules);
 void xfce_environment_app_shortcut(xfce_environment *environment,
                                   const wm_app_shortcut_event *event);
 xfce_style xfce_environment_style(xfce_environment *environment);

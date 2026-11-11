@@ -11,6 +11,7 @@
 #include "decor/shadow.h"
 #include "render/surface_opacity.h"
 #include "unmanaged.h"
+#include "xwayland.h"
 
 static const enum wlr_xwayland_net_wm_window_type popup_types[] = {
     WLR_XWAYLAND_NET_WM_WINDOW_TYPE_MENU,          WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
@@ -41,6 +42,7 @@ static bool build_scene(unmanaged *unmanaged);
 static bool is_popup(const struct wlr_xwayland_surface *xsurface);
 static void apply_style(unmanaged *unmanaged);
 static void show_style(unmanaged *unmanaged, const shadow_inputs *inputs);
+static wm_rect logical_geometry(const unmanaged *unmanaged);
 
 unmanaged *unmanaged_create(compositor *server, struct wlr_xwayland_surface *xsurface)
 {
@@ -81,7 +83,8 @@ void unmanaged_destroy(unmanaged *u)
 
 void unmanaged_move(unmanaged *u)
 {
-    wlr_scene_node_set_position(&u->tree->node, u->xsurface->x, u->xsurface->y);
+    wm_rect geometry = logical_geometry(u);
+    wlr_scene_node_set_position(&u->tree->node, geometry.x, geometry.y);
     apply_style(u);
 }
 
@@ -97,7 +100,7 @@ static bool build_scene(unmanaged *u)
         return false;
     }
     u->shadow = shadow_create(u->tree);
-    u->surface_tree = wlr_scene_subsurface_tree_create(u->tree, u->xsurface->surface);
+    u->surface_tree = xwayland_surface_tree(u->server, u->tree, u->xsurface->surface);
     return u->shadow != NULL && u->surface_tree != NULL;
 }
 
@@ -113,8 +116,7 @@ static bool is_popup(const struct wlr_xwayland_surface *xsurface)
 
 static bool covers_output(const unmanaged *u)
 {
-    const struct wlr_xwayland_surface *xs = u->xsurface;
-    wm_rect window = {xs->x, xs->y, xs->width, xs->height};
+    wm_rect window = logical_geometry(u);
     output *o = outputs_near_point(u->server->outputs, wm_rect_center(&window));
     if (o == NULL) {
         return false;
@@ -134,7 +136,7 @@ static void apply_style(unmanaged *u)
     shadow_inputs inputs;
     memset(&inputs, 0, sizeof(inputs));
     inputs.config = *config;
-    inputs.geometry = (wm_rect){xs->x, xs->y, xs->width, xs->height};
+    inputs.geometry = logical_geometry(u);
     inputs.opaque = surface_is_opaque(xs->surface);
     if (u->styled && memcmp(&inputs, &u->styled_for, sizeof(inputs)) == 0) {
         return;
@@ -150,6 +152,11 @@ static void show_style(unmanaged *u, const shadow_inputs *inputs)
         shadow_hide(u->shadow);
         return;
     }
-    wm_rect frame = {0, 0, u->xsurface->width, u->xsurface->height};
+    wm_rect frame = {0, 0, inputs->geometry.width, inputs->geometry.height};
     shadow_show_around(u->shadow, u->server, &frame);
+}
+
+static wm_rect logical_geometry(const unmanaged *u)
+{
+    return xwayland_shell_logical_rect(u->server->xwayland, u->xsurface);
 }

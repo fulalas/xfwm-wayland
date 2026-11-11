@@ -15,6 +15,7 @@
 #include "util/listener.h"
 #include "output/output.h"
 #include "render/scene_buffers.h"
+#include "xwayland/xwayland.h"
 
 struct window_capture_source {
     struct wlr_ext_image_capture_source_v1 base;
@@ -167,7 +168,7 @@ static bool build_scene(window_capture_source *s)
     if (s->content == NULL) {
         return false;
     }
-    s->surface = wlr_scene_subsurface_tree_create(s->content, view_surface(s->view));
+    s->surface = xwayland_surface_tree(s->server, s->content, view_surface(s->view));
     if (s->surface == NULL) {
         return false;
     }

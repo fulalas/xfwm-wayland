@@ -12,6 +12,7 @@ typedef struct wm_output_info {
     wm_rect full;
     wm_rect usable;
     bool primary;
+    const char *name;
 } wm_output_info;
 
 typedef struct wm_presenter {

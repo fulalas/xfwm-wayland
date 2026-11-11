@@ -31,5 +31,6 @@ void monitors_remember(wm_desktop *desktop);
 bool monitors_remembered_at(const wm_desktop *desktop, wm_point point, wm_rect *full,
                             wm_rect *work);
 bool monitors_find(const wm_desktop *desktop, const wm_rect *full, size_t *index);
+bool monitors_find_named(const wm_desktop *desktop, const char *name, size_t *index);
 
 #endif

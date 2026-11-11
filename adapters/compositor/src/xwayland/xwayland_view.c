@@ -6,6 +6,7 @@
 
 #include "util/listener.h"
 #include "output/output.h"
+#include "x11_scale.h"
 #include "xwayland_shell_private.h"
 #include "xwayland_view_private.h"
 
@@ -63,6 +64,21 @@ xwayland_view *xwayland_view_create(compositor *server, struct wlr_xwayland_surf
     return xv;
 }
 
+void xwayland_views_rescale(struct wl_list *views)
+{
+    xwayland_view *xv;
+    wl_list_for_each(xv, views, link) {
+        if (xv->unmanaged != NULL) {
+            unmanaged_move(xv->unmanaged);
+        }
+        wm_window *window = xwayland_view_window(xv);
+        if (window != NULL) {
+            wm_rect client = wm_window_current_view(window).client;
+            impl_configure(xv, &client);
+        }
+    }
+}
+
 wm_rect xwayland_views_apply_struts(const struct wl_list *views, const strut_context *context,
                                     wm_rect usable)
 {
@@ -77,6 +93,11 @@ wm_rect xwayland_views_apply_struts(const struct wl_list *views, const strut_con
 wm_window *xwayland_view_window(const xwayland_view *xv)
 {
     return xv->view != NULL ? view_window(xv->view) : NULL;
+}
+
+double xwayland_view_scale(const xwayland_view *xv)
+{
+    return xwayland_shell_scale(xv->server->xwayland);
 }
 
 void xwayland_view_settle_if_current(xwayland_view *xv)
@@ -151,7 +172,8 @@ static void handle_commit(struct wl_listener *listener, void *data)
     }
     if (xv->view != NULL) {
         struct wlr_surface *surface = xv->xsurface->surface;
-        view_committed(xv->view, (wm_size){surface->current.width, surface->current.height});
+        wm_size size = {surface->current.width, surface->current.height};
+        view_committed(xv->view, x11_scale_size_from_x(xwayland_view_scale(xv), size));
         xwayland_view_settle_if_current(xv);
     }
 }
@@ -178,7 +200,7 @@ static void map_managed(xwayland_view *xv)
         wlr_log(WLR_ERROR, "cannot create a view for X11 window %s", xv->xsurface->class);
         return;
     }
-    wlr_scene_subsurface_tree_create(view_content_tree(xv->view), xv->xsurface->surface);
+    xwayland_surface_tree(xv->server, view_content_tree(xv->view), xv->xsurface->surface);
     xwayland_view_read_properties(xv);
     wm_window_desc desc = xwayland_view_describe(xv);
     char *remote_title = xwayland_view_remote_title(xv);
@@ -235,8 +257,9 @@ static struct wlr_surface *impl_surface(void *self)
 static void impl_configure(void *self, const wm_rect *client)
 {
     xwayland_view *xv = self;
-    wlr_xwayland_surface_configure(xv->xsurface, (int16_t) client->x, (int16_t) client->y,
-                                   (uint16_t) client->width, (uint16_t) client->height);
+    wm_rect x = x11_scale_rect_to_x(xwayland_view_scale(xv), *client);
+    wlr_xwayland_surface_configure(xv->xsurface, (int16_t) x.x, (int16_t) x.y, (uint16_t) x.width,
+                                   (uint16_t) x.height);
 }
 
 static void impl_close(void *self)
