@@ -88,6 +88,10 @@ static unsigned xsettings_flags(const char *property)
     if (g_str_has_prefix(property, "/Gtk/CursorTheme")) {
         flags |= CHANGE_INPUT;
     }
+    if (g_str_has_prefix(property, "/Net/IconThemeName")
+        || g_str_has_prefix(property, "/Net/FallbackIconTheme")) {
+        flags |= CHANGE_ICON_THEME;
+    }
     return flags;
 }
 

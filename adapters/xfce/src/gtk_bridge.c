@@ -56,6 +56,11 @@ void gtk_bridge_start(gtk_bridge *bridge)
     helper_client_start(bridge->client);
 }
 
+void gtk_bridge_forget_icons(gtk_bridge *bridge)
+{
+    icon_lookups_forget_paths(bridge->icons);
+}
+
 xfce_style gtk_bridge_style(const gtk_bridge *bridge)
 {
     return style_state_current(bridge->style);
@@ -64,8 +69,12 @@ xfce_style gtk_bridge_style(const gtk_bridge *bridge)
 void gtk_bridge_lookup_icon(gtk_bridge *bridge, const icon_request *request)
 {
     unsigned id = icon_lookups_add(bridge->icons, request);
-    char *line = helper_icon_request_format(id, request);
+    char *line;
 
+    if (id == ICON_LOOKUP_KNOWN) {
+        return;
+    }
+    line = helper_icon_request_format(id, request);
     g_hash_table_insert(bridge->icon_lines, GUINT_TO_POINTER(id), line);
     helper_client_send(bridge->client, line);
 }

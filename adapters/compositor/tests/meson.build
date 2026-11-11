@@ -24,6 +24,8 @@ compositor_pure_tests = {
   'session_book': ['../src/session/session_book.c', '../src/session/session_record.c'],
   'session_apply': ['../src/session/session_apply.c'],
   'present_rules': ['../src/render/present_rules.c'],
+  'mapping_line': ['../src/server/mapping_line.c'],
+  'page_runs': ['../src/server/page_runs.c'],
   'scalable_layout': ['../src/cursor/scalable_layout.c'],
   'xcursor_resize': ['../src/cursor/xcursor_resize.c'],
   'repaint_timing': ['../src/render/repaint_timing.c', '../src/render/present_rules.c'],

@@ -8,6 +8,7 @@
 #include "shell/layer_shell.h"
 #include "input/lid_switch.h"
 #include "lock.h"
+#include "memory_trim.h"
 #include "osd/osd.h"
 #include "output/output.h"
 #include "output/output_config.h"
@@ -60,6 +61,7 @@ static bool create_core_modules(compositor *c)
 {
     bool ready = true;
     c->outputs = outputs_create(c);
+    c->memory_trim = memory_trim_create(c->loop);
     c->seat = require(&ready, c->outputs != NULL ? seat_create(c) : NULL);
     c->device_list = device_list_create(c);
     c->osd = require(&ready, osd_create(c));
@@ -106,6 +108,7 @@ void server_modules_destroy(compositor *c)
     DESTROY_AND_CLEAR(c->device_list, device_list_destroy);
     DESTROY_AND_CLEAR(c->seat, seat_destroy);
     DESTROY_AND_CLEAR(c->outputs, outputs_destroy);
+    DESTROY_AND_CLEAR(c->memory_trim, memory_trim_destroy);
 }
 
 static bool create_display_modules(compositor *c)

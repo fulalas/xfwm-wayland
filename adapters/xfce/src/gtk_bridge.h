@@ -14,6 +14,7 @@ typedef struct gtk_bridge gtk_bridge;
 gtk_bridge *gtk_bridge_create(const bridge_listener *listener);
 void gtk_bridge_destroy(gtk_bridge *bridge);
 void gtk_bridge_start(gtk_bridge *bridge);
+void gtk_bridge_forget_icons(gtk_bridge *bridge);
 xfce_style gtk_bridge_style(const gtk_bridge *bridge);
 void gtk_bridge_lookup_icon(gtk_bridge *bridge, const icon_request *request);
 void gtk_bridge_cancel_icons(gtk_bridge *bridge, void *context);

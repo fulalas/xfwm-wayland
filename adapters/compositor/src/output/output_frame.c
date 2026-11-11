@@ -7,6 +7,7 @@
 #include "output_private.h"
 #include "output_repaint.h"
 #include "render/scene_buffers.h"
+#include "server/memory_trim.h"
 #include "input/seat.h"
 #include "shell/view.h"
 #include "zoom.h"
@@ -60,6 +61,7 @@ bool output_commit_state(output *o, struct wlr_output_state *state)
     }
     if (painted) {
         paint_stats_note(&o->stats, o->wlr_output->name);
+        memory_trim_note_frame(o->server->memory_trim);
     }
     if ((state->committed & WLR_OUTPUT_STATE_IMAGE_DESCRIPTION) != 0) {
         o->scene_hdr = state->image_description != NULL;

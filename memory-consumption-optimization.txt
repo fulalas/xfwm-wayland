@@ -1,0 +1,119 @@
+Memory consumption optimization log
+===================================
+
+Every strategy tried goes here: what, result, kept or dropped.
+
+Baseline (0.7.39, 2026-11-11, real session, 3840x2160, RSS after boot)
+----------------------------------------------------------------------
+xfwm-wayland          168 MB at scale 1, 228 MB at scale 1.5, 409 MB seen once
+xfwm-wayland-helper    28 MB
+labwc                  29 MB
+xfwl4                 158 MB
+Goal: below xfwl4, as close to labwc as possible.
+
+How it is measured here
+-----------------------
+.local-build/test/run-compare.sh [ours|labwc]
+  Headless 3840x2160 on the real GPU (GLES): empty, then xfdesktop + panel,
+  then 4 windows, then scale 1.5, back to 1, all closed.
+  Result in .local-build/test/out/compare-*.txt (RSS split by mapping).
+.local-build/test/tools/memlive.sh
+  Same split for the live session. Not run yet, so real hardware numbers
+  after these changes are still missing.
+
+Headless baseline (RSS, MB)      ours 0.7.39    labwc
+  empty                               83           94
+  desktop + panel                    150          159
+  4 windows, scale 1                 156          164
+  4 windows, scale 1.5               215          220
+It matches the real session (168 / 228), so the test is trusted.
+labwc is not lighter in the same conditions. The 29 MB figure must come
+from a session without the Xfce desktop.
+
+Where the 156 MB went
+---------------------
+  65 MB  client buffers (wl_shm) mapped into the compositor, mostly the
+         xfdesktop wallpaper (two 3840x2160 images). 126 MB at scale 1.5,
+         because GTK draws at scale 2. This is the scale 1.5 jump and most
+         likely the 409 MB case (more or bigger windows).
+  40 MB  libLLVM + libgallium pages (Mesa), touched once at start.
+  25 MB  other library pages.
+  20 MB  private memory: 11 MB heap + 5 MB anonymous, almost all Mesa GL.
+         With the software renderer the whole compositor idles at 10 MB.
+
+Strategies
+----------
+1. Helper runs only when needed.                                   KEPT
+   Starts at boot, on an xsettings change and for an icon it has not seen.
+   Exits after 10 s without messages (60 s on the first run, so a theme
+   that xfsettingsd pushes late at boot is still seen). Icon paths are
+   remembered in the compositor (dropped on icon theme change, checked
+   with a stat, at most 256).
+   Result: helper is gone most of the time (28 MB -> 0).
+   Cost: first icon of a new app waits for GTK to start.
+   Test: .local-build/test/run-helper.sh
+
+2. Release client buffer pages after reading them.                 KEPT
+   madvise(MADV_DONTNEED) on shared file mappings found in /proc/self/maps,
+   only for pages /proc/self/pagemap reports as file-backed.
+   The pages belong to the client, so nothing is lost; the next read maps
+   them again.
+   Not possible through wlroots buffers: looking one up locks it, and
+   unlocking an idle buffer sends the client a release it did not expect.
+   Result: 156 -> 86 MB at scale 1, 215 -> 87 MB at scale 1.5.
+
+3. Release library pages no longer in use.                         KEPT
+   Same pass, for read-only private file mappings (code and constants).
+   /proc/self/pagemap tells which pages still come from the file; only
+   those are dropped. Writable mappings are never touched.
+   Result: 86 -> 25-35 MB.
+   Known risk: if another thread unmaps a file mapping and the range is
+   reused for private memory between the pagemap read and the madvise
+   (microseconds), that memory is wiped. No thread here is known to do it.
+
+   When 2 and 3 run (server/memory_trim.c): 2 s after a frame, only if at
+   most 10 frames were drawn in those 2 s, and only if file pages grew by
+   16 MB or 60 s passed. Pages that come straight back are counted as in
+   use and left alone until the 60 s pass. One pass takes 1-5 ms.
+
+   First versions, dropped:
+   - every 2 s no matter what: +28% compositor CPU with a window that
+     repaints twice a second (the buffer was dropped and mapped again
+     each time).
+   - code pages on every pass, full pass every 10 or 30 s: same problem,
+     smaller.
+
+4. malloc_trim(0) on each pass.                                    DROPPED
+   No change (private memory stays at 20-22 MB).
+
+5. glibc settings: MALLOC_ARENA_MAX=1, MALLOC_TRIM_THRESHOLD_=128k
+   with MALLOC_TOP_PAD_=0.                                         DROPPED
+   Under 0.3 MB.
+
+6. Mesa settings: MESA_SHADER_CACHE_DISABLE, MESA_NO_ERROR,
+   AMD_DEBUG=useaco, GALLIUM_THREAD=0.                             DROPPED
+   Under 0.3 MB, one made it worse.
+
+Result (headless, RSS, MB)       before    after
+  empty                              83       28
+  desktop + panel                   150       26
+  4 windows, scale 1                156       35
+  4 windows, scale 1.5              215       25
+  helper                             28        0 (60 s after boot, then 10 s after each use)
+CPU, 40 s, 4K terminal: repainting 2x per second 18 -> 19 ticks,
+50x per second 400 -> 404 ticks (noise).
+
+Note: 2 and 3 lower RSS, not the memory the system can reclaim. Those
+pages were shared with clients or the page cache already.
+
+Not tried
+---------
+- Vulkan as default renderer: 11 MB private instead of 20 MB at idle,
+  but changes speed and power.
+- The 20 MB of Mesa GL private memory: nothing found that we control.
+
+Earlier work (from git log, before this file)
+---------------------------------------------
+- 0.7.37: cursor images loaded only when needed. Kept.
+- 0.7.37: GDK dropped from theme loading. Kept.
+- Other attempts were not logged.

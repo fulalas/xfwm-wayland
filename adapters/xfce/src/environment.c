@@ -275,6 +275,12 @@ static void on_dispatch(void *self, unsigned flags)
         reload_keymap(environment);
         notify(environment, environment->listener.shortcuts_changed);
     }
+    if (flags & CHANGE_ICON_THEME) {
+        gtk_bridge_forget_icons(environment->bridge);
+    }
+    if (flags & CHANGE_X11_SETTINGS) {
+        gtk_bridge_start(environment->bridge);
+    }
     notify_changes(environment, flags);
 }
 

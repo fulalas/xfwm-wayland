@@ -9,18 +9,26 @@ enum {
     RESTART_DELAY_MIN_MS = 1000,
     RESTART_DELAY_MAX_MS = 60000,
     BACKOFF_FACTOR = 2,
+    FIRST_IDLE_STOP_MS = 60000,
+    IDLE_STOP_MS = 10000,
 };
 
 struct helper_client {
     helper_events events;
     helper_session *session;
     guint restart_id;
+    guint idle_id;
+    unsigned idle_stop_ms;
     unsigned restart_delay_ms;
 };
 
 static void spawn(helper_client *client);
 static void schedule_restart(helper_client *client);
 static gboolean on_restart(void *data);
+static void stay_awake(helper_client *client);
+static void cancel_idle(helper_client *client);
+static void drop_session(helper_client *client);
+static gboolean on_idle(void *data);
 static void on_line(void *self, const char *line);
 static void on_exited(void *self);
 
@@ -30,6 +38,7 @@ helper_client *helper_client_create(const helper_events *events)
 
     client->events = *events;
     client->restart_delay_ms = RESTART_DELAY_MIN_MS;
+    client->idle_stop_ms = FIRST_IDLE_STOP_MS;
     return client;
 }
 
@@ -38,22 +47,22 @@ void helper_client_destroy(helper_client *client)
     if (client->restart_id) {
         g_source_remove(client->restart_id);
     }
-    if (client->session) {
-        helper_session_destroy(client->session);
-    }
+    drop_session(client);
     g_free(client);
 }
 
 void helper_client_start(helper_client *client)
 {
-    if (client->session || client->restart_id) {
-        return;
+    if (client->session) {
+        stay_awake(client);
+    } else if (!client->restart_id) {
+        spawn(client);
     }
-    spawn(client);
 }
 
 void helper_client_send(helper_client *client, const char *line)
 {
+    helper_client_start(client);
     if (client->session) {
         helper_session_send(client->session, line);
     }
@@ -75,7 +84,9 @@ static void spawn(helper_client *client)
         g_warning("Cannot find the GTK helper xfwm-wayland-helper");
     }
     g_free(path);
-    if (!client->session) {
+    if (client->session) {
+        stay_awake(client);
+    } else {
         schedule_restart(client);
     }
 }
@@ -96,10 +107,45 @@ static gboolean on_restart(void *data)
     return G_SOURCE_REMOVE;
 }
 
+static void stay_awake(helper_client *client)
+{
+    cancel_idle(client);
+    client->idle_id = g_timeout_add(client->idle_stop_ms, on_idle, client);
+}
+
+static void cancel_idle(helper_client *client)
+{
+    if (client->idle_id) {
+        g_source_remove(client->idle_id);
+        client->idle_id = 0;
+    }
+}
+
+static void drop_session(helper_client *client)
+{
+    cancel_idle(client);
+    if (client->session) {
+        helper_session_destroy(client->session);
+        client->session = NULL;
+    }
+}
+
+static gboolean on_idle(void *data)
+{
+    helper_client *client = data;
+
+    client->idle_id = 0;
+    client->idle_stop_ms = IDLE_STOP_MS;
+    drop_session(client);
+    client->events.stopped(client->events.self);
+    return G_SOURCE_REMOVE;
+}
+
 static void on_line(void *self, const char *line)
 {
     helper_client *client = self;
 
+    stay_awake(client);
     client->events.line(client->events.self, line);
 }
 
@@ -108,8 +154,7 @@ static void on_exited(void *self)
     helper_client *client = self;
 
     g_warning("The GTK helper exited, restarting it in %u ms", client->restart_delay_ms);
-    helper_session_destroy(client->session);
-    client->session = NULL;
+    drop_session(client);
     schedule_restart(client);
     client->events.stopped(client->events.self);
 }

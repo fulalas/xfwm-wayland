@@ -169,6 +169,8 @@ static void test_change_flags(void)
     CHECK_INT_EQ(CHANGE_INPUT | CHANGE_X11_SETTINGS,
                  change_flags_for(CHANNEL_XSETTINGS, "/Gtk/CursorThemeSize"));
     CHECK_INT_EQ(CHANGE_X11_SETTINGS, change_flags_for(CHANNEL_XSETTINGS, "/Net/ThemeName"));
+    CHECK_INT_EQ(CHANGE_ICON_THEME | CHANGE_X11_SETTINGS,
+                 change_flags_for(CHANNEL_XSETTINGS, "/Net/IconThemeName"));
     CHECK_INT_EQ(CHANGE_SHORTCUTS, change_flags_for(CHANNEL_SHORTCUTS, "/xfwm4/custom/<Alt>F4"));
     CHECK_INT_EQ(CHANGE_INPUT, change_flags_for(CHANNEL_POINTERS, "/Mouse/RightHanded"));
 }

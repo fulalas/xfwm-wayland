@@ -33,6 +33,7 @@ typedef struct device_list device_list;
 typedef struct drm_lease drm_lease;
 typedef struct xdg_sessions xdg_sessions;
 typedef struct present_sync present_sync;
+typedef struct memory_trim memory_trim;
 typedef struct xdg_outputs xdg_outputs;
 
 typedef struct protocol_globals {
@@ -126,6 +127,7 @@ struct compositor {
     drm_lease *drm_lease;
     xdg_sessions *xdg_sessions;
     present_sync *present_sync;
+    memory_trim *memory_trim;
     struct wl_list views;
     view_signals view_events;
     struct wl_event_source *timer;
