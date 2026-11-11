@@ -11,6 +11,7 @@ static wm_dispatch dispatch_key(wm_desktop *desktop, const wm_key_event *event);
 wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event)
 {
     focus_note_user_input(desktop, event->time_ms);
+    actions_cancel_tap(desktop);
     wm_dispatch result = dispatch_key(desktop, event);
     present_flush(desktop);
     return result;

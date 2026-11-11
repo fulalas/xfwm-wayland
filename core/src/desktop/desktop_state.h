@@ -48,6 +48,7 @@ struct wm_desktop {
     uint32_t last_user_input_ms;
     uint32_t held_app_shortcut;
     uint32_t held_app_shortcut_keysym;
+    wm_key_event tapped_modifier;
     bool has_scrolled;
     uint32_t last_scroll_ms;
 };

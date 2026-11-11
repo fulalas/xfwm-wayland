@@ -118,6 +118,9 @@ Input
 * Programs get global shortcuts through the GlobalShortcuts portal. Only
   special keys (function, media, etc.) or keys with Ctrl, Alt or Super can be
   global. Xfce shortcuts win over them.
+* A shortcut on a modifier key alone (e.g. `Super_L` to open the
+  applications menu) runs when the key is released, only if no other key or
+  mouse button was pressed meanwhile, like `xcape` on X11.
 * Displays turn off when idle. The timeout is taken from
   `~/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-power-manager.xml`
   (if the file is not found, 10 minutes on AC or 5 on battery).

@@ -36,6 +36,7 @@ enum fake_keysym {
     FAKE_KEY_F8 = 0xffc5,
     FAKE_KEY_SPACE = 0x20,
     FAKE_KEY_ALT_L = 0xffe9,
+    FAKE_KEY_SUPER_L = 0xffeb,
     FAKE_KEY_1 = 0x31,
     FAKE_KEY_2 = 0x32,
     FAKE_KEY_D = 0x64,

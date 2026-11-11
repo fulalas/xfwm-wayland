@@ -5,6 +5,8 @@
 
 enum {
     KEYSYM_MODIFIER_FIRST = 0xffe1,
+    KEYSYM_CAPS_LOCK = 0xffe5,
+    KEYSYM_SHIFT_LOCK = 0xffe6,
     KEYSYM_MODIFIER_LAST = 0xffee,
     KEYSYM_ISO_MODIFIER_FIRST = 0xfe01,
     KEYSYM_ISO_MODIFIER_LAST = 0xfe13,
@@ -132,6 +134,12 @@ bool keysym_is_modifier(uint32_t keysym)
     return (keysym >= KEYSYM_MODIFIER_FIRST && keysym <= KEYSYM_MODIFIER_LAST)
            || (keysym >= KEYSYM_ISO_MODIFIER_FIRST && keysym <= KEYSYM_ISO_MODIFIER_LAST)
            || keysym == KEYSYM_MODE_SWITCH || keysym == KEYSYM_NUM_LOCK;
+}
+
+bool keysym_is_held_modifier(uint32_t keysym)
+{
+    return keysym >= KEYSYM_MODIFIER_FIRST && keysym <= KEYSYM_MODIFIER_LAST
+           && keysym != KEYSYM_CAPS_LOCK && keysym != KEYSYM_SHIFT_LOCK;
 }
 
 bool keysym_is_return(uint32_t keysym)

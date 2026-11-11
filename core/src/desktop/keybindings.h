@@ -27,6 +27,7 @@ bool keybindings_is_key_of(const keybindings *keys, wm_action action, uint32_t k
 move_direction keybindings_direction_of(const keybindings *keys, uint32_t keysym);
 uint32_t keybindings_modifiers_of(const keybindings *keys, wm_action action);
 bool keysym_is_modifier(uint32_t keysym);
+bool keysym_is_held_modifier(uint32_t keysym);
 bool keysym_is_return(uint32_t keysym);
 
 #endif

@@ -1,6 +1,8 @@
 #include "check.h"
 #include "fake_input.h"
 
+#include <string.h>
+
 static const wm_rect small = {0, 0, 400, 300};
 
 static wm_frame_state title_state(const wm_window *window)
@@ -121,6 +123,52 @@ static void test_command_binding_spawns(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_lone_modifier_spawns_on_release(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    CHECK_INT_EQ(WM_FORWARD, fake_key(desktop, FAKE_KEY_SUPER_L, 0));
+    CHECK(world.spawned[0] == '\0');
+    CHECK_INT_EQ(WM_FORWARD, fake_key_release(desktop, FAKE_KEY_SUPER_L, WM_MOD_SUPER));
+    CHECK(strcmp("menu", world.spawned) == 0);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_modifier_used_in_chord_does_not_spawn(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_key(desktop, FAKE_KEY_SUPER_L, 0);
+    fake_key(desktop, FAKE_KEY_M, WM_MOD_SUPER);
+    fake_key_release(desktop, FAKE_KEY_SUPER_L, WM_MOD_SUPER);
+    CHECK(world.spawned[0] == '\0');
+    fake_key(desktop, FAKE_KEY_SUPER_L, 0);
+    fake_click click = {WM_TARGET_DESKTOP, NULL, {800, 500}, WM_MOUSE_LEFT, 0, -1};
+    fake_press(&world, desktop, &click);
+    fake_key_release(desktop, FAKE_KEY_SUPER_L, WM_MOD_SUPER);
+    CHECK(world.spawned[0] == '\0');
+    fake_key(desktop, FAKE_KEY_SUPER_L, 0);
+    fake_scroll(&world, &click, 1);
+    fake_key_release(desktop, FAKE_KEY_SUPER_L, WM_MOD_SUPER);
+    CHECK(world.spawned[0] == '\0');
+    wm_desktop_destroy(desktop);
+}
+
+static void test_release_of_earlier_key_keeps_tap(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_key(desktop, FAKE_KEY_A, 0);
+    fake_key(desktop, FAKE_KEY_SUPER_L, 0);
+    fake_key_release(desktop, FAKE_KEY_A, WM_MOD_SUPER);
+    fake_key_release(desktop, FAKE_KEY_SUPER_L, WM_MOD_SUPER);
+    CHECK(strcmp("menu", world.spawned) == 0);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_app_shortcut_reports_press_and_release(void)
 {
     fake_world world;
@@ -214,6 +262,9 @@ static const check_case CASES[] = {
      test_not_responding_after_close_asks_terminate},
     {"close_without_focus_logs_out", test_close_without_focus_logs_out},
     {"command_binding_spawns", test_command_binding_spawns},
+    {"lone_modifier_spawns_on_release", test_lone_modifier_spawns_on_release},
+    {"modifier_used_in_chord_does_not_spawn", test_modifier_used_in_chord_does_not_spawn},
+    {"release_of_earlier_key_keeps_tap", test_release_of_earlier_key_keeps_tap},
     {"app_shortcut_reports_press_and_release", test_app_shortcut_reports_press_and_release},
     {"second_app_shortcut_releases_the_first", test_second_app_shortcut_releases_the_first},
     {"user_shortcut_beats_app_shortcut", test_user_shortcut_beats_app_shortcut},

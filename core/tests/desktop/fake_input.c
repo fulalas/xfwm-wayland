@@ -30,6 +30,7 @@ static const wm_key_binding KEY_BINDINGS[] = {
 
 static const wm_command_binding COMMAND_BINDINGS[] = {
     {{FAKE_KEY_T, WM_MOD_CTRL | WM_MOD_ALT}, "xfce4-terminal"},
+    {{FAKE_KEY_SUPER_L, 0}, "menu"},
 };
 
 static const wm_app_shortcut APP_SHORTCUTS[] = {

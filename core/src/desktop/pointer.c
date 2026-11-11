@@ -1,3 +1,4 @@
+#include "actions.h"
 #include "click.h"
 #include "cursor.h"
 #include "cycle.h"
@@ -58,6 +59,7 @@ wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event)
     desktop->pointer = event->pointer.position;
     if (event->pressed) {
         focus_note_user_input(desktop, event->pointer.time_ms);
+        actions_cancel_tap(desktop);
     }
     wm_dispatch result = dispatch_button(desktop, event);
     present_flush(desktop);
@@ -67,6 +69,7 @@ wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event)
 wm_dispatch wm_pointer_axis(wm_desktop *desktop, const wm_axis_event *event)
 {
     desktop->pointer = event->pointer.position;
+    actions_cancel_tap(desktop);
     wm_dispatch result = dispatch_axis(desktop, event);
     present_flush(desktop);
     return result;

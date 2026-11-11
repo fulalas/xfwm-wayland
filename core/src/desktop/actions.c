@@ -19,6 +19,7 @@ typedef struct window_action {
     window_handler run;
 } window_action;
 
+static void run_tapped_modifier(wm_desktop *desktop, const wm_key_event *event);
 static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *event);
 static void send_app_shortcut(wm_desktop *desktop, const wm_app_shortcut_event *event);
 static bool is_grab_only(wm_action action);
@@ -92,6 +93,10 @@ wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
 {
     const char *command = keybindings_command_for(&desktop->keys, event);
     if (command != NULL) {
+        if (keysym_is_held_modifier(event->keysym)) {
+            desktop->tapped_modifier = *event;
+            return WM_FORWARD;
+        }
         desktop->ports.commands.spawn(desktop->ports.commands.self, command);
         return WM_CONSUMED;
     }
@@ -106,8 +111,14 @@ wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
     return WM_CONSUMED;
 }
 
+void actions_cancel_tap(wm_desktop *desktop)
+{
+    desktop->tapped_modifier = (wm_key_event) {0};
+}
+
 wm_dispatch actions_release_key(wm_desktop *desktop, const wm_key_event *event)
 {
+    run_tapped_modifier(desktop, event);
     uint32_t id = desktop->held_app_shortcut;
     if (id == 0 || desktop->held_app_shortcut_keysym != event->keysym) {
         return WM_FORWARD;
@@ -115,6 +126,19 @@ wm_dispatch actions_release_key(wm_desktop *desktop, const wm_key_event *event)
     desktop->held_app_shortcut = 0;
     send_app_shortcut(desktop, &(wm_app_shortcut_event) {id, WM_SHORTCUT_RELEASED, event->time_ms});
     return WM_CONSUMED;
+}
+
+static void run_tapped_modifier(wm_desktop *desktop, const wm_key_event *event)
+{
+    wm_key_event tapped = desktop->tapped_modifier;
+    if (tapped.keysym != event->keysym) {
+        return;
+    }
+    actions_cancel_tap(desktop);
+    const char *command = keybindings_command_for(&desktop->keys, &tapped);
+    if (command != NULL) {
+        desktop->ports.commands.spawn(desktop->ports.commands.self, command);
+    }
 }
 
 static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *event)
