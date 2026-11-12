@@ -26,6 +26,15 @@ bool page_runs_next(const uint64_t *entries, size_t entry_count, page_run *run)
     return run->count > 0;
 }
 
+size_t page_runs_file_pages(const uint64_t *entries, size_t entry_count)
+{
+    size_t pages = 0;
+    for (size_t i = 0; i < entry_count; i++) {
+        pages += is_file_page(entries[i]) ? 1 : 0;
+    }
+    return pages;
+}
+
 static bool is_file_page(uint64_t entry)
 {
     return (entry & PAGE_PRESENT) != 0 && (entry & PAGE_FROM_FILE) != 0;

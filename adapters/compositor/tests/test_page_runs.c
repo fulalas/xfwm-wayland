@@ -62,6 +62,13 @@ static void test_whole_chunk_can_be_one_run(void)
     CHECK(!page_runs_next(entries, 2, &run));
 }
 
+static void test_counts_only_file_pages(void)
+{
+    const uint64_t entries[] = {FILE_PAGE, OWN_PAGE, MISSING_PAGE, FILE_PAGE, SWAPPED | FROM_FILE};
+    CHECK_INT_EQ(2, (int) page_runs_file_pages(entries, 5));
+    CHECK_INT_EQ(0, (int) page_runs_file_pages(NULL, 0));
+}
+
 static void test_empty_chunk_has_no_run(void)
 {
     page_run run = {0};
@@ -78,6 +85,7 @@ int main(void)
         {"written_and_missing_pages_alone_make_no_run",
          test_written_and_missing_pages_alone_make_no_run},
         {"whole_chunk_can_be_one_run", test_whole_chunk_can_be_one_run},
+        {"counts_only_file_pages", test_counts_only_file_pages},
         {"empty_chunk_has_no_run", test_empty_chunk_has_no_run},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));

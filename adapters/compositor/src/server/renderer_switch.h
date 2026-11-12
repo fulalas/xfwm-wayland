@@ -9,5 +9,6 @@ bool renderer_create_initial(compositor *server);
 void renderer_follow_config(compositor *server);
 bool renderer_fall_back(compositor *server);
 void renderer_release(compositor *server);
+void renderer_keep_ready(compositor *server);
 
 #endif

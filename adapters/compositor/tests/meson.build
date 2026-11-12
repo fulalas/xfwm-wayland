@@ -25,6 +25,8 @@ compositor_pure_tests = {
   'session_apply': ['../src/session/session_apply.c'],
   'present_rules': ['../src/render/present_rules.c'],
   'mapping_line': ['../src/server/mapping_line.c'],
+  'mapping_set': ['../src/server/mapping_set.c'],
+  'trim_rule': ['../src/server/trim_rule.c'],
   'page_runs': ['../src/server/page_runs.c'],
   'scalable_layout': ['../src/cursor/scalable_layout.c'],
   'xcursor_resize': ['../src/cursor/xcursor_resize.c'],

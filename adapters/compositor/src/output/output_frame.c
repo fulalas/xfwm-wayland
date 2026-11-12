@@ -8,6 +8,7 @@
 #include "output_repaint.h"
 #include "render/scene_buffers.h"
 #include "server/memory_trim.h"
+#include "server/renderer_switch.h"
 #include "input/seat.h"
 #include "shell/view.h"
 #include "zoom.h"
@@ -26,6 +27,7 @@ void output_render_frame(output *o)
     if (o->scene_output == NULL) {
         return;
     }
+    renderer_keep_ready(o->server);
     if (zoom_is_active(o->server->zoom)) {
         zoom_render(o->server->zoom, o);
     } else {

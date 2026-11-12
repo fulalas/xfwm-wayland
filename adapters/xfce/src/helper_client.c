@@ -110,10 +110,9 @@ static gboolean on_restart(void *data)
 
 static unsigned idle_stop_ms(helper_client *client)
 {
-    gint64 now_us = g_get_monotonic_time();
-    gint64 left_ms;
+    gint64 left_us = client->first_run_end_us - g_get_monotonic_time();
+    gint64 left_ms = (left_us + 999) / 1000;
 
-    left_ms = (client->first_run_end_us - now_us + 999) / 1000;
     return (unsigned) MAX(left_ms, IDLE_STOP_MS);
 }
 

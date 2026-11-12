@@ -77,6 +77,11 @@ bool renderer_fall_back(compositor *c)
     return replace_renderer(c, RENDERER_KIND_DEFAULT);
 }
 
+void renderer_keep_ready(compositor *c)
+{
+    keep_context_current(c->renderer);
+}
+
 void renderer_release(compositor *c)
 {
     listener_disconnect(&c->render.lost);
@@ -202,6 +207,9 @@ static void keep_context_current(struct wlr_renderer *renderer)
         return;
     }
     struct wlr_egl *egl = wlr_gles2_renderer_get_egl(renderer);
+    if (eglGetCurrentContext() == wlr_egl_get_context(egl)) {
+        return;
+    }
     if (!eglMakeCurrent(wlr_egl_get_display(egl), EGL_NO_SURFACE, EGL_NO_SURFACE,
                         wlr_egl_get_context(egl))) {
         wlr_log(WLR_ERROR, "cannot keep the OpenGL context current");

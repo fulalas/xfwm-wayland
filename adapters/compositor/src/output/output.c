@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <wlr/backend.h>
 #include <wlr/interfaces/wlr_output.h>
+#include <wlr/render/pixman.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_damage_ring.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
@@ -109,6 +110,7 @@ bool outputs_renderer_changed(outputs *outs)
 {
     compositor *server = outs->server;
     outs->can_time_renders = output_repaint_renderer_can_time(server->renderer);
+    outs->renders_on_cpu = server->renderer != NULL && wlr_renderer_is_pixman(server->renderer);
     bool all_ok = true;
     output *o;
     wl_list_for_each(o, &outs->list, link) {

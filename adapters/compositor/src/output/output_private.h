@@ -67,6 +67,7 @@ struct outputs {
     struct wl_list list;
     double max_scale;
     bool can_time_renders;
+    bool renders_on_cpu;
     bool changed;
     struct wl_event_source *arrange_idle;
     struct wl_listener new_output;
