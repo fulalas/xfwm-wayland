@@ -28,7 +28,8 @@ development in January 2026 and is still not ready for daily use. Also,
 some differences seem intrinsic to the project, so they're unlikely to
 change.
 
-Here's a quick comparison:
+Here's a quick comparison showing `xfwm-wayland` faster and more efficient
+than `xfwl4`, while delivering more features in a more reliable way:
 
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
@@ -39,7 +40,7 @@ Here's a quick comparison:
 | Memory consumption                   | 158.5 MB           | 33.4 MB                  |
 | Average power                        | 9.6 W              | 8.9 W                    |
 | Power with a fullscreen window       | 8.6 W              | 6.7 W                    |
-| Compositor CPU time                  | 10.9 s             | 7.2 s                    |
+| Compositor CPU time                  | 10.9 s             | 7.1 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
 | Unit tests                           | 49                 | 832                      |
 | HDR                                  | no                 | yes                      |
@@ -70,8 +71,8 @@ Pick "Xfce Session (xfwm-wayland)" at login, or start Xfce manually:
 
     startxfce4 --wayland xfwm-wayland
 
-Login managers remember the last session picked. For example, to make it the
-default in LightDM, set it in `/etc/lightdm/lightdm.conf`:
+The login manager can also be set to default to `xfwm-wayland`. In
+LightDM, for instance, this can be done in `/etc/lightdm/lightdm.conf`:
 
     [Seat:*]
     user-session=xfwm-wayland
@@ -81,8 +82,7 @@ and cursor settings are applied by the compositor instead of `xfsettingsd`.
 
 Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) is highly recommended because:
 
-* its settings dialogs open on Wayland; the original ones check for an X11
-  window manager and refuse to start
+* its settings dialogs open on Wayland, while the original refuses to start
 * it hides the options that do nothing on Wayland and renames the ones that
   work differently
 * its bundled themes are SVG, so window borders stay sharp at any scale
@@ -105,10 +105,10 @@ Screen
   milliseconds, `off` draws right away.
 * `ten_bit_color` (new): 10-bit color, falling back to 8-bit.
 * **Enable HDR** (new): HDR10 on monitors that support it. Switches to Vulkan
-  (the screen may blink), or stays off if Vulkan can't drive the screens.
-  Running programs may need a restart. Normal content is shown at 203 nits;
-  **HDR brightness** (50% to 200%) scales everything, HDR videos included.
-  Night-light programs override it while running.
+  or stays off if Vulkan can't drive the screens. Running programs may need
+  a restart.
+  **HDR brightness** (50% to 200%) scales everything. Night-light programs
+  override it while running.
 * New monitors get a scale guessed from their size (1 to 3); TVs get 1.
 
 Input
@@ -165,12 +165,6 @@ are shrunk. Running programs may need a restart after the scale changes.
 
 ## Issues and possible solutions
 
-* X11 programs that ignore the DPI (Java, old toolkits) look small when
-  scaled. Turning off `xwayland_zero_scaling` makes the compositor scale
-  them instead, but blurry:
-  ```sh
-  xfconf-query -c xfwm4 -p /general/xwayland_zero_scaling -n -t bool -s false
-  ```
 * Many programs that support Wayland still use `XWayland` by default, which
   means more CPU and input lag, possible issues with multiple displays and no
   HDR. Set these to make them use Wayland when they can:
@@ -182,6 +176,12 @@ are shrunk. Running programs may need a restart after the scale changes.
   ```
 * Old Chromium-based browsers and Electron programs may need the parameter
   `--ozone-platform-hint=auto`.
+* X11 programs that ignore the DPI (Java, old toolkits) look small when
+  scaled. Turning off `xwayland_zero_scaling` makes the compositor scale
+  them instead, but blurry:
+  ```sh
+  xfconf-query -c xfwm4 -p /general/xwayland_zero_scaling -n -t bool -s false
+  ```
 * Window positions come back only for Wayland programs that support
   `xdg-session-management`; X11 programs never get them back.
 * Ctrl+Shift drag doesn't create symlinks (Wayland limitation).
