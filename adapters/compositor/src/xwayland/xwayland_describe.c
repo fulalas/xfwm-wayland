@@ -45,7 +45,8 @@ static wm_window *group_window(const xwayland_view *xv);
 static bool surface_is_urgent(const struct wlr_xwayland_surface *xsurface);
 static bool has_position(const struct wlr_xwayland_surface *xsurface);
 static strut_range strut_side(uint32_t size, uint32_t start, uint32_t end);
-static void set_maximized(struct wlr_xwayland_surface *xsurface, bool value);
+static void set_maximized(struct wlr_xwayland_surface *xsurface, bool horizontally,
+                          bool vertically);
 static void set_layer_states(struct wlr_xwayland_surface *xsurface, const wm_window_view *state);
 
 wm_window_desc xwayland_view_describe(const xwayland_view *xv)
@@ -139,7 +140,7 @@ static wm_size_hints size_steps_and_ratios(wm_size_hints hints, const xcb_size_h
 static const char *startup_id_of(const xwayland_view *xv)
 {
     const struct wlr_xwayland_surface *xs = xv->xsurface;
-    if (xs->startup_id != NULL || xv->server->xwayland == NULL) {
+    if (xs->startup_id != NULL) {
         return xs->startup_id;
     }
     return xwayland_shell_take_startup_id(xv->server->xwayland, xs->pid);
@@ -193,6 +194,7 @@ void xwayland_view_fetch_icon(xwayland_view *xv)
         icon = old_style_icon(xv);
     }
     if (icon == NULL) {
+        icon_slot_set(xv->icon, NULL);
         icon_slot_lookup_app(xv->icon, xv->xsurface->class);
         return;
     }
@@ -208,8 +210,7 @@ bool xwayland_view_has_strut(const xwayland_view *xv)
 static cairo_surface_t *old_style_icon(const xwayland_view *xv)
 {
     const xcb_icccm_wm_hints_t *hints = xv->xsurface->hints;
-    xwayland_shell *shell = xv->server->xwayland;
-    xcb_connection_t *connection = shell != NULL ? x11_link_query_connection(&shell->link) : NULL;
+    xcb_connection_t *connection = x11_link_query_connection(&xv->server->xwayland->link);
     if (connection == NULL || hints == NULL ||
         (hints->flags & XCB_ICCCM_WM_HINT_ICON_PIXMAP) == 0) {
         return NULL;
@@ -239,7 +240,7 @@ void xwayland_view_send_states(void *self, const wm_window_view *state)
 {
     xwayland_view *xv = self;
     struct wlr_xwayland_surface *xs = xv->xsurface;
-    set_maximized(xs, state->maximized);
+    set_maximized(xs, state->maximized_horizontally, state->maximized_vertically);
     if (xs->fullscreen != state->fullscreen) {
         wlr_xwayland_surface_set_fullscreen(xs, state->fullscreen);
     }
@@ -294,10 +295,10 @@ static strut_range strut_side(uint32_t size, uint32_t start, uint32_t end)
     return (strut_range){(int) size, (int) start, (int) end};
 }
 
-static void set_maximized(struct wlr_xwayland_surface *xs, bool value)
+static void set_maximized(struct wlr_xwayland_surface *xs, bool horizontally, bool vertically)
 {
-    if (xs->maximized_horz != value || xs->maximized_vert != value) {
-        wlr_xwayland_surface_set_maximized(xs, value, value);
+    if (xs->maximized_horz != horizontally || xs->maximized_vert != vertically) {
+        wlr_xwayland_surface_set_maximized(xs, horizontally, vertically);
     }
 }
 

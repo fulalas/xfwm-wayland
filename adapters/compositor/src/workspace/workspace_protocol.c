@@ -55,8 +55,7 @@ workspace_protocol *workspace_protocol_create(compositor *server)
     w->server = server;
     wl_list_init(&w->commit.link);
     struct wlr_ext_workspace_manager_v1 *manager = server->globals.workspace;
-    w->group = manager != NULL ? wlr_ext_workspace_group_handle_v1_create(manager, GROUP_CAPS)
-                               : NULL;
+    w->group = wlr_ext_workspace_group_handle_v1_create(manager, GROUP_CAPS);
     if (w->group != NULL) {
         listener_connect(&w->commit, &manager->events.commit, handle_commit);
     }

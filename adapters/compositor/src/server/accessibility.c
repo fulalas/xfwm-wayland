@@ -4,6 +4,7 @@
 #include "accessibility.h"
 #include "osd/osd.h"
 #include "input/seat_resource.h"
+#include "util/resource.h"
 #include "xfce-accessibility-private-v1-protocol.h"
 
 enum {
@@ -49,13 +50,8 @@ void accessibility_destroy(accessibility *a)
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
-    struct wl_resource *resource = wl_resource_create(
-        client, &xfce_accessibility_manager_private_v1_interface, (int) version, id);
-    if (resource == NULL) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(resource, &manager_impl, data, NULL);
+    resource_bind(client, &xfce_accessibility_manager_private_v1_interface, version, id,
+                  &manager_impl, data, NULL);
 }
 
 static void handle_find_pointer(struct wl_client *client, struct wl_resource *resource,

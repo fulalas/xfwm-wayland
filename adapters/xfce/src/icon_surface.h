@@ -4,5 +4,6 @@
 #include <cairo.h>
 
 cairo_surface_t *icon_surface_load(const char *path, int size);
+cairo_surface_t *icon_surface_scale(cairo_surface_t *source, double factor);
 
 #endif

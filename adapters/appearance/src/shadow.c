@@ -9,7 +9,6 @@
 
 enum {
     TEMPLATE_CORNERS = 3,
-    OPACITY_STEPS = 25,
     ALPHA_MAX = 255,
     ALPHA_SHIFT = 24,
 };
@@ -24,18 +23,17 @@ static double gaussian(double radius, double x, double y);
 static unsigned sum_gaussian(const gaussian_map *map, wm_point offset, int box);
 static unsigned shadow_value(const gaussian_map *map, wm_point position, int template_size);
 static int mirror(int position, int template_size);
-static void fill_template(cairo_surface_t *surface, const gaussian_map *map, int opacity_steps);
+static void fill_template(cairo_surface_t *surface, const gaussian_map *map);
 
-shadow_template appearance_shadow_template_create(double opacity)
+shadow_template appearance_shadow_template_create(void)
 {
     int kernel = wm_shadow_kernel_size();
     int size = TEMPLATE_CORNERS * kernel;
     gaussian_map map = make_gaussian_map(WM_SHADOW_RADIUS, kernel);
-    double clamped = fmin(fmax(opacity, 0.0), 1.0);
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, size, size);
 
     if (cairo_surface_status(surface) == CAIRO_STATUS_SUCCESS) {
-        fill_template(surface, &map, (int) (clamped * OPACITY_STEPS));
+        fill_template(surface, &map);
     }
     g_free(map.data);
     return (shadow_template) { surface, kernel };
@@ -102,7 +100,7 @@ static int mirror(int position, int template_size)
     return MIN(position, template_size - 1 - position);
 }
 
-static void fill_template(cairo_surface_t *surface, const gaussian_map *map, int opacity_steps)
+static void fill_template(cairo_surface_t *surface, const gaussian_map *map)
 {
     int size = cairo_image_surface_get_width(surface);
     int stride = cairo_image_surface_get_stride(surface);
@@ -112,8 +110,7 @@ static void fill_template(cairo_surface_t *surface, const gaussian_map *map, int
     for (int y = 0; y < size; y++) {
         uint32_t *row = (uint32_t *) (void *) (data + (size_t) y * (size_t) stride);
         for (int x = 0; x < size; x++) {
-            unsigned value = shadow_value(map, (wm_point) { x, y }, size);
-            unsigned alpha = value * (unsigned) opacity_steps / OPACITY_STEPS;
+            unsigned alpha = shadow_value(map, (wm_point) { x, y }, size);
             row[x] = (uint32_t) alpha << ALPHA_SHIFT;
         }
     }

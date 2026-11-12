@@ -25,6 +25,8 @@ struct icon_cache {
 };
 
 static GList *find(const icon_cache *cache, const icon_key *key);
+static cairo_surface_t *load(const icon_cache *cache, const icon_key *key);
+static const cached_icon *find_larger(const icon_cache *cache, const icon_key *key);
 static cairo_surface_t *reuse(icon_cache *cache, GList *link);
 static void remember(icon_cache *cache, const icon_key *key, cairo_surface_t *surface);
 static void free_entry(void *data);
@@ -52,7 +54,7 @@ cairo_surface_t *icon_cache_load(icon_cache *cache, const char *path, int size)
     if (link) {
         return reuse(cache, link);
     }
-    surface = icon_surface_load(path, size);
+    surface = load(cache, &key);
     if (surface) {
         remember(cache, &key, surface);
     }
@@ -65,6 +67,27 @@ static GList *find(const icon_cache *cache, const icon_key *key)
         const cached_icon *entry = link->data;
         if (entry->size == key->size && strcmp(entry->path, key->path) == 0) {
             return link;
+        }
+    }
+    return NULL;
+}
+
+static cairo_surface_t *load(const icon_cache *cache, const icon_key *key)
+{
+    const cached_icon *larger = find_larger(cache, key);
+
+    if (larger) {
+        return icon_surface_scale(larger->surface, (double) key->size / larger->size);
+    }
+    return icon_surface_load(key->path, key->size);
+}
+
+static const cached_icon *find_larger(const icon_cache *cache, const icon_key *key)
+{
+    for (GList *link = cache->entries.head; link; link = link->next) {
+        const cached_icon *entry = link->data;
+        if (entry->size > key->size && strcmp(entry->path, key->path) == 0) {
+            return entry;
         }
     }
     return NULL;

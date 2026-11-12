@@ -101,7 +101,6 @@ static double scale_at(const compositor *server, wm_point point)
 
 static uint32_t elapsed_ms(const struct timespec *from, const struct timespec *to)
 {
-    int64_t ms = ((int64_t) to->tv_sec - from->tv_sec) * CLOCK_MS_PER_SECOND +
-                 ((int64_t) to->tv_nsec - from->tv_nsec) / CLOCK_NS_PER_MS;
+    int64_t ms = (clock_timespec_ns(to) - clock_timespec_ns(from)) / CLOCK_NS_PER_MS;
     return ms > 0 ? (uint32_t) ms : 0;
 }

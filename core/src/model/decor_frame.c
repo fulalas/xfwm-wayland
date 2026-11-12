@@ -22,7 +22,7 @@ decor_frame decor_frame_compute(const wm_decor_input *input)
         .config = input->config,
         .window = input->window,
         .state = input->window->state,
-        .has_frame = decor_has_frame(input),
+        .has_frame = wm_decor_has_frame(input),
         .borderless = decor_is_borderless(input),
         .extents = wm_decor_extents(input),
         .border_top = decor_border_top(input),

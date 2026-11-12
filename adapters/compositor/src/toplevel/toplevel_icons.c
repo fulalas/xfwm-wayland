@@ -14,7 +14,6 @@ enum {
 };
 
 struct toplevel_icons {
-    compositor *server;
     struct wl_listener set_icon;
 };
 
@@ -28,7 +27,6 @@ toplevel_icons *toplevel_icons_create(compositor *server)
     if (icons == NULL) {
         return NULL;
     }
-    icons->server = server;
     wl_list_init(&icons->set_icon.link);
     struct wlr_xdg_toplevel_icon_manager_v1 *manager = server->globals.toplevel_icon;
     if (manager != NULL) {

@@ -8,9 +8,7 @@
 
 typedef struct focus_state {
     wm_window *focused;
-    wm_window *delayed;
     wm_window *hovered;
-    wm_window *last_raise;
 } focus_state;
 
 bool focus_accepts(const wm_desktop *desktop, const wm_window *window);

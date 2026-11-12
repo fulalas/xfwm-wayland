@@ -36,6 +36,8 @@ void seat_surface_gone(seat *seat, struct wlr_surface *surface);
 void seat_view_destroyed(seat *seat, view *view);
 void seat_focus_refresh(seat *seat);
 void seat_release_pointer_grab(seat *seat);
+bool seat_holds_grab_serial(const seat *seat, uint32_t serial);
+void seat_release_touch_and_pen(seat *seat);
 
 void seat_set_core_cursor(seat *seat, wm_cursor_shape shape);
 void seat_set_busy(seat *seat, bool busy);

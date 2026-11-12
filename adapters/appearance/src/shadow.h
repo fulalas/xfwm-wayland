@@ -3,6 +3,6 @@
 
 #include "compositor/painter.h"
 
-shadow_template appearance_shadow_template_create(double opacity);
+shadow_template appearance_shadow_template_create(void);
 
 #endif

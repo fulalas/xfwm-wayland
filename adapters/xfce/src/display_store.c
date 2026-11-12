@@ -4,13 +4,15 @@
 #include "display_plan.h"
 #include "display_table.h"
 #include "display_write.h"
+#include "value_text.h"
 
 static const char active_profile_property[] = "/ActiveProfile";
 
 static GHashTable *read_table(XfconfChannel *channel);
 static void add_text(void *key, void *value, void *table);
-static char *value_text(const GValue *value);
-static void replace_default_profile(XfconfChannel *channel, const GPtrArray *writes);
+static void replace_default_profile(XfconfChannel *channel, const display_set *current,
+                                    const GPtrArray *writes);
+static void reset_output(XfconfChannel *channel, const char *connector);
 static void store(XfconfChannel *channel, const profile_write *write);
 
 display_plan display_store_load(XfconfChannel *channel, const display_set *connected)
@@ -33,7 +35,7 @@ void display_store_save(XfconfChannel *channel, const display_set *current)
     writes = display_profile_writes(current);
     table = read_table(channel);
     if (!display_profile_is_saved(table, writes)) {
-        replace_default_profile(channel, writes);
+        replace_default_profile(channel, current, writes);
     }
     g_hash_table_destroy(table);
     g_ptr_array_unref(writes);
@@ -53,42 +55,31 @@ static GHashTable *read_table(XfconfChannel *channel)
 
 static void add_text(void *key, void *value, void *table)
 {
-    char *text = value_text(value);
+    char *text = value_text_of(value);
 
     if (text) {
         g_hash_table_insert(table, g_strdup(key), text);
     }
 }
 
-static char *value_text(const GValue *value)
+static void replace_default_profile(XfconfChannel *channel, const display_set *current,
+                                    const GPtrArray *writes)
 {
-    if (G_VALUE_HOLDS_STRING(value)) {
-        return g_value_dup_string(value);
+    for (size_t i = 0; i < current->count; i++) {
+        reset_output(channel, current->displays[i].identity.connector);
     }
-    if (G_VALUE_HOLDS_BOOLEAN(value)) {
-        return g_strdup(g_value_get_boolean(value) ? "true" : "false");
-    }
-    if (G_VALUE_HOLDS_INT(value)) {
-        return g_strdup_printf("%d", g_value_get_int(value));
-    }
-    if (G_VALUE_HOLDS_UINT(value)) {
-        return g_strdup_printf("%u", g_value_get_uint(value));
-    }
-    if (G_VALUE_HOLDS_DOUBLE(value)) {
-        return display_double_text(g_value_get_double(value));
-    }
-    return NULL;
-}
-
-static void replace_default_profile(XfconfChannel *channel, const GPtrArray *writes)
-{
-    char *root = g_strdup_printf("/%s", display_default_profile);
-
-    xfconf_channel_reset_property(channel, root, TRUE);
     for (guint i = 0; i < writes->len; i++) {
         store(channel, g_ptr_array_index(writes, i));
     }
     xfconf_channel_set_string(channel, active_profile_property, display_default_profile);
+}
+
+static void reset_output(XfconfChannel *channel, const char *connector)
+{
+    display_key key = { .profile = display_default_profile, .connector = connector };
+    char *root = display_key_text(&key);
+
+    xfconf_channel_reset_property(channel, root, TRUE);
     g_free(root);
 }
 

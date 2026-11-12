@@ -39,5 +39,6 @@ wm_rect output_usable(const output *output);
 struct wlr_output *output_wlr(const output *output);
 void output_announce_scale(const output *output, struct wlr_surface *surface);
 output *output_from_wlr(struct wlr_output *wlr_output);
+void output_damage_whole(output *output);
 
 #endif

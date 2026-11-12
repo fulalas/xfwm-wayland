@@ -24,7 +24,6 @@ typedef struct zoom_target {
     uint64_t point;
     bool cursor_locked;
     bool view_changed;
-    int failures;
 } zoom_target;
 
 typedef struct output_brightness {
@@ -48,6 +47,8 @@ struct output {
     struct wlr_output *wlr_output;
     struct wlr_scene_output *scene_output;
     bool scene_hdr;
+    bool tearing_refused;
+    int render_failures;
     wm_rect usable;
     paint_stats stats;
     zoom_target zoom;
@@ -81,6 +82,7 @@ void output_send_frame_done(output *output);
 void output_tell_scene_color(const output *output, struct wlr_output_state *state);
 bool output_wants_tearing(const output *output);
 bool output_commit_state(output *output, struct wlr_output_state *state);
+void output_note_render(output *output, bool ok);
 void outputs_arrange(outputs *outputs);
 
 #endif

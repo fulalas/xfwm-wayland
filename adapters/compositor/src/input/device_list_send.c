@@ -3,11 +3,6 @@
 #include "device_list_send.h"
 #include "xfce-input-device-list-private-v1-protocol.h"
 
-enum {
-    MATRIX_VALUES = 6,
-    AREA_VALUES = 4,
-};
-
 typedef void (*send_three)(struct wl_resource *resource, uint32_t a, uint32_t b, uint32_t c);
 typedef void (*send_two)(struct wl_resource *resource, uint32_t a, uint32_t b);
 
@@ -95,8 +90,8 @@ static void send_numbers(struct wl_resource *resource, device_setting_id id,
 
 static void send_calibration(struct wl_resource *resource, const double *numbers)
 {
-    wl_fixed_t f[2 * MATRIX_VALUES];
-    for (int i = 0; i < 2 * MATRIX_VALUES; i++) {
+    wl_fixed_t f[2 * SETTING_MATRIX_VALUES];
+    for (int i = 0; i < 2 * SETTING_MATRIX_VALUES; i++) {
         f[i] = wl_fixed_from_double(numbers[i]);
     }
     xfce_input_device_v1_send_calibration(resource, f[0], f[1], f[2], f[3], f[4], f[5], f[6],
@@ -105,8 +100,8 @@ static void send_calibration(struct wl_resource *resource, const double *numbers
 
 static void send_area(struct wl_resource *resource, const double *numbers)
 {
-    wl_fixed_t f[2 * AREA_VALUES];
-    for (int i = 0; i < 2 * AREA_VALUES; i++) {
+    wl_fixed_t f[2 * SETTING_AREA_VALUES];
+    for (int i = 0; i < 2 * SETTING_AREA_VALUES; i++) {
         f[i] = wl_fixed_from_double(numbers[i]);
     }
     xfce_input_device_v1_send_area(resource, f[0], f[1], f[2], f[3], f[4], f[5], f[6], f[7]);

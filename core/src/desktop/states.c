@@ -3,6 +3,7 @@
 #include "desktop_state.h"
 #include "frame.h"
 #include "monitors.h"
+#include "moveresize.h"
 #include "placement.h"
 #include "stack.h"
 #include "transients.h"
@@ -89,6 +90,7 @@ void states_enter_fullscreen(wm_desktop *desktop, wm_window *window)
     if (window_is_fullscreen(window)) {
         return;
     }
+    moveresize_window_gone(desktop, window);
     window->pre_fullscreen = window->client;
     window->states |= WM_STATE_FULLSCREEN;
     window->tile = TILE_NONE;
@@ -103,6 +105,10 @@ void states_leave_fullscreen(wm_desktop *desktop, wm_window *window)
         return;
     }
     window->states &= ~(uint32_t) WM_STATE_FULLSCREEN;
+    if (window->fullscreen_area_once) {
+        window->fullscreen_area = (wm_rect) {0, 0, 0, 0};
+        window->fullscreen_area_once = false;
+    }
     window_placed(window);
     states_update_fullscreen_size(desktop, window);
     stack_update_layers(desktop);

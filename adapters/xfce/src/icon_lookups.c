@@ -82,6 +82,16 @@ void icon_lookups_cancel(icon_lookups *lookups, void *context)
     cancel_in(&lookups->answered, context);
 }
 
+bool icon_lookups_pending(const icon_lookups *lookups, unsigned id)
+{
+    for (GList *link = lookups->pending.head; link; link = link->next) {
+        if (((const icon_pending *) link->data)->id == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void icon_lookups_finish(icon_lookups *lookups, unsigned id, const char *path)
 {
     icon_pending *pending = take_pending(lookups, id);

@@ -64,11 +64,9 @@ static void handle_new_request(struct wl_listener *listener, void *data)
     struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request *request = data;
     view *v = foreign_toplevel_ext_view(request->toplevel_handle);
     capture_entry *entry = v != NULL ? entry_for(c, v) : NULL;
-    if (entry == NULL) {
-        return;
-    }
-    wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request_accept(
-        request, window_capture_source_base(entry->source));
+    struct wlr_ext_image_capture_source_v1 *source =
+        entry != NULL ? window_capture_source_base(entry->source) : NULL;
+    wlr_ext_foreign_toplevel_image_capture_source_manager_v1_request_accept(request, source);
 }
 
 static void handle_unmapped(struct wl_listener *listener, void *data)

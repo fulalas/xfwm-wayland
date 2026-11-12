@@ -20,7 +20,6 @@ void click_begin(wm_desktop *desktop, const click_request *request)
     click->part = request->part;
     click->button = request->press->button;
     click->clicks = 1;
-    click->allow_double = allows_double(request->purpose);
     click->origin = request->press->pointer.position;
     click->start_ms = request->press->pointer.time_ms;
     timer_request timer = {TIMER_CLICK, NULL, desktop->config.mouse.double_click_time_ms};
@@ -92,7 +91,7 @@ static bool is_terminal(const click_state *click)
     if (click->clicks >= CLICK_DOUBLE) {
         return true;
     }
-    return !click->allow_double && click->clicks == CLICK_SINGLE;
+    return !allows_double(click->purpose) && click->clicks == CLICK_SINGLE;
 }
 
 static void finish(wm_desktop *desktop)

@@ -173,6 +173,7 @@ typedef struct wm_decor_layout {
 } wm_decor_layout;
 
 wm_extents wm_decor_extents(const wm_decor_input *input);
+bool wm_decor_has_frame(const wm_decor_input *input);
 void wm_decor_layout_compute(const wm_decor_input *input, wm_decor_layout *layout);
 wm_part wm_decor_part_at(const wm_decor_layout *layout, wm_point frame_point);
 int wm_decor_title_height(const wm_theme_metrics *theme);

@@ -27,6 +27,10 @@ gboolean                 svgParseViewbox                        (const gchar *,
 const gchar             *svgNextTag                             (const gchar *,
                                                                  const gchar *,
                                                                  const gchar **);
+const gchar             *svgNextElement                         (const gchar *,
+                                                                 const gchar **);
+gboolean                 svgTagIs                               (const gchar *,
+                                                                 const gchar *);
 GArray                  *svgTagAttrs                            (const gchar *,
                                                                  const gchar *);
 void                     svgAttrsFree                           (GArray *);

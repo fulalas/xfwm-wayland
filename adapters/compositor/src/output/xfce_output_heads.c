@@ -97,13 +97,12 @@ bool xfce_output_heads_has_client(const xfce_output_heads *xh, const struct wl_c
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
     xfce_output_heads *xh = data;
-    struct wl_resource *manager = wl_resource_create(
-        client, &xfce_output_management_manager_private_v1_interface, (int) version, id);
+    struct wl_resource *manager =
+        resource_bind(client, &xfce_output_management_manager_private_v1_interface, version, id,
+                      &manager_implementation, xh, resource_unlink);
     if (manager == NULL) {
-        wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(manager, &manager_implementation, xh, resource_unlink);
     wl_list_insert(&xh->managers, wl_resource_get_link(manager));
     output_head *head;
     wl_list_for_each(head, &xh->heads, link) {
@@ -179,8 +178,7 @@ static bool has_head(const xfce_output_heads *xh, const struct wlr_output *wlr_o
 
 static uint32_t current_serial(const xfce_output_heads *xh)
 {
-    struct wlr_output_manager_v1 *manager = xh->server->globals.output_manager;
-    return manager != NULL ? manager->serial : 0;
+    return xh->server->globals.output_manager->serial;
 }
 
 static void send_done(const xfce_output_heads *xh)

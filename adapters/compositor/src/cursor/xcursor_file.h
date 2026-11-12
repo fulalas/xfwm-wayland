@@ -28,6 +28,7 @@ typedef struct xcursor_request {
 } xcursor_request;
 
 bool xcursor_file_load(FILE *file, const xcursor_request *request, xcursor_frames *frames);
+char **xcursor_search_path(void);
 char **xcursor_theme_dirs(const char *theme);
 bool xcursor_theme_load(char *const *dirs, const char *name, const xcursor_request *request,
                         xcursor_frames *frames);

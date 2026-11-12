@@ -16,6 +16,11 @@
 #include "input/seat.h"
 #include "toplevel/toplevel_capture.h"
 
+enum {
+    RECOVER_ATTEMPTS = 5,
+    RECOVER_DELAY_MS = 1000,
+};
+
 typedef struct render_pair {
     struct wlr_renderer *renderer;
     struct wlr_allocator *allocator;
@@ -37,11 +42,14 @@ static void redraw_everything(compositor *server);
 static void watch_lost(compositor *server);
 static void handle_lost(struct wl_listener *listener, void *data);
 static void recover_from_reset(void *data);
+static int retry_recovery(void *data);
+static void stop_recovery(compositor *server);
 
 bool renderer_create_initial(compositor *c)
 {
     c->render.forced = getenv("WLR_RENDERER") != NULL;
     wl_list_init(&c->render.lost.link);
+    c->render.retry = wl_event_loop_add_timer(c->loop, retry_recovery, c);
     render_pair pair = {0};
     renderer_kind kind = wanted_kind(c);
     if (!create_pair(c, kind, &pair) && kind == RENDERER_KIND_VULKAN) {
@@ -53,7 +61,7 @@ bool renderer_create_initial(compositor *c)
     adopt_pair(c, &pair, kind);
     keep_context_current(c->renderer);
     watch_lost(c);
-    return pair.allocator != NULL;
+    return pair.allocator != NULL && c->render.retry != NULL;
 }
 
 void renderer_follow_config(compositor *c)
@@ -74,7 +82,11 @@ bool renderer_fall_back(compositor *c)
     }
     wlr_log(WLR_ERROR, "the vulkan renderer cannot drive the screens, switching back");
     c->render.failed = RENDERER_KIND_VULKAN;
-    return replace_renderer(c, RENDERER_KIND_DEFAULT);
+    if (!replace_renderer(c, RENDERER_KIND_DEFAULT)) {
+        return false;
+    }
+    outputs_apply_color(c->outputs);
+    return true;
 }
 
 void renderer_keep_ready(compositor *c)
@@ -85,6 +97,10 @@ void renderer_keep_ready(compositor *c)
 void renderer_release(compositor *c)
 {
     listener_disconnect(&c->render.lost);
+    if (c->render.retry != NULL) {
+        wl_event_source_remove(c->render.retry);
+        c->render.retry = NULL;
+    }
 }
 
 static renderer_kind wanted_kind(const compositor *c)
@@ -176,9 +192,12 @@ static bool swap_in(compositor *c, const render_pair *pair, renderer_kind kind)
     toplevel_capture_drop_sources(c->toplevel_capture);
     listener_disconnect(&c->render.lost);
     bool ok = use_pair(c, pair, kind);
-    if (!ok) {
+    if (ok) {
+        stop_recovery(c);
+    } else {
         use_pair(c, &old, old_kind);
     }
+    client_textures_move(c->display, c->renderer);
     destroy_pair(ok ? &old : pair);
     keep_context_current(c->renderer);
     watch_lost(c);
@@ -224,7 +243,6 @@ static void destroy_pair(const render_pair *pair)
 
 static void redraw_everything(compositor *c)
 {
-    client_textures_rebuild(c->display, c->renderer);
     compositor_appearance_changed(c);
     seat_refresh_cursor(c->seat);
 }
@@ -240,15 +258,35 @@ static void handle_lost(struct wl_listener *listener, void *data)
 {
     (void) data;
     compositor *c = wl_container_of(listener, c, render.lost);
-    wlr_log(WLR_ERROR, "GPU reset: recreating the renderer");
     listener_disconnect(&c->render.lost);
+    if (c->render.recover_attempts > 0) {
+        return;
+    }
+    wlr_log(WLR_ERROR, "GPU reset: recreating the renderer");
     wl_event_loop_add_idle(c->loop, recover_from_reset, c);
 }
 
 static void recover_from_reset(void *data)
 {
     compositor *c = data;
-    if (!replace_renderer(c, c->render.current)) {
-        wlr_log(WLR_ERROR, "cannot recover from the GPU reset");
+    if (replace_renderer(c, c->render.current)) {
+        return;
     }
+    if (++c->render.recover_attempts >= RECOVER_ATTEMPTS) {
+        wlr_log(WLR_ERROR, "cannot recover from the GPU reset");
+        return;
+    }
+    wl_event_source_timer_update(c->render.retry, RECOVER_DELAY_MS);
+}
+
+static int retry_recovery(void *data)
+{
+    recover_from_reset(data);
+    return 0;
+}
+
+static void stop_recovery(compositor *c)
+{
+    c->render.recover_attempts = 0;
+    wl_event_source_timer_update(c->render.retry, 0);
 }

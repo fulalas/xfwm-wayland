@@ -115,6 +115,30 @@ svgNextTag (const gchar *p, const gchar *name, const gchar **end)
     return NULL;
 }
 
+const gchar *
+svgNextElement (const gchar *p, const gchar **end)
+{
+    while ((p = strchr (p, '<')))
+    {
+        if (g_ascii_isalpha (p[1]))
+        {
+            *end = tag_close (p);
+            return *end ? p : NULL;
+        }
+        p++;
+    }
+    return NULL;
+}
+
+gboolean
+svgTagIs (const gchar *tag, const gchar *name)
+{
+    gsize len;
+
+    len = strlen (name);
+    return !strncmp (tag, name, len) && g_ascii_isspace (tag[len]);
+}
+
 static const gchar *
 tag_close (const gchar *p)
 {

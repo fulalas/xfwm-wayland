@@ -2,6 +2,7 @@
 
 #include "desktop_state.h"
 #include "frame_input.h"
+#include "maximize.h"
 #include "states.h"
 #include "window_ops.h"
 
@@ -130,13 +131,13 @@ static void maximize_action(wm_desktop *desktop, wm_window *window)
 {
     switch (desktop->buttons.mouse_button) {
     case WM_MOUSE_LEFT:
-        window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED);
+        maximize_toggle(desktop, window, WM_STATE_MAXIMIZED);
         break;
     case WM_MOUSE_MIDDLE:
-        window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED_VERT);
+        maximize_toggle(desktop, window, WM_STATE_MAXIMIZED_VERT);
         break;
     case WM_MOUSE_RIGHT:
-        window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED_HORZ);
+        maximize_toggle(desktop, window, WM_STATE_MAXIMIZED_HORZ);
         break;
     default:
         break;

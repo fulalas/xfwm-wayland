@@ -9,7 +9,7 @@
 
 static cairo_surface_t *paint_frame(void *self, const frame_paint_request *request);
 static wm_size measure_title(void *self, const char *title);
-static shadow_template make_shadow_template(void *self, double opacity);
+static shadow_template make_shadow_template(void *self);
 static menu_layout layout_menu(void *self, const wm_menu_level *level);
 static cairo_surface_t *paint_menu(void *self, const menu_paint_request *request);
 static uint32_t menu_mnemonic(void *self, const wm_menu_entry *entry);
@@ -50,10 +50,10 @@ static wm_size measure_title(void *self, const char *title)
     return appearance_title_measure(appearance_title_style(self), title);
 }
 
-static shadow_template make_shadow_template(void *self, double opacity)
+static shadow_template make_shadow_template(void *self)
 {
     (void) self;
-    return appearance_shadow_template_create(opacity);
+    return appearance_shadow_template_create();
 }
 
 static menu_layout layout_menu(void *self, const wm_menu_level *level)

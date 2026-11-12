@@ -14,5 +14,6 @@ bool output_apply_at(output *output, const display_setting *setting);
 bool output_apply_auto(output *output);
 void output_turn_off(output *output);
 void output_remember(output *output);
+void outputs_apply_vblank_mode(outputs *outputs);
 
 #endif

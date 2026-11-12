@@ -12,11 +12,7 @@ typedef struct text_font {
     int line_height;
 } text_font;
 
-typedef struct text_font_request {
-    const char *description;
-} text_font_request;
-
-text_font appearance_text_font_create(const text_font_request *request);
+text_font appearance_text_font_create(const char *description);
 void appearance_text_font_destroy(text_font *font);
 PangoLayout *appearance_text_layout(const text_font *font, const char *text);
 wm_size appearance_text_layout_size(PangoLayout *layout);

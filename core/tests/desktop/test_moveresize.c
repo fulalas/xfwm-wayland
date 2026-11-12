@@ -357,8 +357,38 @@ static void test_closing_last_moved_window_frees_pointer(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_fullscreen_ends_drag(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_click click = drag_title(&world, desktop, window);
+    drag_to(&world, &click, (wm_point) {click.point.x + 40, click.point.y});
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_FULLSCREEN, 0});
+    CHECK(!wm_window_current_view(window).moving);
+    drag_to(&world, &click, (wm_point) {click.point.x + 40, click.point.y});
+    CHECK_RECT_EQ(((wm_rect) {0, 0, 1920, 1080}), fake_client_of(window));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_minimize_ends_keyboard_move(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_key(desktop, FAKE_KEY_F7, WM_MOD_ALT);
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_MINIMIZED, 0});
+    CHECK(!wm_window_current_view(window).moving);
+    CHECK_INT_EQ(WM_FORWARD, fake_key(desktop, WM_KEYSYM_DOWN, 0));
+    wm_desktop_destroy(desktop);
+}
+
 static const check_case CASES[] = {
     {"keyboard_move_and_cancel", test_keyboard_move_and_cancel},
+    {"fullscreen_ends_drag", test_fullscreen_ends_drag},
+    {"minimize_ends_keyboard_move", test_minimize_ends_keyboard_move},
     {"keyboard_move_ends_on_return", test_keyboard_move_ends_on_return},
     {"drag_snaps_to_screen_border", test_drag_snaps_to_screen_border},
     {"tile_left_key_toggles", test_tile_left_key_toggles},

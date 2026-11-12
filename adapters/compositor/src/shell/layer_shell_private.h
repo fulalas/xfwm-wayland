@@ -45,5 +45,6 @@ typedef struct layer_area {
 } layer_area;
 
 wm_rect layer_surface_configure(layer_surface *surface, const layer_area *area);
+void layer_surface_set_shown(layer_surface *surface, bool shown);
 
 #endif

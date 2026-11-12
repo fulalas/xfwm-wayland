@@ -4,6 +4,6 @@
 struct wl_display;
 struct wlr_renderer;
 
-void client_textures_rebuild(struct wl_display *display, struct wlr_renderer *renderer);
+void client_textures_move(struct wl_display *display, struct wlr_renderer *renderer);
 
 #endif

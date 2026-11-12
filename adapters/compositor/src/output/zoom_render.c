@@ -20,10 +20,6 @@
 #include "zoom_math.h"
 #include "zoom_private.h"
 
-enum {
-    RENDER_RETRY_MAX = 3,
-};
-
 typedef struct zoom_pass {
     struct wlr_buffer *target;
     struct wlr_drm_syncobj_timeline *wait_timeline;
@@ -32,6 +28,8 @@ typedef struct zoom_pass {
 
 static void sync_cursor_lock(output *output, bool locked);
 static bool render_frame(const zoom *zoom, output *output);
+static bool build_composited_state(output *output, struct wlr_output_state *state,
+                                   struct wlr_scene_output_state_options *options);
 static bool ensure_swapchain(output *output);
 static bool swapchain_fits(const output *output);
 static void drop_swapchain(output *output);
@@ -54,12 +52,11 @@ void zoom_render(zoom *z, output *o)
     if (!o->zoom.view_changed && !wlr_scene_output_needs_frame(o->scene_output)) {
         return;
     }
-    if (render_frame(z, o)) {
+    bool ok = render_frame(z, o);
+    if (ok) {
         o->zoom.view_changed = false;
-        o->zoom.failures = 0;
-    } else if (++o->zoom.failures < RENDER_RETRY_MAX) {
-        wlr_output_schedule_frame(o->wlr_output);
     }
+    output_note_render(o, ok);
 }
 
 static void sync_cursor_lock(output *o, bool locked)
@@ -83,12 +80,23 @@ static bool render_frame(const zoom *z, output *o)
     };
     output_tell_scene_color(o, &state);
     output_brightness_frame(o, &state);
-    bool ok = output_repaint_build_state(o, &state, &options);
+    bool ok = build_composited_state(o, &state, &options);
     if (ok) {
         keep_source(o, &state);
         ok = compose(z, o, &state) && output_commit_state(o, &state);
     }
     wlr_output_state_finish(&state);
+    return ok;
+}
+
+static bool build_composited_state(output *o, struct wlr_output_state *state,
+                                   struct wlr_scene_output_state_options *options)
+{
+    struct wlr_scene *scene = o->server->scene;
+    bool scanout = scene->WLR_PRIVATE.direct_scanout;
+    scene->WLR_PRIVATE.direct_scanout = false;
+    bool ok = output_repaint_build_state(o, state, options);
+    scene->WLR_PRIVATE.direct_scanout = scanout;
     return ok;
 }
 

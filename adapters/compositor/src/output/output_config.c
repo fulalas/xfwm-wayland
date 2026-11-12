@@ -33,13 +33,9 @@ output_config *output_config_create(compositor *server)
         return NULL;
     }
     c->server = server;
-    wl_list_init(&c->apply.link);
-    wl_list_init(&c->test.link);
     struct wlr_output_manager_v1 *manager = server->globals.output_manager;
-    if (manager != NULL) {
-        listener_connect(&c->apply, &manager->events.apply, handle_apply);
-        listener_connect(&c->test, &manager->events.test, handle_test);
-    }
+    listener_connect(&c->apply, &manager->events.apply, handle_apply);
+    listener_connect(&c->test, &manager->events.test, handle_test);
     listener_connect(&c->layout_change, &server->layout->events.change, handle_layout_change);
     return c;
 }
@@ -112,7 +108,7 @@ static void answer(struct wlr_output_configuration_v1 *config, bool succeeded)
 static void publish(output_config *c)
 {
     compositor *server = c->server;
-    if (server->globals.output_manager == NULL || server->outputs == NULL) {
+    if (server->outputs == NULL) {
         return;
     }
     struct wlr_output_configuration_v1 *config = wlr_output_configuration_v1_create();

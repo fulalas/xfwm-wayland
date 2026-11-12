@@ -13,6 +13,7 @@
 #include "osd/osd.h"
 #include "output/output.h"
 #include "output/output_brightness.h"
+#include "output/output_setting.h"
 #include "renderer_switch.h"
 #include "render/scene_layers.h"
 #include "input/seat.h"
@@ -91,9 +92,13 @@ bool compositor_start(compositor *c, wm_desktop *desktop)
 void compositor_set_config(compositor *c, const wm_config *config)
 {
     bool color_changed = color_config_changed(&c->config.compositing, &config->compositing);
+    bool vblank_changed = c->config.compositing.vblank_mode != config->compositing.vblank_mode;
     c->config = *config;
     if (color_changed) {
         renderer_follow_config(c);
+    }
+    if (vblank_changed) {
+        outputs_apply_vblank_mode(c->outputs);
     }
     if (c->xwayland != NULL) {
         xwayland_shell_update_scale(c->xwayland);
@@ -107,6 +112,11 @@ void compositor_appearance_changed(compositor *c)
 {
     views_invalidate_decorations(c);
     osd_repaint(c->osd);
+}
+
+void compositor_icon_theme_changed(compositor *c)
+{
+    views_reload_icons(c);
 }
 
 void compositor_power_prefs_changed(compositor *c)

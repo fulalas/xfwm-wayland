@@ -5,6 +5,7 @@
 
 #include <glib.h>
 
+#include "image_limits.h"
 #include "mysvg.h"
 
 static const char *const overlay_extensions[] = { "svg", "png", "gif", "jpg", "bmp" };
@@ -29,6 +30,7 @@ static void cut_out_surface(cairo_surface_t *surface);
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf);
 static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
 static GdkPixbuf *load_overlay(const char *dir, const char *name);
+static GdkPixbuf *load_overlay_file(const char *path);
 static GdkPixbuf *compose(GdkPixbuf *base, GdkPixbuf *overlay);
 static void copy_row(const GdkPixbuf *pixbuf, int y, uint32_t *dest);
 static uint32_t cut_out_pixel(const guchar *pixel, int channels);
@@ -125,7 +127,8 @@ static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf)
     int stride = cairo_image_surface_get_stride(surface);
 
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
-        return surface;
+        cairo_surface_destroy(surface);
+        return NULL;
     }
     cairo_surface_flush(surface);
     for (int y = 0; y < height; y++) {
@@ -154,12 +157,23 @@ static GdkPixbuf *load_overlay(const char *dir, const char *name)
         char *file = g_strdup_printf("%s.%s", name, overlay_extensions[i]);
         char *path = g_build_filename(dir, file, NULL);
         if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
-            overlay = gdk_pixbuf_new_from_file(path, NULL);
+            overlay = load_overlay_file(path);
         }
         g_free(path);
         g_free(file);
     }
     return overlay;
+}
+
+static GdkPixbuf *load_overlay_file(const char *path)
+{
+    int width, height;
+
+    if (gdk_pixbuf_get_file_info(path, &width, &height) == NULL
+        || width > APPEARANCE_IMAGE_SIDE_MAX || height > APPEARANCE_IMAGE_SIDE_MAX) {
+        return NULL;
+    }
+    return gdk_pixbuf_new_from_file(path, NULL);
 }
 
 static GdkPixbuf *compose(GdkPixbuf *base, GdkPixbuf *overlay)

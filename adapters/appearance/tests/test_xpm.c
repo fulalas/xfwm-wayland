@@ -110,6 +110,16 @@ static void test_load_rejects_bad_header(void)
     fixture_dir_remove(dir);
 }
 
+static void test_load_rejects_huge_image(void)
+{
+    char *dir = fixture_dir_create();
+    char *path = fixture_write(dir, "huge.xpm", "/* XPM */ static char *x[] = { \"4097 1 1 1\" };");
+
+    CHECK(appearance_xpm_load(path, &symbols) == NULL);
+    g_free(path);
+    fixture_dir_remove(dir);
+}
+
 int main(void)
 {
     static const check_case cases[] = {
@@ -120,6 +130,7 @@ int main(void)
         { "entry_incomplete_is_rejected", test_entry_incomplete_is_rejected },
         { "load_substitutes_symbols", test_load_substitutes_symbols },
         { "load_rejects_bad_header", test_load_rejects_bad_header },
+        { "load_rejects_huge_image", test_load_rejects_huge_image },
     };
 
     return check_run(cases, sizeof cases / sizeof cases[0]);

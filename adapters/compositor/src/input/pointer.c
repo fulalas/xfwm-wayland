@@ -86,7 +86,8 @@ static bool seat_holds_button(const struct wlr_seat *seat, uint32_t button);
 static void note_held(pointer_input *pointer, const button_input *input);
 static void release_held_at(pointer_input *pointer, size_t index, uint32_t time_ms);
 static void handle_button_input(pointer_input *pointer, const button_input *input);
-static bool is_held(const pointer_input *pointer, uint32_t button);
+static bool is_held(const pointer_input *pointer, const button_input *input);
+static size_t find_held(const pointer_input *pointer, const button_input *input);
 static wm_dispatch dispatch_axis(pointer_input *pointer,
                                  const struct wlr_pointer_axis_event *event);
 
@@ -126,6 +127,7 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
         pointer_input_release_grab(p);
     }
     if (p->grab_surface != NULL && s->wlr_seat->drag == NULL) {
+        seat_track_pointer(s);
         deliver_grab_motion(p, time_ms);
         return;
     }
@@ -134,6 +136,8 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
     if (core_receives_pointer(p)) {
         wm_pointer_event event = seat_core_event(p->seat, &hit, time_ms);
         result = wm_pointer_motion(s->server->desktop, &event);
+    } else {
+        seat_track_pointer(s);
     }
     p->last_hit = hit;
     p->has_last_hit = true;
@@ -194,6 +198,16 @@ void pointer_input_release_all(pointer_input *p, uint32_t time_ms)
     while (p->held_count > 0) {
         release_held_at(p, p->held_count - 1, time_ms);
     }
+}
+
+bool pointer_input_holds_device(const pointer_input *p, const struct wlr_input_device *device)
+{
+    for (size_t i = 0; i < p->held_count; i++) {
+        if (p->held[i].device == device) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void pointer_input_release_grab(pointer_input *p)
@@ -481,32 +495,28 @@ static wm_dispatch dispatch_axis(pointer_input *p, const struct wlr_pointer_axis
     if (!core_receives_pointer(p)) {
         return WM_FORWARD;
     }
-    int index = event->orientation == WL_POINTER_AXIS_VERTICAL_SCROLL ? 0 : 1;
+    bool vertical = event->orientation == WL_POINTER_AXIS_VERTICAL_SCROLL;
+    wm_axis axis = vertical ? WM_AXIS_VERTICAL : WM_AXIS_HORIZONTAL;
     int32_t value120 = input_mapping_axis_value120(event->delta_discrete, event->delta);
-    axis_steps steps = input_mapping_axis(p->axis_remainder[index], value120);
-    p->axis_remainder[index] = steps.remainder;
-    if (steps.steps == 0) {
-        return WM_FORWARD;
-    }
+    axis_steps steps = input_mapping_axis(p->axis_remainder[axis], value120);
+    p->axis_remainder[axis] = steps.remainder;
     pointer_hit hit = seat_hit_at_cursor(p->seat);
-    wm_axis_event axis = {.pointer = seat_core_event(p->seat, &hit, event->time_msec)};
-    if (index == 0) {
-        axis.vertical_steps = steps.steps;
-    } else {
-        axis.horizontal_steps = steps.steps;
-    }
-    return wm_pointer_axis(p->seat->server->desktop, &axis);
+    wm_axis_event core_event = {
+        .pointer = seat_core_event(p->seat, &hit, event->time_msec),
+        .axis = axis,
+        .steps = steps.steps,
+    };
+    return wm_pointer_axis(p->seat->server->desktop, &core_event);
 }
 
 static void note_held(pointer_input *p, const button_input *input)
 {
-    for (size_t i = 0; i < p->held_count; i++) {
-        if (p->held[i].button == input->button) {
-            if (!input->pressed) {
-                p->held[i] = p->held[--p->held_count];
-            }
-            return;
+    size_t index = find_held(p, input);
+    if (index < p->held_count) {
+        if (!input->pressed) {
+            p->held[index] = p->held[--p->held_count];
         }
+        return;
     }
     if (input->pressed && p->held_count < HELD_BUTTONS_MAX) {
         p->held[p->held_count++] = (held_button){input->button, input->device};
@@ -526,7 +536,7 @@ static void release_held_at(pointer_input *p, size_t index, uint32_t time_ms)
 
 static void handle_button_input(pointer_input *p, const button_input *input)
 {
-    if (!input->pressed && !is_held(p, input->button)) {
+    if (!input->pressed && !is_held(p, input)) {
         return;
     }
     note_held(p, input);
@@ -537,12 +547,17 @@ static void handle_button_input(pointer_input *p, const button_input *input)
     }
 }
 
-static bool is_held(const pointer_input *p, uint32_t button)
+static bool is_held(const pointer_input *p, const button_input *input)
+{
+    return find_held(p, input) < p->held_count;
+}
+
+static size_t find_held(const pointer_input *p, const button_input *input)
 {
     for (size_t i = 0; i < p->held_count; i++) {
-        if (p->held[i].button == button) {
-            return true;
+        if (p->held[i].button == input->button && p->held[i].device == input->device) {
+            return i;
         }
     }
-    return false;
+    return p->held_count;
 }

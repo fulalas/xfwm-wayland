@@ -1,3 +1,4 @@
+#include <linux/input-event-codes.h>
 #include <stdlib.h>
 #include <wlr/backend/session.h>
 #include <wlr/interfaces/wlr_keyboard.h>
@@ -31,6 +32,7 @@ typedef struct keyboard {
     bool follows_prefs;
     key_list consumed;
     key_list shared;
+    uint32_t pressed_keysyms[KEY_CNT];
     bool x11_modifiers_shared;
     struct wl_list link;
     struct wl_listener key;
@@ -48,16 +50,21 @@ struct keyboards {
 static keyboard *keyboard_create(keyboards *owner, struct wlr_keyboard *wlr_keyboard);
 static void keyboard_destroy(keyboard *keyboard);
 static keyboard_prefs current_prefs(const keyboards *keyboards);
-static void keyboard_apply_prefs(keyboard *keyboard, const keyboard_prefs *prefs);
+static bool keyboard_apply_prefs(keyboard *keyboard, const keyboard_prefs *prefs);
 static void lock_numlock(struct wlr_keyboard *keyboard);
 static void handle_key(struct wl_listener *listener, void *data);
 static void handle_modifiers(struct wl_listener *listener, void *data);
 static void handle_destroy(struct wl_listener *listener, void *data);
+static void report_modifiers(keyboards *keyboards);
+static uint32_t combined_modifiers(const keyboards *keyboards);
 static bool switch_vt(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
                       const key_chord *chord);
 static wm_dispatch dispatch_key(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
                                 const key_chord *chord);
 static bool core_receives_keys(const seat *seat);
+static uint32_t core_keysym(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
+                            const key_chord *chord);
+static uint32_t bound_keysym(const wm_desktop *desktop, const key_chord *chord);
 static uint32_t base_keysym(struct wlr_keyboard *keyboard, uint32_t keycode);
 static key_chord chord_for(struct wlr_keyboard *keyboard, uint32_t keycode);
 static bool key_list_take(key_list *list, uint32_t keycode);
@@ -133,8 +140,8 @@ void keyboards_reload(keyboards *kbs)
         if (!kb->follows_prefs) {
             continue;
         }
-        keyboard_apply_prefs(kb, &prefs);
-        if (numlock_turned_on) {
+        bool keymap_changed = keyboard_apply_prefs(kb, &prefs);
+        if (numlock_turned_on || (prefs.numlock && keymap_changed)) {
             lock_numlock(kb->wlr_keyboard);
         }
     }
@@ -192,15 +199,15 @@ static keyboard_prefs current_prefs(const keyboards *kbs)
     return services->keyboard_prefs(services->self);
 }
 
-static void keyboard_apply_prefs(keyboard *kb, const keyboard_prefs *prefs)
+static bool keyboard_apply_prefs(keyboard *kb, const keyboard_prefs *prefs)
 {
     struct xkb_keymap *keymap = keymap_cache_keymap(kb->owner->keymaps);
-    if (keymap != NULL && kb->wlr_keyboard->keymap != keymap) {
-        wlr_keyboard_set_keymap(kb->wlr_keyboard, keymap);
-    }
-    int rate = prefs->repeat_rate > 0 ? prefs->repeat_rate : DEFAULT_REPEAT_RATE;
+    bool keymap_changed = keymap != NULL && kb->wlr_keyboard->keymap != keymap &&
+                          wlr_keyboard_set_keymap(kb->wlr_keyboard, keymap);
+    int rate = prefs->repeat_rate >= 0 ? prefs->repeat_rate : DEFAULT_REPEAT_RATE;
     int delay = prefs->repeat_delay_ms > 0 ? prefs->repeat_delay_ms : DEFAULT_REPEAT_DELAY_MS;
     wlr_keyboard_set_repeat_info(kb->wlr_keyboard, rate, delay);
+    return keymap_changed;
 }
 
 static void lock_numlock(struct wlr_keyboard *wlr_keyboard)
@@ -243,16 +250,34 @@ static void handle_modifiers(struct wl_listener *listener, void *data)
     wlr_seat_set_keyboard(s->wlr_seat, kb->wlr_keyboard);
     wlr_seat_keyboard_notify_modifiers(s->wlr_seat, &kb->wlr_keyboard->modifiers);
     share_modifiers_with_x11(kb);
-    uint32_t mods = input_mapping_modifiers(wlr_keyboard_get_modifiers(kb->wlr_keyboard));
-    wm_modifiers_changed(s->server->desktop, mods);
-    selection_modifiers_changed(s->selection, mods);
+    report_modifiers(kb->owner);
 }
 
 static void handle_destroy(struct wl_listener *listener, void *data)
 {
     (void) data;
     keyboard *kb = wl_container_of(listener, kb, destroy);
+    keyboards *kbs = kb->owner;
     keyboard_destroy(kb);
+    report_modifiers(kbs);
+}
+
+static void report_modifiers(keyboards *kbs)
+{
+    seat *s = kbs->seat;
+    uint32_t mods = combined_modifiers(kbs);
+    wm_modifiers_changed(s->server->desktop, mods);
+    selection_modifiers_changed(s->selection, mods);
+}
+
+static uint32_t combined_modifiers(const keyboards *kbs)
+{
+    uint32_t mods = 0;
+    const keyboard *kb;
+    wl_list_for_each(kb, &kbs->list, link) {
+        mods |= input_mapping_modifiers(wlr_keyboard_get_modifiers(kb->wlr_keyboard));
+    }
+    return mods;
 }
 
 static bool switch_vt(keyboard *kb, const struct wlr_keyboard_key_event *event,
@@ -275,11 +300,12 @@ static wm_dispatch dispatch_key(keyboard *kb, const struct wlr_keyboard_key_even
     seat *s = kb->owner->seat;
     bool released = event->state != WL_KEYBOARD_KEY_STATE_PRESSED;
     bool press_was_consumed = released && key_list_take(&kb->consumed, event->keycode);
+    uint32_t keysym = core_keysym(kb, event, chord);
     if (!press_was_consumed && !core_receives_keys(s)) {
         return WM_FORWARD;
     }
     wm_key_event key = {
-        .keysym = input_mapping_keysym(chord->base_keysym),
+        .keysym = keysym,
         .modifiers = chord->modifiers,
         .time_ms = event->time_msec,
     };
@@ -318,6 +344,31 @@ static bool core_receives_keys(const seat *s)
     }
     return !shortcuts_inhibited(s->shortcuts, s->focus.current) &&
            !xwayland_shell_grabs_keyboard(s->server->xwayland, s->focus.current);
+}
+
+static uint32_t core_keysym(keyboard *kb, const struct wlr_keyboard_key_event *event,
+                            const key_chord *chord)
+{
+    bool remembered = event->keycode < KEY_CNT;
+    if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+        uint32_t keysym = bound_keysym(kb->owner->seat->server->desktop, chord);
+        if (remembered) {
+            kb->pressed_keysyms[event->keycode] = keysym;
+        }
+        return keysym;
+    }
+    uint32_t pressed = remembered ? kb->pressed_keysyms[event->keycode] : XKB_KEY_NoSymbol;
+    return pressed != XKB_KEY_NoSymbol ? pressed : input_mapping_keysym(chord->base_keysym);
+}
+
+static uint32_t bound_keysym(const wm_desktop *desktop, const key_chord *chord)
+{
+    wm_key_event key = {input_mapping_keysym(chord->base_keysym), chord->modifiers, 0};
+    if (wm_key_is_bound(desktop, &key)) {
+        return key.keysym;
+    }
+    wm_key_event level_key = {input_mapping_keysym(chord->translated_keysym), chord->modifiers, 0};
+    return wm_key_is_bound(desktop, &level_key) ? level_key.keysym : key.keysym;
 }
 
 static uint32_t base_keysym(struct wlr_keyboard *wlr_keyboard, uint32_t keycode)

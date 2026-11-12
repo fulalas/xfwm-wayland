@@ -13,11 +13,13 @@
 static void handle_destroy(struct wl_listener *listener, void *data);
 static void handle_associate(struct wl_listener *listener, void *data);
 static void handle_dissociate(struct wl_listener *listener, void *data);
+static void handle_override_redirect(struct wl_listener *listener, void *data);
 static void handle_map(struct wl_listener *listener, void *data);
 static void handle_unmap(struct wl_listener *listener, void *data);
 static void handle_commit(struct wl_listener *listener, void *data);
 static void handle_icon_changed(void *self);
 static void detach_surface(xwayland_view *view);
+static void map_any(xwayland_view *view);
 static void map_managed(xwayland_view *view);
 static void unmap_any(xwayland_view *view);
 static void release_queries_when_idle(const xwayland_view *view);
@@ -58,6 +60,8 @@ xwayland_view *xwayland_view_create(compositor *server, struct wlr_xwayland_surf
     listener_connect(&xv->destroy, &xsurface->events.destroy, handle_destroy);
     listener_connect(&xv->associate, &xsurface->events.associate, handle_associate);
     listener_connect(&xv->dissociate, &xsurface->events.dissociate, handle_dissociate);
+    listener_connect(&xv->override_redirect, &xsurface->events.set_override_redirect,
+                     handle_override_redirect);
     xwayland_requests_connect(xv);
     xwayland_properties_connect(xv);
     wl_list_insert(views, &xv->link);
@@ -121,6 +125,7 @@ static void handle_destroy(struct wl_listener *listener, void *data)
     listener_disconnect(&xv->destroy);
     listener_disconnect(&xv->associate);
     listener_disconnect(&xv->dissociate);
+    listener_disconnect(&xv->override_redirect);
     wl_list_remove(&xv->link);
     xv->xsurface->data = NULL;
     icon_slot_destroy(xv->icon);
@@ -145,10 +150,27 @@ static void handle_dissociate(struct wl_listener *listener, void *data)
     detach_surface(xv);
 }
 
+static void handle_override_redirect(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    xwayland_view *xv = wl_container_of(listener, xv, override_redirect);
+    struct wlr_surface *surface = xv->xsurface->surface;
+    if (surface == NULL || !surface->mapped) {
+        return;
+    }
+    unmap_any(xv);
+    map_any(xv);
+}
+
 static void handle_map(struct wl_listener *listener, void *data)
 {
     (void) data;
     xwayland_view *xv = wl_container_of(listener, xv, map);
+    map_any(xv);
+}
+
+static void map_any(xwayland_view *xv)
+{
     if (xv->xsurface->override_redirect) {
         xv->unmanaged = unmanaged_create(xv->server, xv->xsurface);
         return;
@@ -236,9 +258,6 @@ static void unmap_any(xwayland_view *xv)
 static void release_queries_when_idle(const xwayland_view *xv)
 {
     xwayland_shell *shell = xv->server->xwayland;
-    if (shell == NULL) {
-        return;
-    }
     const xwayland_view *other;
     wl_list_for_each(other, &shell->views, link) {
         if (other->view != NULL) {

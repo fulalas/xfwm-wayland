@@ -19,6 +19,7 @@ typedef struct monitor_memory {
 size_t monitors_count(const wm_desktop *desktop);
 wm_rect monitors_full_rect(const wm_desktop *desktop, size_t index);
 size_t monitors_index_at(const wm_desktop *desktop, wm_point point);
+size_t monitors_index_of(const wm_desktop *desktop, const wm_window *window);
 bool monitors_cover(const wm_desktop *desktop, wm_point point);
 bool monitors_overlap(const wm_desktop *desktop, const wm_rect *full);
 wm_rect monitors_full_at(const wm_desktop *desktop, wm_point point);

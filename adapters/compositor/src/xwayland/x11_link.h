@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <xcb/shape.h>
 #include <xcb/xcb.h>
 
 #include "x11_atoms.h"
@@ -61,7 +62,13 @@ typedef struct x11_read {
 } x11_read;
 
 void x11_link_read(x11_link *link, x11_read *reads, size_t count);
-bool x11_link_is_shaped(x11_link *link, xcb_window_t window);
+typedef struct x11_shape_query {
+    xcb_connection_t *connection;
+    xcb_shape_query_extents_cookie_t cookie;
+} x11_shape_query;
+
+x11_shape_query x11_link_request_shape(x11_link *link, xcb_window_t window);
+bool x11_link_collect_shape(x11_link *link, const x11_shape_query *query);
 void x11_link_set_cardinals(const x11_link *link, const x11_property *property,
                             x11_values values);
 void x11_link_set_atoms(const x11_link *link, const x11_property *property, x11_atom_list list);

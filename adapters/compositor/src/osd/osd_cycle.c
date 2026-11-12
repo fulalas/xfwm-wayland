@@ -36,7 +36,8 @@ static void collect_icons(const osd_cycle *cycle, cairo_surface_t **icons);
 static void update_previews(osd_cycle *cycle);
 static void update_preview(osd_cycle *cycle, size_t index);
 static osd_preview *preview_slot(osd_cycle *cycle, size_t index);
-static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node);
+static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node,
+                          const struct wlr_surface *surface);
 static void clear_previews_from(osd_cycle *cycle, size_t first);
 static void destroy_previews(osd_cycle *cycle);
 static bool lists_view(const osd_cycle *cycle, const view *v);
@@ -208,10 +209,11 @@ static void update_preview(osd_cycle *cycle, size_t index)
         return;
     }
     struct wlr_scene_buffer *node = osd_preview_node(preview);
-    bool shown = osd_preview_show(preview, v != NULL ? view_surface(v) : NULL);
+    struct wlr_surface *surface = v != NULL ? view_surface(v) : NULL;
+    bool shown = osd_preview_show(preview, surface);
     wlr_scene_node_set_enabled(&node->node, shown);
     if (shown) {
-        place_preview(cycle, index, node);
+        place_preview(cycle, index, node, surface);
     }
 }
 
@@ -223,10 +225,11 @@ static osd_preview *preview_slot(osd_cycle *cycle, size_t index)
     return cycle->previews[index];
 }
 
-static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node)
+static void place_preview(osd_cycle *cycle, size_t index, struct wlr_scene_buffer *node,
+                          const struct wlr_surface *surface)
 {
-    wm_size buffer_size = {node->buffer->width, node->buffer->height};
-    wm_rect fitted = osd_fit_preview(buffer_size, &cycle->layout.previews[index]);
+    wm_size surface_size = {surface->current.width, surface->current.height};
+    wm_rect fitted = osd_fit_preview(surface_size, &cycle->layout.previews[index]);
     wlr_scene_buffer_set_dest_size(node, fitted.width, fitted.height);
     wlr_scene_node_set_position(&node->node, cycle->origin.x + fitted.x,
                                 cycle->origin.y + fitted.y);

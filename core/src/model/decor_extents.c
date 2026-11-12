@@ -40,7 +40,7 @@ bool decor_is_borderless(const wm_decor_input *input)
     return is_maximized(input->window) && input->config->borderless_maximize;
 }
 
-bool decor_has_frame(const wm_decor_input *input)
+bool wm_decor_has_frame(const wm_decor_input *input)
 {
     const wm_decor_window *window = input->window;
     if (!window->has_border || window->fullscreen) {
@@ -86,7 +86,7 @@ static bool hides_titlebar_when_maximized(const wm_decor_input *input)
 
 static int frame_top(const wm_decor_input *input)
 {
-    if (!decor_has_frame(input)) {
+    if (!wm_decor_has_frame(input)) {
         return 0;
     }
     return wm_decor_title_height(input->theme) - decor_border_top(input);

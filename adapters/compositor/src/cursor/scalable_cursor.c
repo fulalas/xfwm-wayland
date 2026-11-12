@@ -11,6 +11,7 @@
 
 #include "render/cairo_buffer.h"
 #include "scalable_layout.h"
+#include "xcursor_file.h"
 
 static const char scalable_dir[] = "cursors_scalable";
 static const char default_theme[] = "default";
@@ -98,16 +99,12 @@ const cursor_frame *cursor_animation_frame(cursor_animation *animation, size_t i
 
 static char *find_theme_dir(const char *name)
 {
-    char *found = existing_dir(g_build_filename(g_get_user_data_dir(), "icons", name,
-                                                scalable_dir, NULL));
-    if (found == NULL) {
-        found = existing_dir(g_build_filename(g_get_home_dir(), ".icons", name, scalable_dir,
-                                              NULL));
+    char **path = xcursor_search_path();
+    char *found = NULL;
+    for (char **dir = path; found == NULL && *dir != NULL; dir++) {
+        found = existing_dir(g_build_filename(*dir, name, scalable_dir, NULL));
     }
-    const char *const *system_dirs = g_get_system_data_dirs();
-    for (size_t i = 0; found == NULL && system_dirs[i] != NULL; i++) {
-        found = existing_dir(g_build_filename(system_dirs[i], "icons", name, scalable_dir, NULL));
-    }
+    g_strfreev(path);
     return found;
 }
 

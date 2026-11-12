@@ -52,6 +52,7 @@ static void present_window(void *self, void *window, const wm_window_view *state
     compositor *c = self;
     view_present(window, state);
     idle_schedule_refresh(c->idle);
+    seat_repick_pointer(c->seat);
 }
 
 static void present_stacking(void *self, void *const *windows, size_t count)
@@ -59,6 +60,7 @@ static void present_stacking(void *self, void *const *windows, size_t count)
     compositor *c = self;
     views_stack(windows, count);
     idle_schedule_refresh(c->idle);
+    seat_repick_pointer(c->seat);
 }
 
 static void present_focus(void *self, void *window)
@@ -83,12 +85,14 @@ static void present_cycle(void *self, const wm_cycle_view *view)
 {
     compositor *c = self;
     osd_show_cycle(c->osd, view);
+    seat_repick_pointer(c->seat);
 }
 
 static void hide_cycle(void *self)
 {
     compositor *c = self;
     osd_hide_cycle(c->osd);
+    seat_repick_pointer(c->seat);
     seat_focus_refresh(c->seat);
 }
 
@@ -96,12 +100,14 @@ static void present_menu(void *self, const wm_menu_view *view)
 {
     compositor *c = self;
     osd_show_menu(c->osd, view);
+    seat_repick_pointer(c->seat);
 }
 
 static void hide_menu(void *self)
 {
     compositor *c = self;
     osd_hide_menu(c->osd);
+    seat_repick_pointer(c->seat);
     seat_focus_refresh(c->seat);
 }
 

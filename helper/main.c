@@ -15,7 +15,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     if (argc > 1 && strcmp(argv[1], terminate_flag) == 0) {
-        return terminate_dialog_run(argc - 1, argv + 1);
+        return terminate_dialog_run(argv + 1);
     }
     return style_service_run();
 }

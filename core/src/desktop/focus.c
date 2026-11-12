@@ -47,7 +47,6 @@ void focus_clear(wm_desktop *desktop)
 void focus_desktop_clicked(wm_desktop *desktop)
 {
     timers_cancel_kind(desktop, TIMER_FOCUS);
-    desktop->focus.delayed = NULL;
     update_focus(desktop, NULL);
 }
 
@@ -117,12 +116,10 @@ void focus_pointer_entered(wm_desktop *desktop, wm_window *window)
         return;
     }
     timers_cancel_kind(desktop, TIMER_FOCUS);
-    desktop->focus.delayed = NULL;
     if (window->type == WM_TYPE_DOCK || window->type == WM_TYPE_DESKTOP) {
         return;
     }
     if (desktop->config.focus.focus_delay_ms > 0) {
-        desktop->focus.delayed = window;
         timer_request timer = {TIMER_FOCUS, window, desktop->config.focus.focus_delay_ms};
         timers_start(desktop, &timer);
         return;
@@ -132,7 +129,6 @@ void focus_pointer_entered(wm_desktop *desktop, wm_window *window)
 
 void focus_on_delay_elapsed(wm_desktop *desktop, wm_window *window)
 {
-    desktop->focus.delayed = NULL;
     focus_set(desktop, window);
 }
 
@@ -149,14 +145,8 @@ void focus_forget(wm_desktop *desktop, wm_window *window)
     if (focus->focused == window) {
         focus->focused = NULL;
     }
-    if (focus->delayed == window) {
-        focus->delayed = NULL;
-    }
     if (focus->hovered == window) {
         focus->hovered = NULL;
-    }
-    if (focus->last_raise == window) {
-        focus->last_raise = NULL;
     }
     window_list_remove(&desktop->mru, window);
 }

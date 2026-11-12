@@ -13,7 +13,6 @@
 enum {
     EVENT_TYPE_MASK = 0x7f,
     RESOURCES_MAX_WORDS = 1 << 16,
-    BYTE_FORMAT = 8,
 };
 
 struct xwayland_xsettings {
@@ -168,8 +167,8 @@ static void update_resources(const xwayland_xsettings *xsettings, xcb_connection
     if (merged == NULL) {
         return;
     }
-    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, root, XCB_ATOM_RESOURCE_MANAGER,
-                        XCB_ATOM_STRING, BYTE_FORMAT, (uint32_t) strlen(merged), merged);
+    x11_property property = {root, XCB_ATOM_RESOURCE_MANAGER, XCB_ATOM_STRING};
+    x11_link_set_bytes(xsettings->link, &property, (x11_bytes){merged, (uint32_t) strlen(merged)});
     g_free(merged);
 }
 

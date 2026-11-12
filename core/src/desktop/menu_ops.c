@@ -1,6 +1,7 @@
 #include "menu.h"
 
 #include "desktop_state.h"
+#include "maximize.h"
 #include "monitor_move.h"
 #include "moveresize.h"
 #include "states.h"
@@ -14,15 +15,9 @@ typedef struct menu_op {
     menu_handler run;
 } menu_op;
 
-static void maximize(wm_desktop *desktop, wm_window *window);
-static void monitor_left(wm_desktop *desktop, wm_window *window);
-static void monitor_right(wm_desktop *desktop, wm_window *window);
-static void monitor_up(wm_desktop *desktop, wm_window *window);
-static void monitor_down(wm_desktop *desktop, wm_window *window);
+static bool run_monitor_op(wm_desktop *desktop, wm_window *window, wm_menu_label label);
 
 static const menu_op MENU_OPS[] = {
-    {WM_MENU_MAXIMIZE, maximize},
-    {WM_MENU_UNMAXIMIZE, maximize},
     {WM_MENU_MINIMIZE, window_ops_hide},
     {WM_MENU_MINIMIZE_OTHERS, visibility_minimize_others},
     {WM_MENU_SHOW, window_ops_show},
@@ -36,11 +31,17 @@ static const menu_op MENU_OPS[] = {
     {WM_MENU_FULLSCREEN, states_toggle_fullscreen},
     {WM_MENU_UNFULLSCREEN, states_toggle_fullscreen},
     {WM_MENU_STICK, states_toggle_stick},
-    {WM_MENU_MONITOR_LEFT, monitor_left},
-    {WM_MENU_MONITOR_RIGHT, monitor_right},
-    {WM_MENU_MONITOR_UP, monitor_up},
-    {WM_MENU_MONITOR_DOWN, monitor_down},
     {WM_MENU_CLOSE, window_ops_close},
+};
+
+static const struct {
+    wm_menu_label label;
+    monitor_direction direction;
+} MONITOR_OPS[] = {
+    {WM_MENU_MONITOR_LEFT, MONITOR_LEFT},
+    {WM_MENU_MONITOR_RIGHT, MONITOR_RIGHT},
+    {WM_MENU_MONITOR_UP, MONITOR_UP},
+    {WM_MENU_MONITOR_DOWN, MONITOR_DOWN},
 };
 
 void menu_perform(wm_desktop *desktop, const menu_choice *choice)
@@ -53,6 +54,13 @@ void menu_perform(wm_desktop *desktop, const menu_choice *choice)
     if (item->mark == WM_MENU_MARK_RADIO_ON) {
         return;
     }
+    if (item->label == WM_MENU_MAXIMIZE || item->label == WM_MENU_UNMAXIMIZE) {
+        maximize_toggle(desktop, choice->window, WM_STATE_MAXIMIZED);
+        return;
+    }
+    if (run_monitor_op(desktop, choice->window, item->label)) {
+        return;
+    }
     for (size_t i = 0; i < sizeof(MENU_OPS) / sizeof(MENU_OPS[0]); i++) {
         if (MENU_OPS[i].label == item->label) {
             MENU_OPS[i].run(desktop, choice->window);
@@ -61,27 +69,13 @@ void menu_perform(wm_desktop *desktop, const menu_choice *choice)
     }
 }
 
-static void maximize(wm_desktop *desktop, wm_window *window)
+static bool run_monitor_op(wm_desktop *desktop, wm_window *window, wm_menu_label label)
 {
-    window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED);
-}
-
-static void monitor_left(wm_desktop *desktop, wm_window *window)
-{
-    monitor_move(desktop, window, MONITOR_LEFT);
-}
-
-static void monitor_right(wm_desktop *desktop, wm_window *window)
-{
-    monitor_move(desktop, window, MONITOR_RIGHT);
-}
-
-static void monitor_up(wm_desktop *desktop, wm_window *window)
-{
-    monitor_move(desktop, window, MONITOR_UP);
-}
-
-static void monitor_down(wm_desktop *desktop, wm_window *window)
-{
-    monitor_move(desktop, window, MONITOR_DOWN);
+    for (size_t i = 0; i < sizeof(MONITOR_OPS) / sizeof(MONITOR_OPS[0]); i++) {
+        if (MONITOR_OPS[i].label == label) {
+            monitor_move(desktop, window, MONITOR_OPS[i].direction);
+            return true;
+        }
+    }
+    return false;
 }

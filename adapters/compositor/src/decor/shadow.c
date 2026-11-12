@@ -69,9 +69,9 @@ void shadow_show_around(shadow *s, compositor *server, const wm_rect *frame)
 {
     const wm_compositing_config *config = &server->config.compositing;
     wm_rect rect = wm_shadow_rect(frame, config);
-    double opacity = scene_opacity_from_percent(config->shadow_opacity_percent);
-    shadow_image image = shadow_cache_get(server->shadows, opacity);
+    shadow_image image = shadow_cache_get(server->shadows);
     shadow_show(s, &image, &rect);
+    shadow_set_opacity(s, (float) scene_opacity_from_percent(config->shadow_opacity_percent));
 }
 
 void shadow_hide(shadow *s)

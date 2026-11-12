@@ -1,21 +1,15 @@
-#include <math.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_buffer.h>
 
 #include "render/cairo_buffer.h"
 #include "shadow_cache.h"
 
-enum {
-    OPACITY_STEPS = 100,
-};
-
 struct shadow_cache {
     const compositor_painter *painter;
-    shadow_image slots[OPACITY_STEPS + 1];
+    shadow_image image;
 };
 
-static int slot_for(double opacity);
-static shadow_image load_image(const compositor_painter *painter, int slot);
+static shadow_image load_image(const compositor_painter *painter);
 
 shadow_cache *shadow_cache_create(const compositor_painter *painter)
 {
@@ -28,36 +22,24 @@ shadow_cache *shadow_cache_create(const compositor_painter *painter)
 
 void shadow_cache_destroy(shadow_cache *cache)
 {
-    for (int i = 0; i <= OPACITY_STEPS; i++) {
-        if (cache->slots[i].buffer != NULL) {
-            wlr_buffer_drop(cache->slots[i].buffer);
-        }
+    if (cache->image.buffer != NULL) {
+        wlr_buffer_drop(cache->image.buffer);
     }
     free(cache);
 }
 
-shadow_image shadow_cache_get(shadow_cache *cache, double opacity)
+shadow_image shadow_cache_get(shadow_cache *cache)
 {
-    int slot = slot_for(opacity);
-    if (cache->slots[slot].buffer == NULL) {
-        cache->slots[slot] = load_image(cache->painter, slot);
+    if (cache->image.buffer == NULL) {
+        cache->image = load_image(cache->painter);
     }
-    return cache->slots[slot];
+    return cache->image;
 }
 
-static int slot_for(double opacity)
-{
-    long slot = lround(opacity * OPACITY_STEPS);
-    if (slot < 0) {
-        return 0;
-    }
-    return slot > OPACITY_STEPS ? OPACITY_STEPS : (int) slot;
-}
-
-static shadow_image load_image(const compositor_painter *painter, int slot)
+static shadow_image load_image(const compositor_painter *painter)
 {
     shadow_image image = {0};
-    shadow_template tmpl = painter->shadow_template(painter->self, (double) slot / OPACITY_STEPS);
+    shadow_template tmpl = painter->shadow_template(painter->self);
     image.buffer = cairo_buffer_create(tmpl.surface);
     if (tmpl.surface != NULL) {
         cairo_surface_destroy(tmpl.surface);

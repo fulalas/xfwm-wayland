@@ -30,9 +30,6 @@ void stack_add(wm_desktop *desktop, wm_window *window)
 void stack_remove(wm_desktop *desktop, wm_window *window)
 {
     window_list_remove(&desktop->stack, window);
-    if (desktop->focus.last_raise == window) {
-        desktop->focus.last_raise = NULL;
-    }
     stack_mark_changed(desktop);
 }
 
@@ -44,7 +41,6 @@ void stack_raise(wm_desktop *desktop, wm_window *window)
     if (ancestor != window) {
         raise_internal(desktop, window);
     }
-    desktop->focus.last_raise = window;
     if (!same_order(&before, &desktop->stack)) {
         stack_mark_changed(desktop);
     }
@@ -60,9 +56,6 @@ void stack_lower(wm_desktop *desktop, wm_window *window)
         place_above(desktop, window, window->parent);
     } else {
         window_list_insert(stack, bottom_of_layer(stack, window->layer), window);
-    }
-    if (desktop->focus.last_raise == window) {
-        desktop->focus.last_raise = NULL;
     }
     stack_mark_changed(desktop);
     focus_pass(desktop, window);
@@ -218,7 +211,7 @@ static wm_layer base_layer(const wm_desktop *desktop, const wm_window *window)
         return WM_LAYER_DOCK;
     }
     if (window_has_state(window, WM_STATE_ABOVE)) {
-        return WM_LAYER_ABOVE;
+        return fullscreen_has_focus(desktop, window) ? WM_LAYER_FULLSCREEN : WM_LAYER_ABOVE;
     }
     if (window_has_state(window, WM_STATE_BELOW)) {
         return WM_LAYER_BELOW;

@@ -21,13 +21,12 @@ static const struct xfce_input_device_v1_interface device_implementation = {
     .release = resource_handle_destroy,
 };
 
-listed_device *listed_device_create(device_list *list, struct libinput_device *handle)
+listed_device *listed_device_create(struct libinput_device *handle)
 {
     listed_device *entry = calloc(1, sizeof(*entry));
     if (entry == NULL) {
         return NULL;
     }
-    entry->list = list;
     entry->handle = libinput_device_ref(handle);
     entry->capabilities = device_capabilities(handle);
     wl_list_init(&entry->users);

@@ -4,6 +4,7 @@
 #include "stack.h"
 #include "transients.h"
 #include "urgency.h"
+#include "window_ops.h"
 
 static void refresh_type(wm_desktop *desktop, wm_window *window);
 
@@ -29,8 +30,13 @@ void wm_window_set_type(wm_desktop *desktop, wm_window *window, wm_window_type t
 
 void wm_window_set_capabilities(wm_desktop *desktop, wm_window *window, uint32_t capabilities)
 {
+    bool had_border = window_has_flag(window, WINDOW_HAS_BORDER);
     window->capabilities = capabilities;
     window_update_flags(window);
+    if (window_has_flag(window, WINDOW_HAS_BORDER) != had_border) {
+        window_ops_refit(desktop, window);
+        present_request_configure(window);
+    }
     present_flush(desktop);
 }
 

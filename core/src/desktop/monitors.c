@@ -33,6 +33,11 @@ size_t monitors_index_at(const wm_desktop *desktop, wm_point point)
                                                                       : nearest(desktop, point);
 }
 
+size_t monitors_index_of(const wm_desktop *desktop, const wm_window *window)
+{
+    return monitors_index_at(desktop, wm_rect_center(&window->client));
+}
+
 bool monitors_cover(const wm_desktop *desktop, wm_point point)
 {
     size_t index;

@@ -35,6 +35,7 @@ struct xfce_environment {
     session_launch *session;
     char *theme_name;
     char *title_font;
+    char **startup_environment;
 };
 
 typedef struct change_notice {
@@ -80,6 +81,7 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
                                                   on_screensaver_activity };
 
     environment->listener = *listener;
+    environment->startup_environment = g_get_environ();
     environment->channels = channels_create(&watch);
     environment->dispatcher = dispatcher_create(&target);
     environment->bridge = gtk_bridge_create(&bridge_listener);
@@ -104,6 +106,7 @@ void xfce_environment_destroy(xfce_environment *environment)
     keymap_store_destroy(environment->keymap);
     g_free(environment->theme_name);
     g_free(environment->title_font);
+    g_strfreev(environment->startup_environment);
     g_free(environment);
 }
 
@@ -277,6 +280,7 @@ static void on_dispatch(void *self, unsigned flags)
     }
     if (flags & CHANGE_ICON_THEME) {
         gtk_bridge_forget_icons(environment->bridge);
+        notify(environment, environment->listener.icon_theme_changed);
     }
     if (flags & CHANGE_X11_SETTINGS) {
         gtk_bridge_start(environment->bridge);
@@ -394,7 +398,7 @@ static cursor_prefs cursor_prefs_of(void *self)
 {
     xfce_environment *environment = self;
 
-    return input_prefs_cursor(environment->channels);
+    return input_prefs_cursor(environment->channels, environment->startup_environment);
 }
 
 static accessibility_prefs accessibility_prefs_of(void *self)

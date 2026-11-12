@@ -1,10 +1,10 @@
 #include "display_table.h"
 
 #include <errno.h>
-#include <math.h>
 #include <limits.h>
 #include <stdlib.h>
-#include <string.h>
+
+#include "input_text.h"
 
 GHashTable *display_table_new(void)
 {
@@ -33,9 +33,9 @@ const char *display_table_text(GHashTable *table, const display_key *key)
 
 bool display_table_bool(GHashTable *table, const display_key *key)
 {
-    const char *value = display_table_text(table, key);
+    optional_bool value = input_bool_from_text(display_table_text(table, key));
 
-    return value && strcmp(value, "true") == 0;
+    return value.is_set && value.value;
 }
 
 int display_table_int(GHashTable *table, const display_key *key, int fallback)
@@ -57,20 +57,7 @@ int display_table_int(GHashTable *table, const display_key *key, int fallback)
 
 double display_table_double(GHashTable *table, const display_key *key, double fallback)
 {
-    const char *value = display_table_text(table, key);
-    char *end = NULL;
-    double number;
+    optional_double value = input_double_from_text(display_table_text(table, key));
 
-    if (!value) {
-        return fallback;
-    }
-    number = g_ascii_strtod(value, &end);
-    return end != value && *end == '\0' && isfinite(number) ? number : fallback;
-}
-
-char *display_double_text(double value)
-{
-    char buffer[G_ASCII_DTOSTR_BUF_SIZE];
-
-    return g_strdup(g_ascii_dtostr(buffer, sizeof(buffer), value));
+    return value.is_set ? value.value : fallback;
 }

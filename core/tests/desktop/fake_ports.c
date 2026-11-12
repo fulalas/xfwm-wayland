@@ -223,13 +223,11 @@ static void stacking_changed(void *self, void *const *windows, size_t count)
 static void focus_changed(void *self, void *window)
 {
     world_of(self)->focused = window;
-    world_of(self)->focus_calls++;
 }
 
 static void workspaces_changed(void *self, const wm_workspaces_view *view)
 {
     world_of(self)->workspaces = *view;
-    world_of(self)->workspaces_calls++;
 }
 
 static void cycle_shown(void *self, const wm_cycle_view *view)

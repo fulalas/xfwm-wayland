@@ -58,7 +58,6 @@ extern const wm_corner decor_corner_order[WM_CORNER_COUNT];
 
 wm_size decor_pick_size(wm_size preferred, wm_size fallback);
 bool decor_is_borderless(const wm_decor_input *input);
-bool decor_has_frame(const wm_decor_input *input);
 int decor_border_top(const wm_decor_input *input);
 int decor_button_offset(const decor_frame *frame);
 

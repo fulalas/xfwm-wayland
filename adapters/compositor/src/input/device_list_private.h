@@ -10,7 +10,6 @@ struct libinput_device;
 struct wlr_input_device;
 
 typedef struct listed_device {
-    device_list *list;
     struct libinput_device *handle;
     uint32_t capabilities;
     device_settings settings;
@@ -20,7 +19,7 @@ typedef struct listed_device {
     struct wl_list link;
 } listed_device;
 
-listed_device *listed_device_create(device_list *list, struct libinput_device *handle);
+listed_device *listed_device_create(struct libinput_device *handle);
 void listed_device_add_user(listed_device *entry, struct wlr_input_device *device);
 void listed_device_announce(listed_device *entry, struct wl_resource *manager);
 void listed_device_refresh(listed_device *entry);

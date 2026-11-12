@@ -99,6 +99,32 @@ static void test_workspace_request_out_of_range_is_ignored(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_configure_keeps_dock_where_asked(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    wm_window_desc desc = fake_desc(1, small);
+    desc.type = WM_TYPE_DOCK;
+    wm_window *dock = wm_window_map(desktop, &desc);
+    wm_rect asked = {0, FAKE_SCREEN_HEIGHT - 5, FAKE_SCREEN_WIDTH, 30};
+    wm_request_configure(desktop, dock, &asked);
+    CHECK_INT_EQ(asked.y, fake_client_of(dock).y);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_configure_without_monitors_keeps_position(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    wm_window *window = fake_map(desktop, 1, small);
+    world.output_count = 0;
+    wm_rect asked = {100, 200, 400, 300};
+    wm_request_configure(desktop, window, &asked);
+    CHECK_INT_EQ(asked.x, fake_client_of(window).x);
+    CHECK_INT_EQ(asked.y, fake_client_of(window).y);
+    wm_desktop_destroy(desktop);
+}
+
 static const check_case CASES[] = {
     {"minimize_sends_no_configure", test_minimize_sends_no_configure},
     {"refused_maximize_still_answers", test_refused_maximize_still_answers},
@@ -108,6 +134,9 @@ static const check_case CASES[] = {
     {"workspace_request_unsticks_window", test_workspace_request_unsticks_window},
     {"workspace_request_out_of_range_is_ignored",
      test_workspace_request_out_of_range_is_ignored},
+    {"configure_keeps_dock_where_asked", test_configure_keeps_dock_where_asked},
+    {"configure_without_monitors_keeps_position",
+     test_configure_without_monitors_keeps_position},
 };
 
 int main(void)

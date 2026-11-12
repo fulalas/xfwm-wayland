@@ -25,6 +25,7 @@ static void handle_message(gtk_bridge *bridge, const helper_message *message);
 static void finish_style(gtk_bridge *bridge, const helper_message *message);
 static void resend_icon_lines(gtk_bridge *bridge);
 static void send_icon_line(void *id, void *line, void *self);
+static gboolean is_cancelled(void *id, void *line, void *self);
 
 gtk_bridge *gtk_bridge_create(const bridge_listener *listener)
 {
@@ -82,6 +83,7 @@ void gtk_bridge_lookup_icon(gtk_bridge *bridge, const icon_request *request)
 void gtk_bridge_cancel_icons(gtk_bridge *bridge, void *context)
 {
     icon_lookups_cancel(bridge->icons, context);
+    g_hash_table_foreach_remove(bridge->icon_lines, is_cancelled, bridge);
 }
 
 void gtk_bridge_ask_terminate(gtk_bridge *bridge, const terminate_request *request)
@@ -153,4 +155,12 @@ static void send_icon_line(void *id, void *line, void *self)
 
     (void) id;
     helper_client_send(bridge->client, line);
+}
+
+static gboolean is_cancelled(void *id, void *line, void *self)
+{
+    gtk_bridge *bridge = self;
+
+    (void) line;
+    return !icon_lookups_pending(bridge->icons, GPOINTER_TO_UINT(id));
 }

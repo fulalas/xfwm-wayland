@@ -8,7 +8,6 @@
 #include "view.h"
 
 typedef struct pending_activation {
-    activation *owner;
     struct wlr_surface *surface;
     bool trusted;
     char launch[WM_LAUNCH_ID_MAX];
@@ -125,7 +124,6 @@ static void remember(activation *a, const activation_request *request)
         if (pending == NULL) {
             return;
         }
-        pending->owner = a;
         pending->surface = surface;
         listener_connect(&pending->surface_destroy, &surface->events.destroy,
                          handle_surface_destroy);

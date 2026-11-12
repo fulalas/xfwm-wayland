@@ -20,6 +20,8 @@ enum {
 typedef struct inhibitor_watch {
     idle *owner;
     struct wl_listener destroy;
+    struct wl_listener map;
+    struct wl_listener unmap;
 } inhibitor_watch;
 
 struct idle {
@@ -39,6 +41,8 @@ struct idle {
 
 static void handle_new_inhibitor(struct wl_listener *listener, void *data);
 static void handle_inhibitor_destroy(struct wl_listener *listener, void *data);
+static void handle_surface_map(struct wl_listener *listener, void *data);
+static void handle_surface_unmap(struct wl_listener *listener, void *data);
 static void handle_refresh(void *data);
 static bool any_visible_inhibitor(const struct wlr_idle_inhibit_manager_v1 *manager);
 static int handle_display_timer(void *data);
@@ -127,6 +131,8 @@ static void handle_new_inhibitor(struct wl_listener *listener, void *data)
     if (watch != NULL) {
         watch->owner = i;
         listener_connect(&watch->destroy, &inhibitor->events.destroy, handle_inhibitor_destroy);
+        listener_connect(&watch->map, &inhibitor->surface->events.map, handle_surface_map);
+        listener_connect(&watch->unmap, &inhibitor->surface->events.unmap, handle_surface_unmap);
     }
     idle_schedule_refresh(i);
 }
@@ -137,7 +143,23 @@ static void handle_inhibitor_destroy(struct wl_listener *listener, void *data)
     inhibitor_watch *watch = wl_container_of(listener, watch, destroy);
     idle_schedule_refresh(watch->owner);
     listener_disconnect(&watch->destroy);
+    listener_disconnect(&watch->map);
+    listener_disconnect(&watch->unmap);
     free(watch);
+}
+
+static void handle_surface_map(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    inhibitor_watch *watch = wl_container_of(listener, watch, map);
+    idle_schedule_refresh(watch->owner);
+}
+
+static void handle_surface_unmap(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    inhibitor_watch *watch = wl_container_of(listener, watch, unmap);
+    idle_schedule_refresh(watch->owner);
 }
 
 static void handle_refresh(void *data)

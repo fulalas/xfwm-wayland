@@ -30,8 +30,7 @@ xcb_dep = dependency('xcb')
 xcb_ewmh_dep = dependency('xcb-ewmh')
 xcb_icccm_dep = dependency('xcb-icccm')
 xcb_shape_dep = dependency('xcb-shape')
-libdrm_dep = dependency('libdrm').partial_dependency(compile_args: true, includes: true)
-libdrm_link_dep = dependency('libdrm')
+libdrm_dep = dependency('libdrm')
 egl_dep = dependency('egl')
 compositor_m_dep = meson.get_compiler('c').find_library('m', required: false)
 
@@ -283,6 +282,7 @@ compositor_sources = files(
   'src/decor/shadow_cache.c',
   'src/decor/shadow_layout.c',
   'src/input/shortcuts.c',
+  'src/input/surface_watch.c',
   'src/input/tablet.c',
   'src/input/tablet_axes.c',
   'src/input/tablet_pad.c',
@@ -381,7 +381,6 @@ compositor_lib = static_library(
     xcb_icccm_dep,
     xcb_shape_dep,
     libdrm_dep,
-    libdrm_link_dep,
     egl_dep,
     compositor_m_dep,
   ],
@@ -404,7 +403,7 @@ compositor_dep = declare_dependency(
     xcb_ewmh_dep,
     xcb_icccm_dep,
     xcb_shape_dep,
-    libdrm_link_dep,
+    libdrm_dep,
     egl_dep,
     compositor_m_dep,
   ],

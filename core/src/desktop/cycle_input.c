@@ -83,12 +83,12 @@ wm_dispatch cycle_button(wm_desktop *desktop, const wm_button_event *event)
 
 wm_dispatch cycle_axis(wm_desktop *desktop, const wm_axis_event *event)
 {
-    if (event->pointer.target.kind != WM_TARGET_CYCLE) {
+    if (event->pointer.target.kind != WM_TARGET_CYCLE || event->axis != WM_AXIS_VERTICAL) {
         return WM_CONSUMED;
     }
-    if (event->vertical_steps < 0) {
+    if (event->steps < 0) {
         select_previous(desktop);
-    } else if (event->vertical_steps > 0) {
+    } else if (event->steps > 0) {
         select_next(desktop);
     }
     return WM_CONSUMED;

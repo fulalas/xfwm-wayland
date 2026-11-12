@@ -65,5 +65,6 @@ wm_state_change view_state_change(uint32_t states, bool enabled);
 void view_icon_changed(view *view);
 void view_report_not_responding(view *view);
 void views_invalidate_decorations(compositor *server);
+void views_reload_icons(compositor *server);
 
 #endif

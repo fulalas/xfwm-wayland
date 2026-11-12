@@ -1,6 +1,7 @@
 #include "fake_input.h"
 
 static wm_pointer_event pointer_event(fake_world *world, const fake_click *click);
+static wm_point fake_part_point(const wm_window *window, wm_part part);
 
 static const wm_key_binding KEY_BINDINGS[] = {
     {{WM_KEYSYM_ESCAPE, 0}, WM_ACTION_CANCEL},
@@ -58,7 +59,7 @@ wm_dispatch fake_release(fake_world *world, wm_desktop *desktop, const fake_clic
 
 wm_dispatch fake_scroll(fake_world *world, const fake_click *where, int steps)
 {
-    wm_axis_event event = {pointer_event(world, where), steps, 0};
+    wm_axis_event event = {pointer_event(world, where), WM_AXIS_VERTICAL, steps};
     return wm_pointer_axis(world->desktop, &event);
 }
 
@@ -74,7 +75,7 @@ wm_dispatch fake_key_release(wm_desktop *desktop, uint32_t keysym, uint32_t modi
     return wm_key_released(desktop, &event);
 }
 
-wm_point fake_part_point(const wm_window *window, wm_part part)
+static wm_point fake_part_point(const wm_window *window, wm_part part)
 {
     wm_window_view view = wm_window_current_view(window);
     for (size_t i = 0; i < view.decor->part_count; i++) {

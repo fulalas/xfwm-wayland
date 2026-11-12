@@ -18,6 +18,7 @@
 #include "pointer_prefs_compare.h"
 #include "seat_private.h"
 #include "shell/xdg_shell.h"
+#include "surface_watch.h"
 
 typedef struct input_device {
     seat *seat;
@@ -31,7 +32,6 @@ typedef struct input_device {
 static bool seat_create_modules(seat *seat);
 static void seat_destroy_modules(seat *seat);
 static void connect_events(seat *seat);
-static void destroy_pointer_modules(seat *seat);
 static void destroy_pointer_helpers(seat *seat);
 static void destroy_pointer_devices(seat *seat);
 static void handle_new_input(struct wl_listener *listener, void *data);
@@ -49,6 +49,7 @@ static bool takes_pointer_prefs(const struct wlr_input_device *device);
 static void update_capabilities(seat *seat);
 static void handle_warp_motion(void *data);
 static void handle_repick(void *data);
+static wm_point core_position(const seat *seat);
 
 seat *seat_create(compositor *server)
 {
@@ -184,6 +185,18 @@ void seat_release_pointer_grab(seat *s)
     pointer_input_release_grab(s->pointer);
 }
 
+bool seat_holds_grab_serial(const seat *s, uint32_t serial)
+{
+    return wlr_seat_validate_pointer_grab_serial(s->wlr_seat, NULL, serial) ||
+           tablet_input_holds_serial(s->tablet, serial);
+}
+
+void seat_release_touch_and_pen(seat *s)
+{
+    tablet_input_release_tips(s->tablet, (uint32_t) clock_now_ms());
+    touch_input_cancel_all(s->touch);
+}
+
 wm_point seat_pointer_position(const seat *s)
 {
     return (wm_point){(int) floor(s->cursor->x), (int) floor(s->cursor->y)};
@@ -206,11 +219,18 @@ pointer_hit seat_hit_at_cursor(const seat *s)
 wm_pointer_event seat_core_event(const seat *s, const pointer_hit *hit, uint32_t time_ms)
 {
     return (wm_pointer_event){
-        .position = {(int) floor(s->cursor->x), (int) floor(s->cursor->y)},
+        .position = core_position(s),
         .time_ms = time_ms,
         .modifiers = seat_modifiers(s),
         .target = hit->target,
     };
+}
+
+void seat_track_pointer(seat *s)
+{
+    if (seat_input_route(s) != INPUT_ROUTE_LOCKED) {
+        wm_pointer_track(s->server->desktop, core_position(s));
+    }
 }
 
 void seat_notify_activity(seat *s)
@@ -226,6 +246,11 @@ struct xcursor_cache *seat_xcursors(const seat *s)
     return cursor_image_xcursors(s->image);
 }
 
+static wm_point core_position(const seat *s)
+{
+    return (wm_point){(int) floor(s->cursor->x), (int) floor(s->cursor->y)};
+}
+
 static bool seat_create_modules(seat *s)
 {
     s->image = cursor_image_create(s);
@@ -239,15 +264,20 @@ static bool seat_create_modules(seat *s)
     s->constraints = constraints_create(s);
     s->selection = selection_create(s);
     s->virtual_input = virtual_input_create(s);
+    s->surface_watch = surface_watch_create(s);
     return s->image != NULL && s->keyboards != NULL && s->shortcuts != NULL &&
            s->pointer != NULL && s->touch != NULL && s->tablet != NULL && s->absolute != NULL &&
            s->gestures != NULL && s->constraints != NULL && s->selection != NULL &&
-           s->virtual_input != NULL;
+           s->virtual_input != NULL && s->surface_watch != NULL;
 }
 
 static void seat_destroy_modules(seat *s)
 {
-    destroy_pointer_modules(s);
+    if (s->surface_watch != NULL) {
+        surface_watch_destroy(s->surface_watch);
+    }
+    destroy_pointer_helpers(s);
+    destroy_pointer_devices(s);
     if (s->shortcuts != NULL) {
         shortcuts_destroy(s->shortcuts);
     }
@@ -257,12 +287,6 @@ static void seat_destroy_modules(seat *s)
     if (s->image != NULL) {
         cursor_image_destroy(s->image);
     }
-}
-
-static void destroy_pointer_modules(seat *s)
-{
-    destroy_pointer_helpers(s);
-    destroy_pointer_devices(s);
 }
 
 static void destroy_pointer_helpers(seat *s)
@@ -339,10 +363,8 @@ static void handle_keyboard_grab_end(struct wl_listener *listener, void *data)
 
 static void release_presses(seat *s)
 {
-    uint32_t now = (uint32_t) clock_now_ms();
-    pointer_input_release_all(s->pointer, now);
-    tablet_input_release_tips(s->tablet, now);
-    touch_input_cancel_all(s->touch);
+    pointer_input_release_all(s->pointer, (uint32_t) clock_now_ms());
+    seat_release_touch_and_pen(s);
 }
 
 static void release_device_presses(seat *s, struct wlr_input_device *device)

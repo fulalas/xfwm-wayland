@@ -30,6 +30,14 @@ wm_dispatch wm_key_released(wm_desktop *desktop, const wm_key_event *event)
     return result;
 }
 
+bool wm_key_is_bound(const wm_desktop *desktop, const wm_key_event *event)
+{
+    const keybindings *keys = &desktop->keys;
+    return keybindings_command_for(keys, event) != NULL ||
+           keybindings_action_for(keys, event) != WM_ACTION_NONE ||
+           keybindings_app_shortcut_for(keys, event) != NULL;
+}
+
 void wm_modifiers_changed(wm_desktop *desktop, uint32_t modifiers)
 {
     desktop->modifiers = modifiers;

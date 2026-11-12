@@ -9,8 +9,6 @@
 #include "util/utf8_copy.h"
 #include "view_private.h"
 
-static const double SHADOW_TEMPLATE_OPACITY = 1.0;
-
 static void store_target(view *view, const wm_window_view *state);
 static void apply_layer(view *view, wm_layer layer);
 static bool geometry_ready(const view *view);
@@ -152,7 +150,7 @@ static void apply_shadow(view *v)
         shadow_hide(v->shadow);
         return;
     }
-    shadow_image image = shadow_cache_get(v->server->shadows, SHADOW_TEMPLATE_OPACITY);
+    shadow_image image = shadow_cache_get(v->server->shadows);
     wm_rect relative = {s->shadow.x - s->frame.x, s->shadow.y - s->frame.y, s->shadow.width,
                         s->shadow.height};
     shadow_show(v->shadow, &image, &relative);

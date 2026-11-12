@@ -29,7 +29,6 @@ typedef struct click_state {
     wm_part part;
     uint32_t button;
     unsigned clicks;
-    bool allow_double;
     wm_point origin;
     uint32_t start_ms;
 } click_state;

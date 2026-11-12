@@ -22,6 +22,8 @@ static bool commit_setting(output *output, const display_setting *setting);
 static bool commit_with_fallback(output *output, const display_setting *setting);
 static bool commit_any_setting(output *output, const display_setting *setting);
 static bool wants_adaptive_sync(const output *output);
+static bool shows_adaptive_sync(const output *output);
+static void commit_adaptive_sync(output *output);
 static void describe(struct wlr_output *wlr_output, const display_setting *setting,
                      struct wlr_output_state *state);
 static void describe_mode(struct wlr_output *wlr_output, const display_mode *wanted,
@@ -137,6 +139,27 @@ void output_remember(output *o)
     }
 }
 
+void outputs_apply_vblank_mode(outputs *outs)
+{
+    output *o;
+    wl_list_for_each(o, &outs->list, link) {
+        if (o->wlr_output->enabled && shows_adaptive_sync(o) != wants_adaptive_sync(o)) {
+            commit_adaptive_sync(o);
+        }
+    }
+}
+
+static void commit_adaptive_sync(output *o)
+{
+    struct wlr_output_state state;
+    wlr_output_state_init(&state);
+    wlr_output_state_set_adaptive_sync_enabled(&state, wants_adaptive_sync(o));
+    if (!wlr_output_commit_state(o->wlr_output, &state)) {
+        wlr_log(WLR_ERROR, "cannot change adaptive sync on output %s", o->wlr_output->name);
+    }
+    wlr_output_state_finish(&state);
+}
+
 static bool commit_with_fallback(output *o, const display_setting *setting)
 {
     if (commit_any_setting(o, setting) ||
@@ -162,9 +185,11 @@ static bool commit_setting(output *o, const display_setting *setting)
     if (wants_adaptive_sync(o)) {
         wlr_output_state_set_adaptive_sync_enabled(&state, true);
         ok = wlr_output_commit_state(o->wlr_output, &state);
-        wlr_output_state_set_adaptive_sync_enabled(&state, false);
     }
-    ok = ok || wlr_output_commit_state(o->wlr_output, &state);
+    if (!ok) {
+        wlr_output_state_set_adaptive_sync_enabled(&state, false);
+        ok = wlr_output_commit_state(o->wlr_output, &state);
+    }
     wlr_output_state_finish(&state);
     return ok;
 }
@@ -173,6 +198,11 @@ static bool wants_adaptive_sync(const output *o)
 {
     return o->server->config.compositing.vblank_mode == WM_VBLANK_ADAPTIVE &&
            o->wlr_output->adaptive_sync_supported;
+}
+
+static bool shows_adaptive_sync(const output *o)
+{
+    return o->wlr_output->adaptive_sync_status != WLR_OUTPUT_ADAPTIVE_SYNC_DISABLED;
 }
 
 static void describe(struct wlr_output *wlr_output, const display_setting *setting,

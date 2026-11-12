@@ -36,9 +36,7 @@ typedef struct fake_world {
     size_t stacking_count;
     int stacking_calls;
     void *focused;
-    int focus_calls;
     wm_workspaces_view workspaces;
-    int workspaces_calls;
     wm_cycle_view cycle;
     bool cycle_visible;
     wm_menu_view menu;

@@ -43,7 +43,6 @@ typedef struct screen_state {
 struct xwayland_ewmh {
     compositor *server;
     const x11_link *link;
-    bool has_workspaces;
     uint32_t count;
     uint32_t current;
     ewmh_desktop_names names;
@@ -97,7 +96,6 @@ void xwayland_ewmh_link_ready(xwayland_ewmh *ewmh)
 void xwayland_ewmh_publish_workspaces(xwayland_ewmh *ewmh, const wm_workspaces_view *view)
 {
     uint32_t previous_count = ewmh->count;
-    ewmh->has_workspaces = true;
     ewmh->count = (uint32_t) view->count;
     ewmh->current = (uint32_t) view->current;
     ewmh_desktop_names names = ewmh_names(view);
@@ -116,7 +114,7 @@ void xwayland_ewmh_publish_workspaces(xwayland_ewmh *ewmh, const wm_workspaces_v
 
 void xwayland_ewmh_publish_outputs(xwayland_ewmh *ewmh)
 {
-    if (!ewmh->has_workspaces || x11_link_connection(ewmh->link) == NULL) {
+    if (ewmh->count == 0 || x11_link_connection(ewmh->link) == NULL) {
         return;
     }
     screen_state state;
@@ -133,7 +131,7 @@ void xwayland_ewmh_publish_outputs(xwayland_ewmh *ewmh)
 
 bool xwayland_ewmh_can_switch_to(const xwayland_ewmh *ewmh, uint32_t desktop)
 {
-    return ewmh->has_workspaces && desktop < ewmh->count && desktop != ewmh->current;
+    return desktop < ewmh->count && desktop != ewmh->current;
 }
 
 static void intern_desktop_workareas(xwayland_ewmh *ewmh, xcb_connection_t *connection)
@@ -153,7 +151,7 @@ static void intern_desktop_workareas(xwayland_ewmh *ewmh, xcb_connection_t *conn
 
 static void publish_desktops(xwayland_ewmh *ewmh)
 {
-    if (!ewmh->has_workspaces) {
+    if (ewmh->count == 0) {
         return;
     }
     x11_property count = root_property(ewmh, ATOM_NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL);

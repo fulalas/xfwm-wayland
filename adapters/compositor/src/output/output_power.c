@@ -23,11 +23,8 @@ output_power *output_power_create(compositor *server)
         return NULL;
     }
     p->server = server;
-    wl_list_init(&p->set_mode.link);
-    if (server->globals.output_power != NULL) {
-        listener_connect(&p->set_mode, &server->globals.output_power->events.set_mode,
-                         handle_set_mode);
-    }
+    listener_connect(&p->set_mode, &server->globals.output_power->events.set_mode,
+                     handle_set_mode);
     return p;
 }
 

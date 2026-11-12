@@ -254,6 +254,36 @@ static void test_add_and_delete_active_workspace(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_delete_below_current_keeps_windows_shown(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_desktop_switch_workspace(desktop, 1);
+    wm_window *other = fake_map(desktop, 1, small);
+    wm_desktop_switch_workspace(desktop, 2);
+    wm_window *window = fake_map(desktop, 2, small);
+    wm_desktop_remove_workspace(desktop, 0);
+    CHECK_INT_EQ(1, world.workspaces.current);
+    CHECK_INT_EQ(1, wm_window_current_view(window).workspace);
+    CHECK(wm_window_current_view(window).visible);
+    CHECK_INT_EQ(0, wm_window_current_view(other).workspace);
+    CHECK(!wm_window_current_view(other).visible);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_added_workspace_survives_same_config(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_desktop_add_workspace(desktop);
+    wm_theme_metrics theme = fake_theme();
+    wm_desktop_set_appearance(desktop, &theme, &config);
+    CHECK_INT_EQ(5, world.workspaces.count);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_workspace_names(void)
 {
     fake_world world;
@@ -313,8 +343,22 @@ static void test_scroll_on_desktop_switches_workspace(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_partial_scroll_on_desktop_is_consumed(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_click where = {WM_TARGET_DESKTOP, NULL, {50, 50}, 0, 0, -1};
+    CHECK_INT_EQ(WM_CONSUMED, fake_scroll(&world, &where, 0));
+    CHECK_INT_EQ(0, world.workspaces.current);
+    fake_scroll(&world, &where, 1);
+    CHECK_INT_EQ(1, world.workspaces.current);
+    wm_desktop_destroy(desktop);
+}
+
 static const check_case CASES[] = {
     {"switch_restores_workspace_focus", test_switch_restores_workspace_focus},
+    {"partial_scroll_on_desktop_is_consumed", test_partial_scroll_on_desktop_is_consumed},
     {"delete_keeps_ids_of_other_workspaces", test_delete_keeps_ids_of_other_workspaces},
     {"ids_are_unique", test_ids_are_unique},
     {"move_window_to_workspace_key", test_move_window_to_workspace_key},
@@ -330,6 +374,8 @@ static const check_case CASES[] = {
     {"toggle_returns_to_previous", test_toggle_returns_to_previous},
     {"switch_out_of_range_without_wrap_cycle", test_switch_out_of_range_without_wrap_cycle},
     {"add_and_delete_active_workspace", test_add_and_delete_active_workspace},
+    {"delete_below_current_keeps_windows_shown", test_delete_below_current_keeps_windows_shown},
+    {"added_workspace_survives_same_config", test_added_workspace_survives_same_config},
     {"workspace_names", test_workspace_names},
     {"fewer_workspaces_from_config_moves_windows",
      test_fewer_workspaces_from_config_moves_windows},

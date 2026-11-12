@@ -110,10 +110,8 @@ static void handle_startup_id(struct wl_listener *listener, void *data)
     (void) data;
     xwayland_view *xv = wl_container_of(listener, xv, properties.startup_id);
     wm_window *window = xwayland_view_window(xv);
-    if (xv->server->xwayland != NULL) {
-        xwayland_shell_note_startup_id(xv->server->xwayland, xv->xsurface->pid,
-                                       xv->xsurface->startup_id);
-    }
+    xwayland_shell_note_startup_id(xv->server->xwayland, xv->xsurface->pid,
+                                   xv->xsurface->startup_id);
     if (window != NULL) {
         wm_window_launched(xv->server->desktop, window, xv->xsurface->startup_id);
     }

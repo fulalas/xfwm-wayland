@@ -18,7 +18,6 @@ typedef struct group_target {
 } group_target;
 
 static void add_action(keymap_store *store, wm_key key, const char *value);
-static void add_command(keymap_store *store, wm_key key, const char *value);
 static bool has_group(XfconfChannel *channel, const char *root);
 static void load_group(keymap_store *store, XfconfChannel *channel, const shortcut_group *group);
 static void add_entries(const group_target *target, GHashTable *properties);
@@ -26,7 +25,7 @@ static void add_entry(const group_target *target, const char *accelerator, const
 static void add_builtin_actions(keymap_store *store);
 
 static const shortcut_group action_group = { "/xfwm4", add_action };
-static const shortcut_group command_group = { "/commands", add_command };
+static const shortcut_group command_group = { "/commands", keymap_store_add_command };
 
 keymap_store *shortcuts_load(XfconfChannel *channel)
 {
@@ -47,11 +46,6 @@ keymap_store *shortcuts_load(XfconfChannel *channel)
 static void add_action(keymap_store *store, wm_key key, const char *value)
 {
     keymap_store_add_action(store, key, wm_action_from_name(value));
-}
-
-static void add_command(keymap_store *store, wm_key key, const char *value)
-{
-    keymap_store_add_command(store, key, value);
 }
 
 static bool has_group(XfconfChannel *channel, const char *root)

@@ -127,6 +127,9 @@ static void handle_destroy(struct wl_listener *listener, void *data)
     listener_disconnect(&p->commit);
     listener_disconnect(&p->reposition);
     listener_disconnect(&p->destroy);
+    if (p->xdg_popup->base->data == &p->as_parent) {
+        p->xdg_popup->base->data = NULL;
+    }
     if (p->wrap != NULL) {
         listener_disconnect(&p->wrap_destroy);
         if (p->shadow != NULL) {

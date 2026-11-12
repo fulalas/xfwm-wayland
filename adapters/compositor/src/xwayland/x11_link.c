@@ -24,10 +24,11 @@ static xcb_get_property_cookie_t request_read(xcb_connection_t *connection,
 static void receive_read(xcb_connection_t *connection, xcb_get_property_cookie_t cookie,
                          x11_read *read);
 static void store_read(x11_read *read, xcb_get_property_reply_t *reply);
-static void drop_events(xcb_connection_t *connection);
+static void finish_queries(x11_link *link);
 
 void x11_link_attach(x11_link *link, struct wlr_xwayland *wlr)
 {
+    x11_link_release_queries(link);
     link->wlr = wlr;
     xcb_connection_t *connection = wlr_xwayland_get_xwm_connection(wlr);
     link->ready = connection != NULL && x11_atoms_intern(&link->atoms, connection);
@@ -165,7 +166,7 @@ void x11_link_read(x11_link *link, x11_read *reads, size_t count)
     for (size_t i = 0; connection != NULL && i < count; i++) {
         receive_read(connection, cookies[i], &reads[i]);
     }
-    drop_events(connection);
+    finish_queries(link);
 }
 
 static xcb_get_property_cookie_t request_read(xcb_connection_t *connection,
@@ -188,24 +189,32 @@ static void receive_read(xcb_connection_t *connection, xcb_get_property_cookie_t
     }
 }
 
-bool x11_link_is_shaped(x11_link *link, xcb_window_t window)
+x11_shape_query x11_link_request_shape(x11_link *link, xcb_window_t window)
 {
+    x11_shape_query query = {NULL, {0}};
     xcb_connection_t *connection = x11_link_query_connection(link);
     if (connection == NULL) {
-        return false;
+        return query;
     }
     const xcb_query_extension_reply_t *shape = xcb_get_extension_data(connection, &xcb_shape_id);
-    if (shape == NULL || !shape->present) {
+    if (shape != NULL && shape->present) {
+        query = (x11_shape_query){connection, xcb_shape_query_extents(connection, window)};
+    }
+    return query;
+}
+
+bool x11_link_collect_shape(x11_link *link, const x11_shape_query *query)
+{
+    if (query->connection == NULL || query->connection != link->queries) {
         return false;
     }
-    xcb_shape_query_extents_cookie_t cookie = xcb_shape_query_extents(connection, window);
     xcb_generic_error_t *error = NULL;
     xcb_shape_query_extents_reply_t *reply =
-        xcb_shape_query_extents_reply(connection, cookie, &error);
+        xcb_shape_query_extents_reply(query->connection, query->cookie, &error);
     free(error);
     bool shaped = reply != NULL && reply->bounding_shaped;
     free(reply);
-    drop_events(connection);
+    finish_queries(link);
     return shaped;
 }
 
@@ -223,10 +232,17 @@ static void store_read(x11_read *read, xcb_get_property_reply_t *reply)
     }
 }
 
-static void drop_events(xcb_connection_t *connection)
+static void finish_queries(x11_link *link)
 {
+    xcb_connection_t *connection = link->queries;
+    if (connection == NULL) {
+        return;
+    }
     xcb_generic_event_t *event;
-    while (connection != NULL && (event = xcb_poll_for_event(connection)) != NULL) {
+    while ((event = xcb_poll_for_event(connection)) != NULL) {
         free(event);
+    }
+    if (xcb_connection_has_error(connection)) {
+        x11_link_release_queries(link);
     }
 }

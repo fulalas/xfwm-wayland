@@ -29,7 +29,7 @@ static bool title_overlaps(const constrain_box *box, wm_segment band);
 
 void placement_constrain(wm_desktop *desktop, wm_window *window)
 {
-    if (window_is_fullscreen(window)) {
+    if (window_is_fullscreen(window) || monitors_count(desktop) == 0) {
         return;
     }
     constrain_box box = make_box(desktop, window);
@@ -40,7 +40,7 @@ void placement_constrain(wm_desktop *desktop, wm_window *window)
 
 void placement_constrain_fully(wm_desktop *desktop, wm_window *window)
 {
-    if (window_is_fullscreen(window)) {
+    if (window_is_fullscreen(window) || monitors_count(desktop) == 0) {
         return;
     }
     constrain_box box = make_box(desktop, window);

@@ -53,9 +53,6 @@ void wm_window_unmap(wm_desktop *desktop, wm_window *window)
     forget(desktop, window);
     stack_remove(desktop, window);
     transient_detach_all(desktop, window);
-    if (desktop->focus.focused == window) {
-        desktop->focus.focused = NULL;
-    }
     stack_update_layers(desktop);
     window_destroy(window);
     present_flush(desktop);

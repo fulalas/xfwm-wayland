@@ -25,6 +25,7 @@
 #include <librsvg/rsvg.h>
 
 #include "color.h"
+#include "image_limits.h"
 #include "mysvg.h"
 #include "mysvgparse.h"
 #include "mysvgsnap.h"
@@ -69,7 +70,8 @@ static guint channel_byte (gdouble);
 static void append_stripped (GString *, const gchar *, const gchar *);
 static cairo_surface_t *load_colored (const gchar *, gdouble);
 static void set_scale (SvgAxisScale *, gdouble);
-static gboolean get_size (const gchar *, SvgCanvas *, gboolean *);
+static gboolean get_size (const gchar *, gdouble, SvgCanvas *, gboolean *);
+static gboolean size_fits (const SvgSize *, gdouble);
 static gboolean read_size (const gchar *, SvgSize *);
 static gboolean size_from_tag (GArray *, SvgSize *);
 static gboolean size_from_rsvg (const gchar *, SvgSize *);
@@ -240,7 +242,7 @@ load_colored (const gchar *data, gdouble scale)
     gchar *snapped;
     gboolean snap;
 
-    if (!get_size (data, &canvas, &snap))
+    if (!get_size (data, scale, &canvas, &snap))
     {
         return NULL;
     }
@@ -265,11 +267,11 @@ set_scale (SvgAxisScale *axis, gdouble scale)
 }
 
 static gboolean
-get_size (const gchar *data, SvgCanvas *canvas, gboolean *snap)
+get_size (const gchar *data, gdouble scale, SvgCanvas *canvas, gboolean *snap)
 {
     SvgSize size = { 0 };
 
-    if (!read_size (data, &size))
+    if (!read_size (data, &size) || !size_fits (&size, scale))
     {
         return FALSE;
     }
@@ -278,6 +280,12 @@ get_size (const gchar *data, SvgCanvas *canvas, gboolean *snap)
     *snap = !size.has_box || box_matches (size.box, canvas);
 
     return (canvas->x.size > 0 && canvas->y.size > 0);
+}
+
+static gboolean
+size_fits (const SvgSize *size, gdouble scale)
+{
+    return size->width * scale <= APPEARANCE_IMAGE_SIDE_MAX && size->height * scale <= APPEARANCE_IMAGE_SIDE_MAX;
 }
 
 static gboolean

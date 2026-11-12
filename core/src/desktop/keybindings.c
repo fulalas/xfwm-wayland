@@ -23,7 +23,7 @@ static bool key_matches(const wm_key *key, const wm_key_event *event);
 static uint32_t default_keysym(wm_action action);
 static void copy_commands(keybindings *keys, const wm_keymap *keymap);
 static copied_array copy_array(const void *items, size_t count, size_t size);
-static char *copy_text(const char *text);
+static char *copy_or_empty(const char *text);
 
 void keybindings_free(keybindings *keys)
 {
@@ -191,12 +191,12 @@ static void copy_commands(keybindings *keys, const wm_keymap *keymap)
     }
     for (size_t i = 0; i < keymap->command_count; i++) {
         keys->commands[i].key = keymap->commands[i].key;
-        keys->commands[i].command = copy_text(keymap->commands[i].command);
+        keys->commands[i].command = copy_or_empty(keymap->commands[i].command);
     }
     keys->command_count = keymap->command_count;
 }
 
-static char *copy_text(const char *text)
+static char *copy_or_empty(const char *text)
 {
     size_t length = strlen(text ? text : "") + 1;
     char *copy = malloc(length);

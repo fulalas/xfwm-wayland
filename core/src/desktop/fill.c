@@ -3,6 +3,7 @@
 #include "desktop_state.h"
 #include "frame.h"
 #include "monitors.h"
+#include "size_hints.h"
 
 typedef struct neighbours {
     bool has_west;
@@ -34,11 +35,11 @@ void fill_window(wm_desktop *desktop, wm_window *window, unsigned mode)
     wm_rect target = filled_client(&extents, &full, &found);
     if (mode & FILL_HORIZONTAL) {
         window->client.x = target.x;
-        window->client.width = target.width;
+        window->client.width = size_hints_check_width(desktop, window, target.width);
     }
     if (mode & FILL_VERTICAL) {
         window->client.y = target.y;
-        window->client.height = target.height;
+        window->client.height = size_hints_check_height(desktop, window, target.height);
     }
     window_placed(window);
     window_mark_dirty(window);

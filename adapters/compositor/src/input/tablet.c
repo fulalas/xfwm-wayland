@@ -160,7 +160,6 @@ static void add_tablet(tablet_input *tablets, struct wlr_input_device *device)
     if (tablet == NULL) {
         return;
     }
-    tablet->owner = tablets;
     tablet->tablet = wlr_tablet_from_input_device(device);
     tablet->v2 = wlr_tablet_create(tablets->manager, tablets->seat->wlr_seat, device);
     listener_connect(&tablet->destroy, &device->events.destroy, handle_tablet_destroy);

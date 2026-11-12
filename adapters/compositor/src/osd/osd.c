@@ -6,7 +6,6 @@
 #include "render/scene_layers.h"
 
 struct osd {
-    compositor *server;
     osd_menu *menu;
     osd_cycle *cycle;
     osd_outline *outline;
@@ -20,7 +19,6 @@ osd *osd_create(compositor *server)
     if (o == NULL) {
         return NULL;
     }
-    o->server = server;
     struct wlr_scene_tree *parent = scene_layers_tree(server->layers, SCENE_LAYER_OSD);
     o->outline = osd_outline_create(parent);
     o->size = osd_size_create(server, parent);

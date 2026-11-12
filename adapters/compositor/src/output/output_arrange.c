@@ -23,6 +23,7 @@ void outputs_arrange(outputs *outs)
         session_lock_arrange(server->lock);
     }
     update_max_scale(outs);
+    seat_repick_pointer(server->seat);
     if (changed) {
         wm_desktop_outputs_changed(server->desktop);
     }

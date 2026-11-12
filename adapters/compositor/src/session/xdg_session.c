@@ -91,11 +91,10 @@ void xdg_sessions_destroy(xdg_sessions *sessions)
 
 void session_data_changed(session_data *session)
 {
-    if (session->save_timer != NULL) {
-        return;
+    if (session->save_timer == NULL) {
+        struct wl_event_loop *loop = session->owner->server->loop;
+        session->save_timer = wl_event_loop_add_timer(loop, handle_save_timer, session);
     }
-    struct wl_event_loop *loop = session->owner->server->loop;
-    session->save_timer = wl_event_loop_add_timer(loop, handle_save_timer, session);
     if (session->save_timer != NULL) {
         wl_event_source_timer_update(session->save_timer, SAVE_DELAY_MS);
     }
@@ -103,13 +102,8 @@ void session_data_changed(session_data *session)
 
 static void manager_bind(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
-    struct wl_resource *resource =
-        wl_resource_create(client, &xdg_session_manager_v1_interface, (int) version, id);
-    if (resource == NULL) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(resource, &manager_impl, data, NULL);
+    resource_bind(client, &xdg_session_manager_v1_interface, version, id,
+                  &manager_impl, data, NULL);
 }
 
 static void manager_get_session(struct wl_client *client, struct wl_resource *resource,

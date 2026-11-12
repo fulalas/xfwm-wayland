@@ -44,6 +44,14 @@ void views_invalidate_decorations(compositor *server)
     }
 }
 
+void views_reload_icons(compositor *server)
+{
+    view *v;
+    wl_list_for_each(v, &server->views, link) {
+        icon_slot_reload(v->impl->icon(v->self));
+    }
+}
+
 static void place_below_lowest(view *v, struct wlr_scene_node **lowest)
 {
     struct wlr_scene_node *node = &v->tree->node;

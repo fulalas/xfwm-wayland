@@ -61,9 +61,22 @@ bool xcursor_file_load(FILE *file, const xcursor_request *request, xcursor_frame
     return loaded;
 }
 
-char **xcursor_theme_dirs(const char *theme)
+char **xcursor_search_path(void)
 {
     char **path = library_path();
+    for (char **entry = path; *entry != NULL; entry++) {
+        if ((*entry)[0] == '~') {
+            char *expanded = g_build_filename(g_get_home_dir(), *entry + 1, NULL);
+            g_free(*entry);
+            *entry = expanded;
+        }
+    }
+    return path;
+}
+
+char **xcursor_theme_dirs(const char *theme)
+{
+    char **path = xcursor_search_path();
     GPtrArray *dirs = g_ptr_array_new();
     GHashTable *visited = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
     add_theme(path, theme != NULL ? theme : default_theme, dirs, visited);
@@ -254,9 +267,7 @@ static void add_theme(char **path, const char *theme, GPtrArray *dirs, GHashTabl
     g_hash_table_add(visited, g_strdup(theme));
     char **inherits = NULL;
     for (char **entry = path; *entry != NULL; entry++) {
-        const char *dir = *entry;
-        char *base = dir[0] == '~' ? g_build_filename(g_get_home_dir(), dir + 1, theme, NULL)
-                                   : g_build_filename(dir, theme, NULL);
+        char *base = g_build_filename(*entry, theme, NULL);
         char *cursors = g_build_filename(base, "cursors", NULL);
         if (g_file_test(cursors, G_FILE_TEST_IS_DIR)) {
             g_ptr_array_add(dirs, cursors);

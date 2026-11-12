@@ -2,21 +2,17 @@
 #include <string.h>
 
 #include "desktop_state.h"
-#include "maximize.h"
 #include "monitor_move.h"
 #include "monitors.h"
-#include "placement.h"
 #include "present.h"
-#include "states.h"
-#include "tile.h"
 #include "view.h"
 #include "visibility.h"
+#include "window_ops.h"
 #include "workspaces.h"
 #include "zoom.h"
 
 static void apply_config(wm_desktop *desktop, const wm_config *previous);
 static bool names_changed(const wm_config *a, const wm_config *b);
-static void refit_window(wm_desktop *desktop, wm_window *window);
 static void refit_all(wm_desktop *desktop);
 
 wm_desktop *wm_desktop_create(const wm_ports *ports, const wm_config *config)
@@ -136,7 +132,9 @@ void wm_desktop_remove_workspace(wm_desktop *desktop, int workspace)
 
 static void apply_config(wm_desktop *desktop, const wm_config *previous)
 {
-    workspaces_set_count(desktop, desktop->config.workspaces.count);
+    if (previous->workspaces.count != desktop->config.workspaces.count) {
+        workspaces_set_count(desktop, desktop->config.workspaces.count);
+    }
     if (names_changed(previous, &desktop->config) ||
         previous->workspaces.rows != desktop->config.workspaces.rows) {
         present_mark_workspaces(desktop);
@@ -158,20 +156,6 @@ static bool names_changed(const wm_config *a, const wm_config *b)
     return false;
 }
 
-static void refit_window(wm_desktop *desktop, wm_window *window)
-{
-    if (window_is_fullscreen(window)) {
-        states_update_fullscreen_size(desktop, window);
-    } else if (window->tile != TILE_NONE) {
-        tile_update_size(desktop, window);
-    } else if (window_has_state(window, WM_STATE_MAXIMIZED)) {
-        maximize_update_size(desktop, window);
-    } else if (window_is_constrained(window)) {
-        placement_constrain(desktop, window);
-    }
-    window_mark_dirty(window);
-}
-
 static void refit_all(wm_desktop *desktop)
 {
     if (monitors_count(desktop) == 0) {
@@ -180,7 +164,7 @@ static void refit_all(wm_desktop *desktop)
     for (size_t i = 0; i < desktop->stack.count; i++) {
         wm_window *window = desktop->stack.items[i];
         monitor_move_follow_outputs(desktop, window);
-        refit_window(desktop, window);
+        window_ops_refit(desktop, window);
     }
     monitors_remember(desktop);
 }

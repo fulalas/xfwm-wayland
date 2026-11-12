@@ -1,4 +1,5 @@
 #include <math.h>
+#include <pixman.h>
 #include <stdlib.h>
 #include <wlr/backend.h>
 #include <wlr/interfaces/wlr_output.h>
@@ -13,7 +14,6 @@
 
 #include "color_preference.h"
 #include "displays.h"
-#include "input/seat.h"
 #include "shell/layer_shell.h"
 #include "util/listener.h"
 #include "output_brightness.h"
@@ -171,6 +171,19 @@ output *output_from_wlr(struct wlr_output *wlr_output)
     return wlr_output->data;
 }
 
+void output_damage_whole(output *o)
+{
+    struct wlr_scene_output *scene_output = o->scene_output;
+    if (scene_output == NULL) {
+        return;
+    }
+    struct wlr_output *w = o->wlr_output;
+    pixman_region32_t *pending = &scene_output->WLR_PRIVATE.pending_commit_damage;
+    wlr_damage_ring_add_whole(&scene_output->damage_ring);
+    pixman_region32_union_rect(pending, pending, 0, 0, (unsigned) w->width, (unsigned) w->height);
+    wlr_output_update_needs_frame(w);
+}
+
 static void handle_new_output(struct wl_listener *listener, void *data)
 {
     outputs *outs = wl_container_of(listener, outs, new_output);
@@ -201,7 +214,6 @@ static void handle_frame(struct wl_listener *listener, void *data)
 {
     (void) data;
     output *o = wl_container_of(listener, o, frame);
-    seat_repick_pointer(o->server->seat);
     output_repaint_frame(o);
 }
 
@@ -209,15 +221,15 @@ static void handle_commit(struct wl_listener *listener, void *data)
 {
     output *o = wl_container_of(listener, o, commit);
     const struct wlr_output_event_commit *event = data;
+    if ((event->state->committed & WLR_OUTPUT_STATE_MODE) != 0) {
+        o->tearing_refused = false;
+    }
     output_brightness_committed(o, event->state);
     bool color_changed = (event->state->committed & WLR_OUTPUT_STATE_IMAGE_DESCRIPTION) != 0;
     if (!color_changed) {
         return;
     }
-    if (o->scene_output != NULL) {
-        wlr_damage_ring_add_whole(&o->scene_output->damage_ring);
-        wlr_output_update_needs_frame(o->wlr_output);
-    }
+    output_damage_whole(o);
     color_preference_refresh(o->server);
 }
 

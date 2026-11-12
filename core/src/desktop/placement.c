@@ -23,7 +23,6 @@ static bool is_placed_by_client(const wm_window *window);
 static void position_given(wm_desktop *desktop, wm_window *window);
 static void keep_visible(wm_desktop *desktop, wm_window *window, const wm_rect *monitor);
 static bool is_centered_dialog(const wm_desktop *desktop, const wm_window *window);
-static void place(wm_desktop *desktop, wm_window *window, const wm_rect *area);
 static bool below_ratio(const wm_desktop *desktop, const wm_window *window, const wm_rect *area);
 static void center_placement(const wm_desktop *desktop, wm_window *window, const wm_rect *area);
 static void mouse_placement(const wm_desktop *desktop, wm_window *window, const wm_rect *area);
@@ -38,7 +37,7 @@ void placement_init_position(wm_desktop *desktop, wm_window *window)
         position_given(desktop, window);
         area = monitors_work_area_at(desktop, frame_center(desktop, window));
     } else {
-        place(desktop, window, &area);
+        placement_place_in(desktop, window, &area);
     }
     if (window_is_regular_focusable(window)) {
         auto_maximize(desktop, window, &area);
@@ -47,7 +46,18 @@ void placement_init_position(wm_desktop *desktop, wm_window *window)
 
 void placement_place_in(wm_desktop *desktop, wm_window *window, const wm_rect *area)
 {
-    place(desktop, window, area);
+    wm_rect frame = frame_rect(desktop, window);
+    if (below_ratio(desktop, window, area)) {
+        if (desktop->config.placement.mode == WM_PLACE_MOUSE) {
+            mouse_placement(desktop, window, area);
+        } else {
+            center_placement(desktop, window, area);
+        }
+    } else if (frame.width >= area->width && frame.height >= area->height) {
+        center_placement(desktop, window, area);
+    } else {
+        placement_smart(desktop, window, area);
+    }
 }
 
 void placement_anchor(const wm_desktop *desktop, wm_window *window, const wm_rect *area,
@@ -115,22 +125,6 @@ static bool is_centered_dialog(const wm_desktop *desktop, const wm_window *windo
     int dx = abs(window->client.x - (screen.width - window->client.width) / 2);
     int dy = abs(window->client.y - (screen.height - window->client.height) / 2);
     return dx < CENTERED_TOLERANCE && dy < CENTERED_TOLERANCE;
-}
-
-static void place(wm_desktop *desktop, wm_window *window, const wm_rect *area)
-{
-    wm_rect frame = frame_rect(desktop, window);
-    if (below_ratio(desktop, window, area)) {
-        if (desktop->config.placement.mode == WM_PLACE_MOUSE) {
-            mouse_placement(desktop, window, area);
-        } else {
-            center_placement(desktop, window, area);
-        }
-    } else if (frame.width >= area->width && frame.height >= area->height) {
-        center_placement(desktop, window, area);
-    } else {
-        placement_smart(desktop, window, area);
-    }
 }
 
 static bool below_ratio(const wm_desktop *desktop, const wm_window *window, const wm_rect *area)

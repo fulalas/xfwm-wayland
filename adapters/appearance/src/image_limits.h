@@ -1,0 +1,8 @@
+#ifndef APPEARANCE_IMAGE_LIMITS_H
+#define APPEARANCE_IMAGE_LIMITS_H
+
+enum {
+    APPEARANCE_IMAGE_SIDE_MAX = 4096,
+};
+
+#endif

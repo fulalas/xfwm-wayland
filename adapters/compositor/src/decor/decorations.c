@@ -102,10 +102,6 @@ void decorations_destroy(decorations *d)
 
 void decorations_paint(decorations *d, const decor_paint *paint)
 {
-    if (!paint->layout->has_frame) {
-        decorations_hide(d);
-        return;
-    }
     frame_bands bands = frame_bands_compute(paint->layout);
     for (int i = 0; i < FRAME_BAND_COUNT; i++) {
         band_job job = {i, bands.rects[i]};

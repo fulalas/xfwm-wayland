@@ -19,8 +19,11 @@ static const state_flag state_flags[] = {
      wlr_foreign_toplevel_handle_v1_set_fullscreen},
 };
 
-static bool ensure_handles(toplevel_entry *entry);
-static void sync_identity(toplevel_entry *entry);
+static bool ensure_ext(toplevel_entry *entry);
+static bool ensure_wlr(toplevel_entry *entry);
+static void hide_wlr(toplevel_entry *entry);
+static void sync_ext_identity(toplevel_entry *entry);
+static void sync_wlr_identity(toplevel_entry *entry);
 static void sync_states(toplevel_entry *entry);
 static void leave_outputs(toplevel_entry *entry);
 static void enter_outputs(toplevel_entry *entry);
@@ -33,15 +36,18 @@ static bool same_text(const char *current, const char *wanted);
 
 void toplevel_entry_sync(toplevel_entry *entry)
 {
+    if (ensure_ext(entry)) {
+        sync_ext_identity(entry);
+    }
     const wm_window_view *state = view_state(entry->view);
     if (state->skip_taskbar && state->parent == NULL) {
-        toplevel_entry_hide(entry);
+        hide_wlr(entry);
         return;
     }
-    if (!ensure_handles(entry)) {
+    if (!ensure_wlr(entry)) {
         return;
     }
-    sync_identity(entry);
+    sync_wlr_identity(entry);
     sync_states(entry);
     leave_outputs(entry);
     enter_outputs(entry);
@@ -51,28 +57,39 @@ void toplevel_entry_sync(toplevel_entry *entry)
 
 void toplevel_entry_hide(toplevel_entry *entry)
 {
-    xfce_toplevels_detach(entry);
-    toplevel_requests_disconnect(entry);
-    if (entry->wlr != NULL) {
-        wlr_foreign_toplevel_handle_v1_destroy(entry->wlr);
-        entry->wlr = NULL;
-    }
+    hide_wlr(entry);
     if (entry->ext != NULL) {
         wlr_ext_foreign_toplevel_handle_v1_destroy(entry->ext);
         entry->ext = NULL;
     }
 }
 
-static bool ensure_handles(toplevel_entry *entry)
+static void hide_wlr(toplevel_entry *entry)
 {
-    protocol_globals *globals = &entry->owner->server->globals;
+    xfce_toplevels_detach(entry);
+    toplevel_requests_disconnect(entry);
+    if (entry->wlr != NULL) {
+        wlr_foreign_toplevel_handle_v1_destroy(entry->wlr);
+        entry->wlr = NULL;
+    }
+}
+
+static bool ensure_wlr(toplevel_entry *entry)
+{
     if (entry->wlr == NULL) {
-        entry->wlr = wlr_foreign_toplevel_handle_v1_create(globals->foreign_toplevel);
+        entry->wlr =
+            wlr_foreign_toplevel_handle_v1_create(entry->owner->server->globals.foreign_toplevel);
         if (entry->wlr != NULL) {
             entry->wlr->data = entry;
             toplevel_requests_connect(entry);
         }
     }
+    return entry->wlr != NULL;
+}
+
+static bool ensure_ext(toplevel_entry *entry)
+{
+    protocol_globals *globals = &entry->owner->server->globals;
     if (entry->ext == NULL) {
         struct wlr_ext_foreign_toplevel_handle_v1_state state = {
             .title = view_state(entry->view)->title,
@@ -84,10 +101,20 @@ static bool ensure_handles(toplevel_entry *entry)
             entry->ext->data = entry;
         }
     }
-    return entry->wlr != NULL && entry->ext != NULL;
+    return entry->ext != NULL;
 }
 
-static void sync_identity(toplevel_entry *entry)
+static void sync_ext_identity(toplevel_entry *entry)
+{
+    const char *title = view_state(entry->view)->title;
+    const char *app_id = view_state(entry->view)->app_id;
+    if (!same_text(entry->ext->title, title) || !same_text(entry->ext->app_id, app_id)) {
+        struct wlr_ext_foreign_toplevel_handle_v1_state state = {title, app_id};
+        wlr_ext_foreign_toplevel_handle_v1_update_state(entry->ext, &state);
+    }
+}
+
+static void sync_wlr_identity(toplevel_entry *entry)
 {
     const char *title = view_state(entry->view)->title;
     const char *app_id = view_state(entry->view)->app_id;
@@ -96,10 +123,6 @@ static void sync_identity(toplevel_entry *entry)
     }
     if (!same_text(entry->wlr->app_id, app_id)) {
         wlr_foreign_toplevel_handle_v1_set_app_id(entry->wlr, app_id);
-    }
-    if (!same_text(entry->ext->title, title) || !same_text(entry->ext->app_id, app_id)) {
-        struct wlr_ext_foreign_toplevel_handle_v1_state state = {title, app_id};
-        wlr_ext_foreign_toplevel_handle_v1_update_state(entry->ext, &state);
     }
 }
 

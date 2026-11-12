@@ -215,8 +215,6 @@ static ui_color symbol_color(const appearance *appearance, color_symbol_id id,
 
 static void replace_font(text_font *font, const char *description)
 {
-    text_font_request request = { description };
-
     appearance_text_font_destroy(font);
-    *font = appearance_text_font_create(&request);
+    *font = appearance_text_font_create(description);
 }

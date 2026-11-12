@@ -66,6 +66,7 @@ xfce_lib = static_library(
     'src/icon_surface.c',
     'src/input_prefs.c',
     'src/logout.c',
+    'src/name_watches.c',
     'src/power_source.c',
     'src/screensaver_service.c',
     'src/session_export.c',

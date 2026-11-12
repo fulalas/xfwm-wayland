@@ -44,6 +44,7 @@ struct wm_window {
     wm_rect saved;
     wm_rect pre_fullscreen;
     wm_rect fullscreen_area;
+    bool fullscreen_area_once;
     wm_rect configured;
     wm_rect lost_output;
     bool has_lost_output;

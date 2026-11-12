@@ -2,9 +2,7 @@
 #include <wlr/render/drm_syncobj.h>
 #include <wlr/render/swapchain.h>
 #include <wlr/types/wlr_buffer.h>
-#include <wlr/types/wlr_damage_ring.h>
 #include <wlr/types/wlr_output.h>
-#include <wlr/types/wlr_scene.h>
 
 #include "output_private.h"
 #include "zoom.h"
@@ -78,11 +76,9 @@ static void mark_view_changed(zoom *z)
 
 static void zoom_leave(zoom *z)
 {
-    outputs *outs = z->server->outputs;
-    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+    output *o;
+    wl_list_for_each(o, &z->server->outputs->list, link) {
         zoom_release(o);
-        if (o->scene_output != NULL) {
-            wlr_damage_ring_add_whole(&o->scene_output->damage_ring);
-        }
+        output_damage_whole(o);
     }
 }

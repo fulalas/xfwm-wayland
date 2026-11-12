@@ -6,7 +6,6 @@
 
 #include "desktop_state.h"
 #include "focus.h"
-#include "frame.h"
 #include "monitor_move.h"
 #include "monitors.h"
 #include "placement.h"
@@ -34,7 +33,6 @@ static bool workspace_applies(const wm_desktop *desktop, const wm_window *window
 static void place_new(wm_desktop *desktop, wm_window *window, const wm_window_rule *effect);
 static void place_live(wm_desktop *desktop, wm_window *window, const wm_window_rule *effect);
 static bool find_output(const wm_desktop *desktop, const wm_window_rule *effect, size_t *index);
-static size_t current_monitor(const wm_desktop *desktop, const wm_window *window);
 static void anchor(wm_desktop *desktop, wm_window *window, size_t monitor,
                    const wm_window_rule *effect);
 
@@ -264,8 +262,8 @@ static void place_new(wm_desktop *desktop, wm_window *window, const wm_window_ru
     size_t target;
     bool has_target = find_output(desktop, effect, &target);
     if (effect->anchor != WM_ANCHOR_NONE) {
-        anchor(desktop, window, has_target ? target : current_monitor(desktop, window), effect);
-    } else if (has_target && target != current_monitor(desktop, window)) {
+        anchor(desktop, window, has_target ? target : monitors_index_of(desktop, window), effect);
+    } else if (has_target && target != monitors_index_of(desktop, window)) {
         wm_rect area = monitors_work_area_of(desktop, target);
         placement_place_in(desktop, window, &area);
     }
@@ -281,18 +279,13 @@ static void place_live(wm_desktop *desktop, wm_window *window, const wm_window_r
     bool keeps_place = window_is_fullscreen(window)
                        || window_has_state(window, WM_STATE_MAXIMIZED);
     if (effect->anchor != WM_ANCHOR_NONE && !keeps_place) {
-        anchor(desktop, window, has_target ? target : current_monitor(desktop, window), effect);
+        anchor(desktop, window, has_target ? target : monitors_index_of(desktop, window), effect);
     }
 }
 
 static bool find_output(const wm_desktop *desktop, const wm_window_rule *effect, size_t *index)
 {
     return effect->output != NULL && monitors_find_named(desktop, effect->output, index);
-}
-
-static size_t current_monitor(const wm_desktop *desktop, const wm_window *window)
-{
-    return monitors_index_at(desktop, frame_center(desktop, window));
 }
 
 static void anchor(wm_desktop *desktop, wm_window *window, size_t monitor,

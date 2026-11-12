@@ -37,6 +37,19 @@ static void test_maximize_keeps_borders_without_borderless(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_dropping_border_refits_maximized_window(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.frame.borderless_maximize = false;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_MAXIMIZED, 0});
+    wm_window_set_capabilities(desktop, window, WM_CAP_ALL & ~(uint32_t) WM_CAP_DECORATED);
+    CHECK_RECT_EQ(((wm_rect) {0, 0, 1920, 1080}), fake_configured(&world, fake_handle(1)));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_vertical_maximize(void)
 {
     fake_world world;
@@ -149,6 +162,22 @@ static void test_fullscreen_uses_requested_area(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_one_shot_fullscreen_area_ends_with_fullscreen(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    wm_rect area = {0, 0, 3840, 1080};
+    wm_window_set_fullscreen_area_once(desktop, window, &area);
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_FULLSCREEN, 0});
+    CHECK_RECT_EQ(area, fake_client_of(window));
+    wm_request_state(desktop, window, &(wm_state_change) {0, WM_STATE_FULLSCREEN});
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_FULLSCREEN, 0});
+    CHECK_RECT_EQ(((wm_rect) {0, 0, 1920, 1080}), fake_client_of(window));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_locked_opacity_ignores_settings(void)
 {
     fake_world world;
@@ -210,6 +239,7 @@ static const check_case CASES[] = {
     {"maximize_key_and_restore", test_maximize_key_and_restore},
     {"maximize_keeps_borders_without_borderless",
      test_maximize_keeps_borders_without_borderless},
+    {"dropping_border_refits_maximized_window", test_dropping_border_refits_maximized_window},
     {"vertical_maximize", test_vertical_maximize},
     {"fullscreen_covers_output_without_frame", test_fullscreen_covers_output_without_frame},
     {"shade_keeps_only_title_and_bottom", test_shade_keeps_only_title_and_bottom},
@@ -217,6 +247,8 @@ static const check_case CASES[] = {
     {"sticky_window_visible_everywhere", test_sticky_window_visible_everywhere},
     {"inactive_opacity_and_shadow", test_inactive_opacity_and_shadow},
     {"opaque_undecorated_window_has_shadow", test_opaque_undecorated_window_has_shadow},
+    {"one_shot_fullscreen_area_ends_with_fullscreen",
+     test_one_shot_fullscreen_area_ends_with_fullscreen},
     {"locked_opacity_ignores_settings", test_locked_opacity_ignores_settings},
     {"fullscreen_uses_requested_area", test_fullscreen_uses_requested_area},
     {"compositing_disabled_is_opaque", test_compositing_disabled_is_opaque},

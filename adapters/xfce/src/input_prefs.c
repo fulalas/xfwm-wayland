@@ -1,7 +1,5 @@
 #include "input_prefs.h"
 
-#include <stdlib.h>
-
 #include "input_resolve.h"
 #include "input_text.h"
 #include "xfconf_source.h"
@@ -39,12 +37,12 @@ pointer_prefs input_prefs_pointer(const channels *channels, const char *device_n
     return prefs;
 }
 
-cursor_prefs input_prefs_cursor(const channels *channels)
+cursor_prefs input_prefs_cursor(const channels *channels, char **environment)
 {
     xfconf_source *xsettings = xfconf_source_create(channels_get(channels, CHANNEL_XSETTINGS), "/");
     cursor_sources sources = {
         .xsettings = xfconf_source_view(xsettings),
-        .environment = { .self = NULL, .lookup = lookup_environment },
+        .environment = { .self = environment, .lookup = lookup_environment },
     };
     cursor_prefs prefs = input_cursor_prefs_from(&sources);
 
@@ -54,6 +52,5 @@ cursor_prefs input_prefs_cursor(const channels *channels)
 
 static const char *lookup_environment(void *self, const char *key)
 {
-    (void) self;
-    return getenv(key);
+    return g_environ_getenv(self, key);
 }

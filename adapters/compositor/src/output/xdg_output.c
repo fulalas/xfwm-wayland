@@ -89,13 +89,8 @@ void xdg_outputs_refresh(xdg_outputs *outputs)
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
-    struct wl_resource *resource =
-        wl_resource_create(client, &zxdg_output_manager_v1_interface, (int) version, id);
-    if (resource == NULL) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(resource, &manager_impl, data, NULL);
+    resource_bind(client, &zxdg_output_manager_v1_interface, version, id,
+                  &manager_impl, data, NULL);
 }
 
 static void handle_get_xdg_output(struct wl_client *client, struct wl_resource *resource,

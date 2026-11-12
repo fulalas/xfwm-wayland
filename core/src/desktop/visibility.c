@@ -2,6 +2,7 @@
 
 #include "desktop_state.h"
 #include "focus.h"
+#include "moveresize.h"
 #include "transients.h"
 #include "urgency.h"
 
@@ -162,6 +163,7 @@ static bool keeps_shown_on_minimize(const wm_window *owner, const wm_window *win
 
 static void hide_single(wm_desktop *desktop, wm_window *window)
 {
+    moveresize_window_gone(desktop, window);
     if (window->visible) {
         window->visible = false;
         urgency_refresh(desktop, window);

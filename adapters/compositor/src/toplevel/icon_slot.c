@@ -31,6 +31,7 @@ struct icon_slot {
 };
 
 static void request_icon(icon_slot *slot, const char *app_id, const char *icon_name);
+static void request_main(icon_slot *slot);
 static void request_sized(sized_icon *entry);
 static sized_icon *sized_entry(icon_slot *slot, int pixels);
 static void lookup(icon_slot *slot, icon_request request);
@@ -38,6 +39,7 @@ static void handle_icon_found(void *context, cairo_surface_t *icon);
 static void handle_sized_found(void *context, cairo_surface_t *icon);
 static void store_found(icon_slot *slot, cairo_surface_t **target, cairo_surface_t *icon);
 static void forget_lookup(icon_slot *slot);
+static void forget_sized(icon_slot *slot);
 static void replace_surface(cairo_surface_t **target, cairo_surface_t *surface);
 static void store_name(icon_slot *slot, const char *name);
 static void notify(icon_slot *slot);
@@ -99,6 +101,17 @@ void icon_slot_lookup_app(icon_slot *slot, const char *app_id)
     }
 }
 
+void icon_slot_reload(icon_slot *slot)
+{
+    if (slot->lookup_name == NULL) {
+        return;
+    }
+    cancel_lookups(slot);
+    forget_sized(slot);
+    request_main(slot);
+    notify(slot);
+}
+
 cairo_surface_t *icon_slot_surface(const icon_slot *slot)
 {
     return slot != NULL ? slot->surface : NULL;
@@ -144,6 +157,11 @@ static void request_icon(icon_slot *slot, const char *app_id, const char *icon_n
     }
     slot->lookup_app_id = app_id_copy;
     slot->lookup_name = name_copy;
+    request_main(slot);
+}
+
+static void request_main(icon_slot *slot)
+{
     icon_request request = {.size = ICON_REQUEST_SIZE, .done = handle_icon_found, .context = slot};
     lookup(slot, request);
 }
@@ -207,6 +225,11 @@ static void forget_lookup(icon_slot *slot)
     free(slot->lookup_name);
     slot->lookup_app_id = NULL;
     slot->lookup_name = NULL;
+    forget_sized(slot);
+}
+
+static void forget_sized(icon_slot *slot)
+{
     for (size_t i = 0; i < SIZED_ICON_MAX; i++) {
         replace_surface(&slot->sized[i].surface, NULL);
         slot->sized[i].pixels = 0;

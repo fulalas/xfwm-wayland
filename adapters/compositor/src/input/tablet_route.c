@@ -1,6 +1,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_tablet_tool.h>
 #include <wlr/types/wlr_tablet_v2.h>
 
 #include "click_focus.h"
@@ -11,6 +12,7 @@
 #include "tablet_private.h"
 
 static bool holds_grab(const tablet_tool *tool);
+static bool holds_emulated_press(const tablet_tool *tool, const tool_event *event);
 static void move_grabbed(tablet_tool *tool);
 static bool accepts_tablet(const tablet_tool *tool, const pointer_hit *hit,
                            const tool_event *event);
@@ -25,7 +27,7 @@ void tablet_route_update(tablet_tool *tool, const tool_event *event)
         move_grabbed(tool);
         return;
     }
-    if (tool->route == TOOL_ROUTE_EMULATED && tool->tip_down) {
+    if (tool->route == TOOL_ROUTE_EMULATED && holds_emulated_press(tool, event)) {
         route_to_pointer(tool, event);
         return;
     }
@@ -77,8 +79,15 @@ static bool holds_grab(const tablet_tool *tool)
            (tool->v2->is_down || tool->v2->num_buttons > 0);
 }
 
+static bool holds_emulated_press(const tablet_tool *tool, const tool_event *event)
+{
+    const pointer_input *pointer = tool->owner->seat->pointer;
+    return tool->tip_down || pointer_input_holds_device(pointer, &event->tablet->tablet->base);
+}
+
 static void move_grabbed(tablet_tool *tool)
 {
+    seat_track_pointer(tool->owner->seat);
     struct wlr_cursor *cursor = tool->owner->seat->cursor;
     double sx = 0.0;
     double sy = 0.0;

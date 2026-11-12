@@ -60,6 +60,7 @@ struct xwayland_view {
     struct wl_listener destroy;
     struct wl_listener associate;
     struct wl_listener dissociate;
+    struct wl_listener override_redirect;
     struct wl_listener map;
     struct wl_listener unmap;
     struct wl_listener commit;
@@ -85,6 +86,7 @@ wm_window_desc xwayland_view_describe(const xwayland_view *view);
 uint32_t xwayland_view_capabilities(const xwayland_view *view);
 void xwayland_view_read_properties(xwayland_view *view);
 void xwayland_view_read_motif(xwayland_view *view);
+void xwayland_view_read_old_strut(xwayland_view *view);
 char *xwayland_view_remote_title(const xwayland_view *view);
 bool xwayland_view_has_strut(const xwayland_view *view);
 wm_window_type xwayland_view_type(const xwayland_view *view);

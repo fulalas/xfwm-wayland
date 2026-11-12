@@ -12,7 +12,11 @@
 enum {
     NEUTRAL_PERCENT = 100,
     FOREIGN_PERCENT = -1,
+    NO_FAILURE = 0,
 };
+
+static const uint32_t RETRY_FIELDS =
+    WLR_OUTPUT_STATE_IMAGE_DESCRIPTION | WLR_OUTPUT_STATE_MODE | WLR_OUTPUT_STATE_ENABLED;
 
 static int wanted_percent(const output *output);
 static bool needs_change(const output *output);
@@ -42,6 +46,9 @@ void output_brightness_frame(output *o, struct wlr_output_state *state)
 
 void output_brightness_committed(output *o, const struct wlr_output_state *state)
 {
+    if ((state->committed & RETRY_FIELDS) != 0) {
+        o->brightness.failed_percent = NO_FAILURE;
+    }
     if ((state->committed & WLR_OUTPUT_STATE_COLOR_TRANSFORM) != 0) {
         const struct wlr_color_transform *now = state->color_transform;
         o->brightness.on_screen = now == NULL                 ? NEUTRAL_PERCENT
@@ -53,7 +60,10 @@ void output_brightness_committed(output *o, const struct wlr_output_state *state
 
 void output_brightness_init(output *o)
 {
-    o->brightness = (output_brightness) {.on_screen = NEUTRAL_PERCENT};
+    o->brightness = (output_brightness) {
+        .on_screen = NEUTRAL_PERCENT,
+        .failed_percent = NO_FAILURE,
+    };
 }
 
 void output_brightness_release(output *o)
@@ -65,6 +75,7 @@ void output_brightness_release(output *o)
 void outputs_brightness_changed(outputs *outs)
 {
     for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+        o->brightness.failed_percent = NO_FAILURE;
         request_frame(o);
     }
 }

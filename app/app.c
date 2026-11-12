@@ -23,6 +23,7 @@ static void on_power_changed(void *self);
 static void on_user_activity(void *self);
 static void on_x11_display_changed(void *self);
 static void on_style_changed(void *self);
+static void on_icon_theme_changed(void *self);
 static gboolean on_terminate_signal(gpointer data);
 
 app *app_create(const app_options *options)
@@ -103,6 +104,7 @@ static xfce_listener xfce_listener_for(app *app)
         .power_changed = on_power_changed,
         .user_activity = on_user_activity,
         .style_changed = on_style_changed,
+        .icon_theme_changed = on_icon_theme_changed,
         .session_ended = on_quit_requested,
     };
 }
@@ -240,6 +242,13 @@ static void on_x11_display_changed(void *self)
 static void on_style_changed(void *self)
 {
     app_reload_appearance(self);
+}
+
+static void on_icon_theme_changed(void *self)
+{
+    app *app = self;
+
+    compositor_icon_theme_changed(app->compositor);
 }
 
 static gboolean on_terminate_signal(gpointer data)

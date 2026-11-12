@@ -4,11 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/random.h>
-#include <time.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_seat.h>
 
+#include "util/clock.h"
 #include "util/listener.h"
+#include "util/resource.h"
 #include "xdg-activation-v1-protocol.h"
 
 enum {
@@ -47,7 +48,6 @@ typedef struct token_draft {
 } token_draft;
 
 static void bind_activation(struct wl_client *client, void *data, uint32_t version, uint32_t id);
-static void handle_destroy(struct wl_client *client, struct wl_resource *resource);
 static void handle_get_token(struct wl_client *client, struct wl_resource *resource, uint32_t id);
 static void handle_activate(struct wl_client *client, struct wl_resource *resource,
                             const char *name, struct wl_resource *surface);
@@ -69,12 +69,11 @@ static void drop_oldest_of(activation_protocol *protocol, struct wl_client *clie
 static void handle_client_destroy(struct wl_listener *listener, void *data);
 static issued_token *take_token(activation_protocol *protocol, const char *name);
 static void drop_expired(activation_protocol *protocol);
-static void drop_token(activation_protocol *protocol, issued_token *token);
+static void drop_token(issued_token *token);
 static bool random_name(char *name);
-static int64_t now_ms(void);
 
 static const struct xdg_activation_v1_interface activation_impl = {
-    .destroy = handle_destroy,
+    .destroy = resource_handle_destroy,
     .get_activation_token = handle_get_token,
     .activate = handle_activate,
 };
@@ -84,7 +83,7 @@ static const struct xdg_activation_token_v1_interface token_impl = {
     .set_app_id = draft_set_app_id,
     .set_surface = draft_set_surface,
     .commit = draft_commit,
-    .destroy = handle_destroy,
+    .destroy = resource_handle_destroy,
 };
 
 activation_protocol *activation_protocol_create(struct wl_display *display,
@@ -110,7 +109,7 @@ void activation_protocol_destroy(activation_protocol *protocol)
     issued_token *token;
     issued_token *tmp;
     wl_list_for_each_safe(token, tmp, &protocol->issued, link) {
-        drop_token(protocol, token);
+        drop_token(token);
     }
     wl_global_destroy(protocol->global);
     free(protocol);
@@ -118,19 +117,7 @@ void activation_protocol_destroy(activation_protocol *protocol)
 
 static void bind_activation(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
-    struct wl_resource *resource =
-        wl_resource_create(client, &xdg_activation_v1_interface, (int) version, id);
-    if (resource == NULL) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(resource, &activation_impl, data, NULL);
-}
-
-static void handle_destroy(struct wl_client *client, struct wl_resource *resource)
-{
-    (void) client;
-    wl_resource_destroy(resource);
+    resource_bind(client, &xdg_activation_v1_interface, version, id, &activation_impl, data, NULL);
 }
 
 static void handle_get_token(struct wl_client *client, struct wl_resource *resource, uint32_t id)
@@ -167,7 +154,7 @@ static void handle_activate(struct wl_client *client, struct wl_resource *resour
     };
     if (token != NULL) {
         request.trust = token->trusted ? ACTIVATION_TOKEN_TRUSTED : ACTIVATION_TOKEN_UNTRUSTED;
-        drop_token(protocol, token);
+        drop_token(token);
     }
     protocol->handler.activate(protocol->handler.self, &request);
 }
@@ -283,7 +270,7 @@ static issued_token *issue(activation_protocol *protocol, struct wl_client *clie
     drop_oldest_of(protocol, client);
     if (wl_list_length(&protocol->issued) >= TOKENS_MAX) {
         issued_token *oldest = wl_container_of(protocol->issued.next, oldest, link);
-        drop_token(protocol, oldest);
+        drop_token(oldest);
     }
     issued_token *token = calloc(1, sizeof(*token));
     if (token == NULL || !random_name(token->name)) {
@@ -292,7 +279,7 @@ static issued_token *issue(activation_protocol *protocol, struct wl_client *clie
     }
     token->client = client;
     token->trusted = trusted;
-    token->created_ms = now_ms();
+    token->created_ms = clock_now_ms();
     wl_list_insert(protocol->issued.prev, &token->link);
     token->client_destroy.notify = handle_client_destroy;
     wl_client_add_destroy_listener(client, &token->client_destroy);
@@ -311,7 +298,7 @@ static void drop_oldest_of(activation_protocol *protocol, struct wl_client *clie
         }
     }
     if (count >= CLIENT_TOKENS_MAX) {
-        drop_token(protocol, oldest);
+        drop_token(oldest);
     }
 }
 
@@ -328,19 +315,18 @@ static issued_token *take_token(activation_protocol *protocol, const char *name)
 
 static void drop_expired(activation_protocol *protocol)
 {
-    int64_t now = now_ms();
+    int64_t now = clock_now_ms();
     issued_token *token;
     issued_token *tmp;
     wl_list_for_each_safe(token, tmp, &protocol->issued, link) {
         if (now - token->created_ms > TOKEN_LIFETIME_MS) {
-            drop_token(protocol, token);
+            drop_token(token);
         }
     }
 }
 
-static void drop_token(activation_protocol *protocol, issued_token *token)
+static void drop_token(issued_token *token)
 {
-    (void) protocol;
     wl_list_remove(&token->client_destroy.link);
     wl_list_remove(&token->link);
     free(token);
@@ -350,8 +336,7 @@ static void handle_client_destroy(struct wl_listener *listener, void *data)
 {
     (void) data;
     issued_token *token = wl_container_of(listener, token, client_destroy);
-    wl_list_remove(&token->client_destroy.link);
-    wl_list_init(&token->client_destroy.link);
+    listener_disconnect(&token->client_destroy);
     token->client = NULL;
 }
 
@@ -365,11 +350,4 @@ static bool random_name(char *name)
         snprintf(name + i * 2, 3, "%02x", bytes[i]);
     }
     return true;
-}
-
-static int64_t now_ms(void)
-{
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    return (int64_t) now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }

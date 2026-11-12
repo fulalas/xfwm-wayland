@@ -40,6 +40,7 @@ void compositor_schedule_timer(compositor *compositor, uint32_t delay_ms);
 
 void compositor_set_config(compositor *compositor, const wm_config *config);
 void compositor_appearance_changed(compositor *compositor);
+void compositor_icon_theme_changed(compositor *compositor);
 void compositor_input_prefs_changed(compositor *compositor);
 void compositor_display_prefs_changed(compositor *compositor);
 void compositor_power_prefs_changed(compositor *compositor);

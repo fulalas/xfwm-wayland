@@ -14,6 +14,6 @@ typedef struct shadow_image {
 
 shadow_cache *shadow_cache_create(const compositor_painter *painter);
 void shadow_cache_destroy(shadow_cache *cache);
-shadow_image shadow_cache_get(shadow_cache *cache, double opacity);
+shadow_image shadow_cache_get(shadow_cache *cache);
 
 #endif

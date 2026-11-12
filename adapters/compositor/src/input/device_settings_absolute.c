@@ -2,11 +2,6 @@
 
 #include "device_settings.h"
 
-enum {
-    MATRIX_VALUES = 6,
-    AREA_VALUES = 4,
-};
-
 static device_setting rotation(struct libinput_device *device);
 static device_setting calibration(struct libinput_device *device);
 static device_setting area(struct libinput_device *device);
@@ -33,14 +28,14 @@ static device_setting calibration(struct libinput_device *device)
     if (!libinput_device_config_calibration_has_matrix(device)) {
         return (device_setting){0};
     }
-    float fallback[MATRIX_VALUES];
-    float current[MATRIX_VALUES];
+    float fallback[SETTING_MATRIX_VALUES];
+    float current[SETTING_MATRIX_VALUES];
     libinput_device_config_calibration_get_default_matrix(device, fallback);
     libinput_device_config_calibration_get_matrix(device, current);
     device_setting setting = {.available = true};
-    for (int i = 0; i < MATRIX_VALUES; i++) {
+    for (int i = 0; i < SETTING_MATRIX_VALUES; i++) {
         setting.numbers[i] = fallback[i];
-        setting.numbers[MATRIX_VALUES + i] = current[i];
+        setting.numbers[SETTING_MATRIX_VALUES + i] = current[i];
     }
     return setting;
 }
@@ -52,7 +47,8 @@ static device_setting area(struct libinput_device *device)
     }
     device_setting setting = {.available = true};
     copy_area(libinput_device_config_area_get_default_rectangle(device), setting.numbers);
-    copy_area(libinput_device_config_area_get_rectangle(device), setting.numbers + AREA_VALUES);
+    copy_area(libinput_device_config_area_get_rectangle(device),
+              setting.numbers + SETTING_AREA_VALUES);
     return setting;
 }
 

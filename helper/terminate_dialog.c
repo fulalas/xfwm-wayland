@@ -9,13 +9,12 @@
 
 static GtkWidget *create_dialog(const char *title);
 
-int terminate_dialog_run(int argc, char **argv)
+int terminate_dialog_run(char **argv)
 {
     char *title = g_strjoinv(" ", argv + 1);
     GtkWidget *dialog;
     bool terminate;
 
-    (void) argc;
     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
     dialog = create_dialog(title);
     terminate = gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_YES;

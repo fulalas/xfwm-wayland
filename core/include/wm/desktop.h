@@ -136,10 +136,15 @@ typedef struct wm_button_event {
     bool pressed;
 } wm_button_event;
 
+typedef enum wm_axis {
+    WM_AXIS_VERTICAL,
+    WM_AXIS_HORIZONTAL,
+} wm_axis;
+
 typedef struct wm_axis_event {
     wm_pointer_event pointer;
-    int vertical_steps;
-    int horizontal_steps;
+    wm_axis axis;
+    int steps;
 } wm_axis_event;
 
 typedef struct wm_key_event {
@@ -201,6 +206,8 @@ void wm_window_icon_changed(wm_desktop *desktop, wm_window *window);
 void wm_request_move(wm_desktop *desktop, wm_window *window);
 void wm_request_resize(wm_desktop *desktop, wm_window *window, uint32_t edges);
 void wm_window_set_fullscreen_area(wm_desktop *desktop, wm_window *window, const wm_rect *area);
+void wm_window_set_fullscreen_area_once(wm_desktop *desktop, wm_window *window,
+                                       const wm_rect *area);
 void wm_request_window_menu(wm_desktop *desktop, wm_window *window, wm_point client_point);
 void wm_request_configure(wm_desktop *desktop, wm_window *window, const wm_rect *client);
 void wm_request_activate(wm_desktop *desktop, wm_window *window, wm_activation_source source);
@@ -214,11 +221,13 @@ void wm_request_unhighlight(wm_desktop *desktop);
 void wm_request_workspace(wm_desktop *desktop, wm_window *window, int workspace);
 
 wm_dispatch wm_pointer_motion(wm_desktop *desktop, const wm_pointer_event *event);
+void wm_pointer_track(wm_desktop *desktop, wm_point position);
 bool wm_pointer_repick(wm_desktop *desktop, const wm_pointer_event *event, wm_dispatch *result);
 wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event);
 wm_dispatch wm_pointer_axis(wm_desktop *desktop, const wm_axis_event *event);
 wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event);
 wm_dispatch wm_key_released(wm_desktop *desktop, const wm_key_event *event);
+bool wm_key_is_bound(const wm_desktop *desktop, const wm_key_event *event);
 void wm_modifiers_changed(wm_desktop *desktop, uint32_t modifiers);
 
 #endif

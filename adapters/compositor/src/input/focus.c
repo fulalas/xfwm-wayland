@@ -7,6 +7,8 @@
 #include "seat_private.h"
 
 static struct wlr_surface *focus_target(const seat *seat);
+static bool overrides_popup_grab(const seat *seat);
+static struct wlr_surface *exclusive_layer(const seat *seat);
 static void keyboard_enter(seat *seat, struct wlr_surface *surface, bool past_grab);
 
 void seat_focus_view(seat *s, view *v)
@@ -111,6 +113,9 @@ void seat_view_destroyed(seat *s, view *v)
 
 void seat_focus_refresh(seat *s)
 {
+    if (s->focus.popup != NULL && overrides_popup_grab(s)) {
+        wlr_seat_keyboard_end_grab(s->wlr_seat);
+    }
     struct wlr_surface *target = focus_target(s);
     if (target == s->focus.current && target == s->wlr_seat->keyboard_state.focused_surface) {
         return;
@@ -126,8 +131,7 @@ static struct wlr_surface *focus_target(const seat *s)
     if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
         return session_lock_focus(server->lock);
     }
-    struct wlr_surface *exclusive =
-        server->layer_shell != NULL ? layer_shell_exclusive_focus(server->layer_shell) : NULL;
+    struct wlr_surface *exclusive = exclusive_layer(s);
     if (exclusive != NULL) {
         return exclusive;
     }
@@ -144,6 +148,21 @@ static struct wlr_surface *focus_target(const seat *s)
         return s->focus.unmanaged;
     }
     return s->focus.view != NULL ? view_surface(s->focus.view) : NULL;
+}
+
+static bool overrides_popup_grab(const seat *s)
+{
+    if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
+        return true;
+    }
+    struct wlr_surface *exclusive = exclusive_layer(s);
+    return exclusive != NULL && exclusive != s->focus.popup;
+}
+
+static struct wlr_surface *exclusive_layer(const seat *s)
+{
+    layer_shell *shell = s->server->layer_shell;
+    return shell != NULL ? layer_shell_exclusive_focus(shell) : NULL;
 }
 
 static void keyboard_enter(seat *s, struct wlr_surface *surface, bool past_grab)

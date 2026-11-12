@@ -33,6 +33,7 @@ static void refresh_offers(const struct wlr_drag *drag);
 static void refresh_offer(struct wlr_data_offer *offer);
 static drag_choice choice_for(const struct wlr_data_offer *offer);
 static struct wlr_scene_tree *drag_tree(const selection *selection);
+static layout_point drag_position(const selection *selection);
 
 selection *selection_create(seat *s)
 {
@@ -71,8 +72,8 @@ void selection_move_icons(selection *sel)
     if (wl_list_empty(&tree->children)) {
         return;
     }
-    struct wlr_cursor *cursor = sel->seat->cursor;
-    wlr_scene_node_set_position(&tree->node, (int) cursor->x, (int) cursor->y);
+    layout_point position = drag_position(sel);
+    wlr_scene_node_set_position(&tree->node, (int) position.x, (int) position.y);
 }
 
 static void handle_request_set_selection(struct wl_listener *listener, void *data)
@@ -224,4 +225,15 @@ static drag_choice choice_for(const struct wlr_data_offer *offer)
 static struct wlr_scene_tree *drag_tree(const selection *sel)
 {
     return scene_layers_tree(sel->seat->server->layers, SCENE_LAYER_DRAG);
+}
+
+static layout_point drag_position(const selection *sel)
+{
+    seat *s = sel->seat;
+    layout_point position = {s->cursor->x, s->cursor->y};
+    struct wlr_drag *drag = s->wlr_seat->drag;
+    if (drag != NULL && drag->grab_type == WLR_DRAG_GRAB_KEYBOARD_TOUCH) {
+        touch_input_position(s->touch, drag->touch_id, &position);
+    }
+    return position;
 }

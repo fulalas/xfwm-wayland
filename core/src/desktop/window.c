@@ -220,15 +220,7 @@ void window_placed(wm_window *window)
 
 static char *copy_text(const char *text)
 {
-    if (text == NULL) {
-        return NULL;
-    }
-    size_t length = strlen(text) + 1;
-    char *copy = malloc(length);
-    if (copy != NULL) {
-        memcpy(copy, text, length);
-    }
-    return copy;
+    return text != NULL ? strdup(text) : NULL;
 }
 
 static uint32_t type_removed_flags(wm_window_type type)

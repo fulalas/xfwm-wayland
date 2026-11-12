@@ -15,7 +15,6 @@ enum {
 
 static const double ROUNDING = 0.5;
 
-static size_t current_monitor(const wm_desktop *desktop, const wm_window *window);
 static int find_target(const wm_desktop *desktop, const wm_window *window,
                        monitor_direction direction);
 static bool is_aligned(const wm_rect *current, const wm_rect *other, monitor_direction direction);
@@ -47,7 +46,7 @@ void monitor_move_to(wm_desktop *desktop, wm_window *window, size_t target)
         return;
     }
     window_placed(window);
-    size_t current = current_monitor(desktop, window);
+    size_t current = monitors_index_of(desktop, window);
     if (target == current) {
         return;
     }
@@ -92,13 +91,6 @@ static void move_between(wm_desktop *desktop, wm_window *window, const wm_rect *
     window_mark_dirty(window);
 }
 
-static size_t current_monitor(const wm_desktop *desktop, const wm_window *window)
-{
-    wm_point middle = {window->client.x + window->client.width / 2,
-                       window->client.y + window->client.height / 2};
-    return monitors_index_at(desktop, middle);
-}
-
 static int find_target(const wm_desktop *desktop, const wm_window *window,
                        monitor_direction direction)
 {
@@ -106,7 +98,7 @@ static int find_target(const wm_desktop *desktop, const wm_window *window,
     if (count == 0) {
         return NO_MONITOR;
     }
-    size_t current = current_monitor(desktop, window);
+    size_t current = monitors_index_of(desktop, window);
     wm_rect current_rect = monitors_full_rect(desktop, current);
     int best = NO_MONITOR;
     int best_offset = INT_MAX;

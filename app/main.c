@@ -101,8 +101,9 @@ static bool parse_option(arg_reader *reader, app_options *options)
     if (parse_flag(arg, options)) {
         return true;
     }
-    if (is_option(arg, "-s", "--startup") && reader->index + 1 < reader->count) {
-        options->startup_command = reader->args[++reader->index];
+    const char *startup = option_value(reader, "-s", "--startup");
+    if (startup != NULL) {
+        options->startup_command = startup;
         return true;
     }
     const char *compositing = option_value(reader, "-c", "--compositor");

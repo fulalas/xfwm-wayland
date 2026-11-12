@@ -3,6 +3,7 @@
 #include "cycle.h"
 #include "desktop_state.h"
 #include "fill.h"
+#include "maximize.h"
 #include "menu.h"
 #include "monitor_move.h"
 #include "moveresize.h"
@@ -27,27 +28,13 @@ static void run_action(wm_desktop *desktop, wm_action action);
 static bool is_window_action(wm_action action);
 static void run_focused(wm_desktop *desktop, wm_window *window, wm_action action);
 static void run_unfocused(wm_desktop *desktop, wm_action action);
-static void run_tile_action(wm_desktop *desktop, wm_window *window, wm_action action);
-static void maximize_both(wm_desktop *desktop, wm_window *window);
-static void maximize_vertically(wm_desktop *desktop, wm_window *window);
-static void maximize_horizontally(wm_desktop *desktop, wm_window *window);
-static void fill_both(wm_desktop *desktop, wm_window *window);
-static void fill_vertically(wm_desktop *desktop, wm_window *window);
-static void fill_horizontally(wm_desktop *desktop, wm_window *window);
+static void run_size_action(wm_desktop *desktop, wm_window *window, wm_action action);
+static void run_place_action(wm_desktop *desktop, wm_window *window, wm_action action);
 static void popup_menu(wm_desktop *desktop, wm_window *window);
-static void carry_to_next(wm_desktop *desktop, wm_window *window);
-static void carry_to_previous(wm_desktop *desktop, wm_window *window);
-static void carry_left(wm_desktop *desktop, wm_window *window);
-static void carry_right(wm_desktop *desktop, wm_window *window);
-static void carry_up(wm_desktop *desktop, wm_window *window);
-static void carry_down(wm_desktop *desktop, wm_window *window);
 
 static const window_action WINDOW_ACTIONS[] = {
     {WM_ACTION_CLOSE_WINDOW, window_ops_close},
     {WM_ACTION_HIDE_WINDOW, window_ops_hide},
-    {WM_ACTION_MAXIMIZE_WINDOW, maximize_both},
-    {WM_ACTION_MAXIMIZE_VERT, maximize_vertically},
-    {WM_ACTION_MAXIMIZE_HORIZ, maximize_horizontally},
     {WM_ACTION_SHADE_WINDOW, states_toggle_shade},
     {WM_ACTION_STICK_WINDOW, window_ops_toggle_stick},
     {WM_ACTION_TOGGLE_ABOVE, states_toggle_above},
@@ -58,15 +45,24 @@ static const window_action WINDOW_ACTIONS[] = {
     {WM_ACTION_LOWER_WINDOW, stack_lower},
     {WM_ACTION_RAISELOWER_WINDOW, window_ops_raise_or_lower},
     {WM_ACTION_POPUP_MENU, popup_menu},
-    {WM_ACTION_FILL_WINDOW, fill_both},
-    {WM_ACTION_FILL_VERT, fill_vertically},
-    {WM_ACTION_FILL_HORIZ, fill_horizontally},
-    {WM_ACTION_MOVE_NEXT_WORKSPACE, carry_to_next},
-    {WM_ACTION_MOVE_PREV_WORKSPACE, carry_to_previous},
-    {WM_ACTION_MOVE_LEFT_WORKSPACE, carry_left},
-    {WM_ACTION_MOVE_RIGHT_WORKSPACE, carry_right},
-    {WM_ACTION_MOVE_UP_WORKSPACE, carry_up},
-    {WM_ACTION_MOVE_DOWN_WORKSPACE, carry_down},
+};
+
+static const struct {
+    wm_action action;
+    uint32_t mode;
+} MAXIMIZE_ACTIONS[] = {
+    {WM_ACTION_MAXIMIZE_WINDOW, WM_STATE_MAXIMIZED},
+    {WM_ACTION_MAXIMIZE_VERT, WM_STATE_MAXIMIZED_VERT},
+    {WM_ACTION_MAXIMIZE_HORIZ, WM_STATE_MAXIMIZED_HORZ},
+};
+
+static const struct {
+    wm_action action;
+    unsigned mode;
+} FILL_ACTIONS[] = {
+    {WM_ACTION_FILL_WINDOW, FILL_BOTH},
+    {WM_ACTION_FILL_VERT, FILL_VERTICAL},
+    {WM_ACTION_FILL_HORIZ, FILL_HORIZONTAL},
 };
 
 static const struct {
@@ -87,6 +83,24 @@ static const struct {
     {WM_ACTION_MOVE_TO_MONITOR_RIGHT, MONITOR_RIGHT},
     {WM_ACTION_MOVE_TO_MONITOR_UP, MONITOR_UP},
     {WM_ACTION_MOVE_TO_MONITOR_DOWN, MONITOR_DOWN},
+};
+
+static const struct {
+    wm_action action;
+    int step;
+} CARRY_STEP_ACTIONS[] = {
+    {WM_ACTION_MOVE_NEXT_WORKSPACE, 1},
+    {WM_ACTION_MOVE_PREV_WORKSPACE, -1},
+};
+
+static const struct {
+    wm_action action;
+    move_direction direction;
+} CARRY_DIRECTION_ACTIONS[] = {
+    {WM_ACTION_MOVE_LEFT_WORKSPACE, DIRECTION_LEFT},
+    {WM_ACTION_MOVE_RIGHT_WORKSPACE, DIRECTION_RIGHT},
+    {WM_ACTION_MOVE_UP_WORKSPACE, DIRECTION_UP},
+    {WM_ACTION_MOVE_DOWN_WORKSPACE, DIRECTION_DOWN},
 };
 
 wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
@@ -214,7 +228,8 @@ static void run_focused(wm_desktop *desktop, wm_window *window, wm_action action
             return;
         }
     }
-    run_tile_action(desktop, window, action);
+    run_size_action(desktop, window, action);
+    run_place_action(desktop, window, action);
 }
 
 static void run_unfocused(wm_desktop *desktop, wm_action action)
@@ -226,84 +241,50 @@ static void run_unfocused(wm_desktop *desktop, wm_action action)
     }
 }
 
-static void run_tile_action(wm_desktop *desktop, wm_window *window, wm_action action)
+static void run_size_action(wm_desktop *desktop, wm_window *window, wm_action action)
 {
+    for (size_t i = 0; i < sizeof(MAXIMIZE_ACTIONS) / sizeof(MAXIMIZE_ACTIONS[0]); i++) {
+        if (MAXIMIZE_ACTIONS[i].action == action) {
+            maximize_toggle(desktop, window, MAXIMIZE_ACTIONS[i].mode);
+        }
+    }
+    for (size_t i = 0; i < sizeof(FILL_ACTIONS) / sizeof(FILL_ACTIONS[0]); i++) {
+        if (FILL_ACTIONS[i].action == action) {
+            fill_window(desktop, window, FILL_ACTIONS[i].mode);
+        }
+    }
     for (size_t i = 0; i < sizeof(TILE_ACTIONS) / sizeof(TILE_ACTIONS[0]); i++) {
         if (TILE_ACTIONS[i].action == action) {
             tile_toggle(desktop, window, TILE_ACTIONS[i].tile);
         }
     }
+}
+
+static void run_place_action(wm_desktop *desktop, wm_window *window, wm_action action)
+{
     for (size_t i = 0; i < sizeof(MONITOR_ACTIONS) / sizeof(MONITOR_ACTIONS[0]); i++) {
         if (MONITOR_ACTIONS[i].action == action) {
             monitor_move(desktop, window, MONITOR_ACTIONS[i].direction);
         }
     }
-}
-
-static void maximize_both(wm_desktop *desktop, wm_window *window)
-{
-    window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED);
-}
-
-static void maximize_vertically(wm_desktop *desktop, wm_window *window)
-{
-    window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED_VERT);
-}
-
-static void maximize_horizontally(wm_desktop *desktop, wm_window *window)
-{
-    window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED_HORZ);
-}
-
-static void fill_both(wm_desktop *desktop, wm_window *window)
-{
-    fill_window(desktop, window, FILL_BOTH);
-}
-
-static void fill_vertically(wm_desktop *desktop, wm_window *window)
-{
-    fill_window(desktop, window, FILL_VERTICAL);
-}
-
-static void fill_horizontally(wm_desktop *desktop, wm_window *window)
-{
-    fill_window(desktop, window, FILL_HORIZONTAL);
+    for (size_t i = 0; i < sizeof(CARRY_STEP_ACTIONS) / sizeof(CARRY_STEP_ACTIONS[0]); i++) {
+        if (CARRY_STEP_ACTIONS[i].action == action) {
+            int target = desktop->workspaces.current + CARRY_STEP_ACTIONS[i].step;
+            workspaces_switch(desktop, target, window);
+        }
+    }
+    for (size_t i = 0; i < sizeof(CARRY_DIRECTION_ACTIONS) / sizeof(CARRY_DIRECTION_ACTIONS[0]);
+         i++) {
+        if (CARRY_DIRECTION_ACTIONS[i].action == action) {
+            workspaces_move(desktop, CARRY_DIRECTION_ACTIONS[i].direction, window);
+        }
+    }
 }
 
 static void popup_menu(wm_desktop *desktop, wm_window *window)
 {
     menu_show(desktop, window, (wm_point) {window->client.x, window->client.y});
     menu_show_mnemonics(desktop);
-}
-
-static void carry_to_next(wm_desktop *desktop, wm_window *window)
-{
-    workspaces_switch(desktop, desktop->workspaces.current + 1, window);
-}
-
-static void carry_to_previous(wm_desktop *desktop, wm_window *window)
-{
-    workspaces_switch(desktop, desktop->workspaces.current - 1, window);
-}
-
-static void carry_left(wm_desktop *desktop, wm_window *window)
-{
-    workspaces_move(desktop, DIRECTION_LEFT, window);
-}
-
-static void carry_right(wm_desktop *desktop, wm_window *window)
-{
-    workspaces_move(desktop, DIRECTION_RIGHT, window);
-}
-
-static void carry_up(wm_desktop *desktop, wm_window *window)
-{
-    workspaces_move(desktop, DIRECTION_UP, window);
-}
-
-static void carry_down(wm_desktop *desktop, wm_window *window)
-{
-    workspaces_move(desktop, DIRECTION_DOWN, window);
 }
 
 static void send_app_shortcut(wm_desktop *desktop, const wm_app_shortcut_event *event)

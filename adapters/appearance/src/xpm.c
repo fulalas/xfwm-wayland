@@ -9,6 +9,7 @@
 #include <glib.h>
 
 #include "color.h"
+#include "image_limits.h"
 #include "xpm_reader.h"
 
 enum {
@@ -107,7 +108,8 @@ static bool read_header(xpm_reader *reader, xpm_header *header)
 
 static bool header_is_valid(const xpm_header *header)
 {
-    return header->width > 0 && header->height > 0 && header->chars_per_pixel > 0
+    return header->width > 0 && header->height > 0 && header->width <= APPEARANCE_IMAGE_SIDE_MAX
+           && header->height <= APPEARANCE_IMAGE_SIDE_MAX && header->chars_per_pixel > 0
            && header->chars_per_pixel < CHARS_PER_PIXEL_MAX && header->color_count > 0
            && header->color_count < INT_MAX / (header->chars_per_pixel + 1)
            && header->color_count < INT_MAX / (int) sizeof(xpm_pixel);

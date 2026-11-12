@@ -54,8 +54,12 @@ bool osd_preview_show(osd_preview *preview, struct wlr_surface *surface)
         return false;
     }
     struct wlr_scene_buffer_set_buffer_options options = acquire_options(surface);
+    struct wlr_fbox source;
+    wlr_surface_get_buffer_source_box(surface, &source);
     track_surface(preview, surface);
     wlr_scene_buffer_set_buffer_with_options(preview->node, &surface->buffer->base, &options);
+    wlr_scene_buffer_set_source_box(preview->node, &source);
+    wlr_scene_buffer_set_transform(preview->node, surface->current.transform);
     return true;
 }
 

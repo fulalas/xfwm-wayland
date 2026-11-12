@@ -121,14 +121,12 @@ void view_committed(view *v, wm_size size)
 void view_configure_settled(view *v)
 {
     view_handshake *h = &v->handshake;
-    if (!h->awaiting) {
-        return;
-    }
+    bool was_awaiting = h->awaiting;
     end_handshake(v);
     if (!wm_size_equals(h->committed, h->requested)) {
         report_committed_size(v, h->committed);
     }
-    if (v->presented) {
+    if (was_awaiting && v->presented) {
         view_apply_geometry(v);
     }
 }

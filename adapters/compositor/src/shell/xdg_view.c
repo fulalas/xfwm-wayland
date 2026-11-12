@@ -234,7 +234,7 @@ static void apply_fullscreen_output(xdg_view *xv)
         return;
     }
     wm_rect area = output_full(output_from_wlr(chosen));
-    wm_window_set_fullscreen_area(xv->server->desktop, window, &area);
+    wm_window_set_fullscreen_area_once(xv->server->desktop, window, &area);
 }
 
 static void acknowledge_configure(xdg_view *xv)

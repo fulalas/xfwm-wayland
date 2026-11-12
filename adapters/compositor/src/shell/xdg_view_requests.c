@@ -1,5 +1,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 
+#include "input/seat.h"
 #include "util/listener.h"
 #include "output/output.h"
 #include "xdg_view_private.h"
@@ -67,7 +68,7 @@ static void handle_fullscreen(struct wl_listener *listener, void *data)
     wm_window *window = xv->view != NULL ? view_window(xv->view) : NULL;
     if (window != NULL) {
         wm_rect area = o != NULL ? output_full(o) : (wm_rect){0, 0, 0, 0};
-        wm_window_set_fullscreen_area(xv->server->desktop, window, &area);
+        wm_window_set_fullscreen_area_once(xv->server->desktop, window, &area);
     }
     request_state(xv, view_state_change(WM_STATE_FULLSCREEN, wanted));
 }
@@ -83,9 +84,9 @@ static void handle_minimize(struct wl_listener *listener, void *data)
 
 static void handle_move(struct wl_listener *listener, void *data)
 {
-    (void) data;
     xdg_view *xv = wl_container_of(listener, xv, requests.move);
-    if (xv->view != NULL) {
+    const struct wlr_xdg_toplevel_move_event *event = data;
+    if (xv->view != NULL && seat_holds_grab_serial(xv->server->seat, event->serial)) {
         view_request_move(xv->view);
     }
 }
@@ -94,7 +95,7 @@ static void handle_resize(struct wl_listener *listener, void *data)
 {
     xdg_view *xv = wl_container_of(listener, xv, requests.resize);
     const struct wlr_xdg_toplevel_resize_event *event = data;
-    if (xv->view != NULL) {
+    if (xv->view != NULL && seat_holds_grab_serial(xv->server->seat, event->serial)) {
         view_request_resize(xv->view, event->edges);
     }
 }
@@ -105,7 +106,8 @@ static void handle_show_window_menu(struct wl_listener *listener, void *data)
     const struct wlr_xdg_toplevel_show_window_menu_event *event = data;
     wm_window *window = mapped_window(xv);
     if (window != NULL) {
-        wm_point point = {event->x, event->y};
+        const struct wlr_box *geometry = &xv->toplevel->base->geometry;
+        wm_point point = {event->x - geometry->x, event->y - geometry->y};
         wm_request_window_menu(xv->server->desktop, window, point);
     }
 }

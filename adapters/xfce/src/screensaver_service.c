@@ -2,6 +2,8 @@
 
 #include <gio/gio.h>
 
+#include "name_watches.h"
+
 static const char bus_name[] = "org.freedesktop.ScreenSaver";
 static const char interface_name[] = "org.freedesktop.ScreenSaver";
 static const char *const object_paths[] = { "/org/freedesktop/ScreenSaver", "/ScreenSaver" };
@@ -44,6 +46,7 @@ struct screensaver_service {
 };
 
 static void on_bus_acquired(GDBusConnection *connection, const char *name, gpointer data);
+static void on_name_acquired(GDBusConnection *connection, const char *name, gpointer data);
 static void on_name_lost(GDBusConnection *connection, const char *name, gpointer data);
 static void on_method(GDBusConnection *connection, const char *sender, const char *path,
                       const char *interface, const char *method, GVariant *parameters,
@@ -52,12 +55,10 @@ static guint cookie_of(GVariant *parameters);
 static void notify_activity(screensaver_service *service);
 static guint inhibit(screensaver_service *service, const char *sender);
 static void uninhibit(screensaver_service *service, guint cookie);
-static void watch_sender(screensaver_service *service, const char *sender);
 static void on_sender_vanished(GDBusConnection *connection, const char *name, gpointer data);
 static void unregister_objects(screensaver_service *service);
 static void set_cookies_cleared(screensaver_service *service);
 static void notify_if_changed(screensaver_service *service, bool was_inhibited);
-static void unwatch(gpointer data);
 
 static const GDBusInterfaceVTable vtable = { on_method, NULL, NULL, { 0 } };
 
@@ -68,11 +69,10 @@ screensaver_service *screensaver_service_create(const screensaver_listener *list
     service->listener = *listener;
     service->node = g_dbus_node_info_new_for_xml(introspection, NULL);
     service->cookies = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, g_free);
-    service->watches = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, unwatch);
+    service->watches = name_watches_new();
     service->owner = g_bus_own_name(G_BUS_TYPE_SESSION, bus_name,
-                                    G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT
-                                        | G_BUS_NAME_OWNER_FLAGS_DO_NOT_QUEUE,
-                                    on_bus_acquired, NULL, on_name_lost, service, NULL);
+                                    G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT, on_bus_acquired,
+                                    on_name_acquired, on_name_lost, service, NULL);
     return service;
 }
 
@@ -99,9 +99,16 @@ static void on_bus_acquired(GDBusConnection *connection, const char *name, gpoin
 {
     (void) name;
     screensaver_service *service = data;
-    GDBusInterfaceInfo *info = g_dbus_node_info_lookup_interface(service->node, interface_name);
 
     g_set_object(&service->connection, connection);
+}
+
+static void on_name_acquired(GDBusConnection *connection, const char *name, gpointer data)
+{
+    (void) name;
+    screensaver_service *service = data;
+    GDBusInterfaceInfo *info = g_dbus_node_info_lookup_interface(service->node, interface_name);
+
     for (int i = 0; i < OBJECT_PATH_COUNT; i++) {
         service->registrations[i] = g_dbus_connection_register_object(
             connection, object_paths[i], info, &vtable, service, NULL, NULL);
@@ -162,7 +169,8 @@ static guint inhibit(screensaver_service *service, const char *sender)
     guint cookie = ++service->next_cookie;
 
     g_hash_table_insert(service->cookies, GUINT_TO_POINTER(cookie), g_strdup(sender));
-    watch_sender(service, sender);
+    name_watches_add(service->watches, service->connection, sender, on_sender_vanished,
+                     service);
     notify_if_changed(service, was_inhibited);
     return cookie;
 }
@@ -173,17 +181,6 @@ static void uninhibit(screensaver_service *service, guint cookie)
 
     g_hash_table_remove(service->cookies, GUINT_TO_POINTER(cookie));
     notify_if_changed(service, was_inhibited);
-}
-
-static void watch_sender(screensaver_service *service, const char *sender)
-{
-    if (sender == NULL || g_hash_table_contains(service->watches, sender)) {
-        return;
-    }
-    guint watch = g_bus_watch_name_on_connection(service->connection, sender,
-                                                 G_BUS_NAME_WATCHER_FLAGS_NONE, NULL,
-                                                 on_sender_vanished, service, NULL);
-    g_hash_table_insert(service->watches, g_strdup(sender), GUINT_TO_POINTER(watch));
 }
 
 static void on_sender_vanished(GDBusConnection *connection, const char *name, gpointer data)
@@ -229,9 +226,4 @@ static void notify_if_changed(screensaver_service *service, bool was_inhibited)
         && service->listener.inhibit_changed != NULL) {
         service->listener.inhibit_changed(service->listener.self);
     }
-}
-
-static void unwatch(gpointer data)
-{
-    g_bus_unwatch_name(GPOINTER_TO_UINT(data));
 }

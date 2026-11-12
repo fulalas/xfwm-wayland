@@ -73,14 +73,9 @@ wm_rect frame_rect_for_client(const wm_desktop *desktop, const wm_window *window
 
 bool frame_is_shown(const wm_desktop *desktop, const wm_window *window)
 {
-    const wm_frame_config *config = &desktop->config.frame;
-    if (!window_has_flag(window, WINDOW_HAS_BORDER) || window_is_fullscreen(window)) {
-        return false;
-    }
-    bool hides_title = (window_has_state(window, WM_STATE_HIDE_TITLEBAR)
-                        || config->titleless_maximize)
-                       && config->borderless_maximize;
-    return window_is_shaded(window) || !window_is_maximized(window) || !hides_title;
+    wm_decor_window decor = frame_decor_window(desktop, window);
+    wm_decor_input input = {&desktop->theme, &desktop->config.frame, &decor};
+    return wm_decor_has_frame(&input);
 }
 
 int frame_title_height(const wm_desktop *desktop)

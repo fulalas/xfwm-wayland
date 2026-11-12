@@ -6,6 +6,6 @@
 
 keyboard_prefs input_prefs_keyboard(const channels *channels);
 pointer_prefs input_prefs_pointer(const channels *channels, const char *device_name);
-cursor_prefs input_prefs_cursor(const channels *channels);
+cursor_prefs input_prefs_cursor(const channels *channels, char **environment);
 
 #endif

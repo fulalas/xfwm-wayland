@@ -29,6 +29,7 @@ typedef struct xfce_handle {
 struct xfce_toplevels {
     compositor *server;
     struct wl_global *global;
+    struct wl_event_source *republish;
     struct wl_client *highlight_owner;
     struct wl_listener owner_destroy;
 };

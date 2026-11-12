@@ -1,8 +1,10 @@
 #include <stdlib.h>
+#include <string.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/util/log.h>
 
 #include "util/listener.h"
+#include "util/resource.h"
 #include "xfce-foreign-toplevel-management-private-v1-protocol.h"
 #include "xfce_toplevel_private.h"
 
@@ -10,10 +12,19 @@ enum {
     MANAGER_VERSION = 1,
 };
 
+static const char WORKSPACE_INTERFACE[] = "ext_workspace_handle_v1";
+
+typedef struct manager_binding {
+    xfce_toplevels *toplevels;
+    struct wl_listener resource_created;
+} manager_binding;
+
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
 static void handle_get_handle(struct wl_client *client, struct wl_resource *manager, uint32_t id,
                               struct wl_resource *wlr_resource);
-static void handle_manager_destroy(struct wl_client *client, struct wl_resource *manager);
+static void handle_manager_resource_destroy(struct wl_resource *manager);
+static void handle_resource_created(struct wl_listener *listener, void *data);
+static void handle_republish(void *data);
 static bool is_bound(const toplevel_entry *entry, const struct wl_resource *wlr_resource);
 static xfce_handle *create_handle(struct wl_resource *manager, uint32_t id);
 static void attach_handle(xfce_handle *handle, toplevel_entry *entry,
@@ -24,7 +35,7 @@ static void detach_handle(xfce_handle *handle);
 
 static const struct xfce_foreign_toplevel_manager_private_v1_interface manager_impl = {
     .get_xfce_foreign_toplevel_handle = handle_get_handle,
-    .destroy = handle_manager_destroy,
+    .destroy = resource_handle_destroy,
 };
 
 xfce_toplevels *xfce_toplevels_create(compositor *server)
@@ -49,6 +60,9 @@ xfce_toplevels *xfce_toplevels_create(compositor *server)
 void xfce_toplevels_destroy(xfce_toplevels *x)
 {
     xfce_toplevels_release_highlight(x);
+    if (x->republish != NULL) {
+        wl_event_source_remove(x->republish);
+    }
     wl_global_destroy(x->global);
     free(x);
 }
@@ -72,13 +86,19 @@ void xfce_toplevels_detach(toplevel_entry *entry)
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
-    struct wl_resource *resource = wl_resource_create(
-        client, &xfce_foreign_toplevel_manager_private_v1_interface, (int) version, id);
-    if (resource == NULL) {
+    manager_binding *binding = calloc(1, sizeof(*binding));
+    if (binding == NULL) {
         wl_client_post_no_memory(client);
         return;
     }
-    wl_resource_set_implementation(resource, &manager_impl, data, NULL);
+    binding->toplevels = data;
+    if (resource_bind(client, &xfce_foreign_toplevel_manager_private_v1_interface, version, id,
+                      &manager_impl, binding, handle_manager_resource_destroy) == NULL) {
+        free(binding);
+        return;
+    }
+    binding->resource_created.notify = handle_resource_created;
+    wl_client_add_resource_created_listener(client, &binding->resource_created);
 }
 
 static void handle_get_handle(struct wl_client *client, struct wl_resource *manager, uint32_t id,
@@ -102,10 +122,30 @@ static void handle_get_handle(struct wl_client *client, struct wl_resource *mana
     }
 }
 
-static void handle_manager_destroy(struct wl_client *client, struct wl_resource *manager)
+static void handle_manager_resource_destroy(struct wl_resource *manager)
 {
-    (void) client;
-    wl_resource_destroy(manager);
+    manager_binding *binding = wl_resource_get_user_data(manager);
+    listener_disconnect(&binding->resource_created);
+    free(binding);
+}
+
+static void handle_resource_created(struct wl_listener *listener, void *data)
+{
+    manager_binding *binding = wl_container_of(listener, binding, resource_created);
+    xfce_toplevels *x = binding->toplevels;
+    if (strcmp(wl_resource_get_class(data), WORKSPACE_INTERFACE) != 0 || x->republish != NULL) {
+        return;
+    }
+    x->republish = wl_event_loop_add_idle(x->server->loop, handle_republish, x);
+}
+
+static void handle_republish(void *data)
+{
+    xfce_toplevels *x = data;
+    x->republish = NULL;
+    if (x->server->foreign_toplevels != NULL) {
+        foreign_toplevels_sync_all(x->server->foreign_toplevels);
+    }
 }
 
 static bool is_bound(const toplevel_entry *entry, const struct wl_resource *wlr_resource)
@@ -132,7 +172,8 @@ static xfce_handle *create_handle(struct wl_resource *manager, uint32_t id)
         free(handle);
         return NULL;
     }
-    handle->toplevels = wl_resource_get_user_data(manager);
+    const manager_binding *binding = wl_resource_get_user_data(manager);
+    handle->toplevels = binding->toplevels;
     wl_list_init(&handle->link);
     wl_list_init(&handle->wlr_destroy.link);
     wl_list_init(&handle->workspace_destroy.link);

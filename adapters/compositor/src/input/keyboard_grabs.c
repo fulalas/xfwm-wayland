@@ -7,6 +7,7 @@
 #include "util/listener.h"
 #include "util/resource.h"
 #include "xwayland-keyboard-grab-unstable-v1-protocol.h"
+#include "xwayland/x11_link.h"
 #include "xwayland/xwayland.h"
 
 enum {
@@ -21,7 +22,9 @@ struct keyboard_grabs {
 
 typedef struct keyboard_grab {
     struct wl_resource *resource;
+    struct wlr_surface *surface;
     struct wl_list link;
+    struct wl_listener surface_destroy;
 } keyboard_grab;
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id);
@@ -29,6 +32,10 @@ static void grab_keyboard(struct wl_client *client, struct wl_resource *manager,
                           struct wl_resource *surface, struct wl_resource *seat);
 static keyboard_grab *create_grab(struct wl_client *client, int version, uint32_t id);
 static void handle_grab_destroyed(struct wl_resource *resource);
+static void handle_surface_destroy(struct wl_listener *listener, void *data);
+static void free_grab(keyboard_grab *grab);
+static bool same_x11_client(const keyboard_grabs *grabs, struct wlr_surface *surface,
+                            const struct wlr_xwayland_surface *target);
 
 static const struct zwp_xwayland_keyboard_grab_manager_v1_interface manager_impl = {
     .destroy = resource_handle_destroy,
@@ -63,8 +70,7 @@ void keyboard_grabs_destroy(keyboard_grabs *grabs)
     wl_list_for_each_safe(grab, next, &grabs->grabs, link) {
         wl_resource_set_user_data(grab->resource, NULL);
         wl_resource_set_destructor(grab->resource, NULL);
-        wl_list_remove(&grab->link);
-        free(grab);
+        free_grab(grab);
     }
     wl_global_destroy(grabs->global);
     free(grabs);
@@ -75,7 +81,17 @@ bool keyboard_grabs_hold(const keyboard_grabs *grabs, struct wlr_surface *focuse
     if (wl_list_empty(&grabs->grabs) || focused == NULL) {
         return false;
     }
-    return wlr_xwayland_surface_try_from_wlr_surface(focused) != NULL;
+    struct wlr_xwayland_surface *target = wlr_xwayland_surface_try_from_wlr_surface(focused);
+    if (target == NULL) {
+        return false;
+    }
+    const keyboard_grab *grab;
+    wl_list_for_each(grab, &grabs->grabs, link) {
+        if (grab->surface != NULL && same_x11_client(grabs, grab->surface, target)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id)
@@ -85,20 +101,13 @@ static void bind_manager(struct wl_client *client, void *data, uint32_t version,
         wl_client_post_implementation_error(client, "keyboard grabs are reserved to XWayland");
         return;
     }
-    struct wl_resource *resource =
-        wl_resource_create(client, &zwp_xwayland_keyboard_grab_manager_v1_interface,
-                           (int) version, id);
-    if (resource == NULL) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(resource, &manager_impl, grabs, NULL);
+    resource_bind(client, &zwp_xwayland_keyboard_grab_manager_v1_interface, version, id,
+                  &manager_impl, grabs, NULL);
 }
 
 static void grab_keyboard(struct wl_client *client, struct wl_resource *manager, uint32_t id,
                           struct wl_resource *surface, struct wl_resource *seat)
 {
-    (void) surface;
     (void) seat;
     keyboard_grabs *grabs = wl_resource_get_user_data(manager);
     keyboard_grab *grab = create_grab(client, wl_resource_get_version(manager), id);
@@ -106,6 +115,9 @@ static void grab_keyboard(struct wl_client *client, struct wl_resource *manager,
         wl_client_post_no_memory(client);
         return;
     }
+    grab->surface = wlr_surface_from_resource(surface);
+    listener_connect(&grab->surface_destroy, &grab->surface->events.destroy,
+                     handle_surface_destroy);
     wl_list_insert(&grabs->grabs, &grab->link);
 }
 
@@ -129,7 +141,33 @@ static void handle_grab_destroyed(struct wl_resource *resource)
 {
     keyboard_grab *grab = wl_resource_get_user_data(resource);
     if (grab != NULL) {
-        wl_list_remove(&grab->link);
-        free(grab);
+        free_grab(grab);
     }
+}
+
+static void handle_surface_destroy(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    keyboard_grab *grab = wl_container_of(listener, grab, surface_destroy);
+    listener_disconnect(&grab->surface_destroy);
+    grab->surface = NULL;
+}
+
+static void free_grab(keyboard_grab *grab)
+{
+    listener_disconnect(&grab->surface_destroy);
+    wl_list_remove(&grab->link);
+    free(grab);
+}
+
+static bool same_x11_client(const keyboard_grabs *grabs, struct wlr_surface *surface,
+                            const struct wlr_xwayland_surface *target)
+{
+    struct wlr_xwayland_surface *grabbing = wlr_xwayland_surface_try_from_wlr_surface(surface);
+    xcb_connection_t *connection = x11_link_connection(xwayland_shell_link(grabs->shell));
+    if (grabbing == NULL || connection == NULL) {
+        return false;
+    }
+    uint32_t client_bits = ~xcb_get_setup(connection)->resource_id_mask;
+    return (grabbing->window_id & client_bits) == (target->window_id & client_bits);
 }

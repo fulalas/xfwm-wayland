@@ -195,7 +195,7 @@ static void handle_dialog_modal(struct wl_listener *listener, void *data)
     dialog_watch *watch = wl_container_of(listener, watch, set_modal);
     xdg_view *xv = xdg_view_from_toplevel(watch->dialog->xdg_toplevel);
     if (xv != NULL) {
-        xdg_view_modal_changed(xv);
+        xdg_view_modal_changed(xv, watch->dialog->modal);
     }
 }
 
@@ -203,6 +203,10 @@ static void handle_dialog_destroy(struct wl_listener *listener, void *data)
 {
     (void) data;
     dialog_watch *watch = wl_container_of(listener, watch, destroy);
+    xdg_view *xv = xdg_view_from_toplevel(watch->dialog->xdg_toplevel);
+    if (xv != NULL && watch->dialog->modal) {
+        xdg_view_modal_changed(xv, false);
+    }
     listener_disconnect(&watch->set_modal);
     listener_disconnect(&watch->destroy);
     free(watch);

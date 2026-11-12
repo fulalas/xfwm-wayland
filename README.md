@@ -41,12 +41,12 @@ Here's a quick comparison:
 | Power with a fullscreen window       | 8.6 W              | 6.7 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.2 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
-| Unit tests                           | 49                 | 795                      |
+| Unit tests                           | 49                 | 832                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
 | Busy cursor while apps start         | no                 | yes                      |
-| xfwm4 compositing settings           | some ignored       | all                      |
+| xfwm4 compositing settings           | some ignored       | all but one              |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, CPU      |
 | Sharp X11 programs when scaling      | yes, uneven sizes  | yes                      |
 

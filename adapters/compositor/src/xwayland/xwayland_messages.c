@@ -41,7 +41,9 @@ static bool handle_client_message(xwayland_shell *shell,
                                   const xcb_client_message_event_t *message);
 static bool keyboard_move_resize(xwayland_shell *shell, const xcb_client_message_event_t *message);
 static void set_desktop_count(xwayland_shell *shell, const xcb_client_message_event_t *message);
+static void property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event);
 static void root_property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event);
+static void old_strut_changed(xwayland_shell *shell, xcb_window_t window);
 static void read_desktop_names(xwayland_shell *shell, xcb_window_t root);
 static void read_desktop_layout(xwayland_shell *shell, xcb_window_t root);
 static xwayland_view *find_view(const xwayland_shell *shell, xcb_window_t window);
@@ -65,7 +67,7 @@ bool xwayland_messages_handle(xwayland_shell *shell, xcb_generic_event_t *event)
         return false;
     }
     if (type == XCB_PROPERTY_NOTIFY) {
-        root_property_changed(shell, (const xcb_property_notify_event_t *) event);
+        property_changed(shell, (const xcb_property_notify_event_t *) event);
         return false;
     }
     if (type != XCB_CLIENT_MESSAGE) {
@@ -211,17 +213,36 @@ static void set_desktop_count(xwayland_shell *shell, const xcb_client_message_ev
     }
 }
 
-static void root_property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event)
+static void property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event)
 {
     xcb_connection_t *connection = x11_link_connection(&shell->link);
-    if (connection == NULL || event->window != x11_link_root(connection)) {
+    if (connection == NULL) {
         return;
     }
+    if (event->window == x11_link_root(connection)) {
+        root_property_changed(shell, event);
+    } else if (event->atom == x11_link_atom(&shell->link, ATOM_NET_WM_STRUT)) {
+        old_strut_changed(shell, event->window);
+    }
+}
+
+static void root_property_changed(xwayland_shell *shell, const xcb_property_notify_event_t *event)
+{
     if (event->atom == x11_link_atom(&shell->link, ATOM_NET_DESKTOP_NAMES)) {
         read_desktop_names(shell, event->window);
     } else if (event->atom == x11_link_atom(&shell->link, ATOM_NET_DESKTOP_LAYOUT)) {
         read_desktop_layout(shell, event->window);
     }
+}
+
+static void old_strut_changed(xwayland_shell *shell, xcb_window_t window)
+{
+    xwayland_view *xv = find_view(shell, window);
+    if (xv == NULL || xv->view == NULL) {
+        return;
+    }
+    xwayland_view_read_old_strut(xv);
+    outputs_schedule_arrange(shell->server->outputs);
 }
 
 static void read_desktop_names(xwayland_shell *shell, xcb_window_t root)

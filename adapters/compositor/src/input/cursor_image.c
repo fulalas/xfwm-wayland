@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/types/wlr_tablet_v2.h>
 #include <wlr/util/log.h>
 
 #include "cursor/cursor_names.h"
@@ -57,6 +58,8 @@ static void handle_client_surface_destroy(struct wl_listener *listener, void *da
 static void apply_client_shape(cursor_image *image);
 static void handle_request_set_cursor(struct wl_listener *listener, void *data);
 static void handle_request_set_shape(struct wl_listener *listener, void *data);
+static bool tablet_focus_owned_by(const struct wlr_tablet_v2_tablet_tool *tool,
+                                  const struct wlr_seat_client *client);
 static bool accepts_request(const cursor_image *image, struct wlr_seat_client *client);
 static bool drag_active(const cursor_image *image);
 
@@ -309,7 +312,6 @@ static void apply_shape(cursor_image *image, wm_cursor_shape shape)
             return;
         }
     }
-    cursor_sprite_show(image->sprite, &view, "default");
 }
 
 static void handle_request_set_cursor(struct wl_listener *listener, void *data)
@@ -326,7 +328,10 @@ static void handle_request_set_shape(struct wl_listener *listener, void *data)
 {
     cursor_image *image = wl_container_of(listener, image, request_set_shape);
     const struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
-    if (accepts_request(image, event->seat_client)) {
+    bool tablet = event->device_type == WLR_CURSOR_SHAPE_MANAGER_V1_DEVICE_TYPE_TABLET_TOOL;
+    bool accepted = tablet ? tablet_focus_owned_by(event->tablet_tool, event->seat_client)
+                           : accepts_request(image, event->seat_client);
+    if (accepted) {
         image->client_mode = true;
         image->client_shape = wlr_cursor_shape_v1_name(event->shape);
         apply_client(image);
@@ -337,7 +342,16 @@ static void apply_client_shape(cursor_image *image)
 {
     image->showing_busy = false;
     cursor_theme_view view = theme_view(image);
-    cursor_sprite_show(image->sprite, &view, image->client_shape);
+    if (!cursor_sprite_show(image->sprite, &view, image->client_shape)) {
+        apply_shape(image, WM_CURSOR_DEFAULT);
+    }
+}
+
+static bool tablet_focus_owned_by(const struct wlr_tablet_v2_tablet_tool *tool,
+                                  const struct wlr_seat_client *client)
+{
+    const struct wlr_surface *focus = tool->focused_surface;
+    return focus != NULL && client->client == wl_resource_get_client(focus->resource);
 }
 
 static bool accepts_request(const cursor_image *image, struct wlr_seat_client *client)

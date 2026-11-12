@@ -28,6 +28,7 @@ typedef struct arrange_pass {
 static void handle_new_surface(struct wl_listener *listener, void *data);
 static output *output_for_new_surface(const layer_shell *shell);
 static wm_rect arrange_layer(layer_shell *shell, const arrange_pass *pass, layer_area area);
+static void show_on_output(layer_shell *shell, const output *output, bool shown);
 static bool takes_exclusive_focus(const layer_surface *surface);
 
 layer_shell *layer_shell_create(compositor *server)
@@ -57,7 +58,13 @@ void layer_shell_destroy(layer_shell *shell)
 
 wm_rect layer_shell_arrange(layer_shell *shell, output *o)
 {
-    layer_area area = {output_full(o), output_full(o)};
+    wm_rect full = output_full(o);
+    bool in_layout = !wm_rect_is_empty(&full);
+    show_on_output(shell, o, in_layout);
+    if (!in_layout) {
+        return full;
+    }
+    layer_area area = {full, full};
     for (int exclusive = 1; exclusive >= 0; exclusive--) {
         for (int i = 0; i < SHELL_LAYER_COUNT; i++) {
             arrange_pass pass = {o, layers_top_down[i], exclusive == 1};
@@ -143,6 +150,16 @@ static wm_rect arrange_layer(layer_shell *shell, const arrange_pass *pass, layer
         area.usable = layer_surface_configure(surface, &area);
     }
     return area.usable;
+}
+
+static void show_on_output(layer_shell *shell, const output *o, bool shown)
+{
+    layer_surface *surface;
+    wl_list_for_each(surface, &shell->surfaces, link) {
+        if (surface->output == o) {
+            layer_surface_set_shown(surface, shown);
+        }
+    }
 }
 
 static bool takes_exclusive_focus(const layer_surface *surface)

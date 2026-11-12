@@ -58,6 +58,7 @@ typedef struct
 }
 PathState;
 
+static gboolean has_group_transform (const gchar *);
 static void layout_collect (Layout *, const gchar *, const SvgCanvas *);
 static void collect_spans (const gchar *, GArray **);
 static void add_box_spans (GArray **, const Box *);
@@ -74,7 +75,9 @@ static gchar *map_path (const Layout *, const gchar *);
 static const gchar *map_token (PathState *, const gchar *);
 static const gchar *map_command (PathState *, const gchar *);
 static const gchar *map_number (PathState *, const gchar *);
-static gdouble map_next_arg (PathState *, gdouble);
+static gchar next_arg (PathState *);
+static const gchar *map_flag (PathState *, const gchar *);
+static const gchar *map_value (PathState *, gchar, const gchar *);
 static void append_number_attr (GString *, const gchar *, gdouble);
 static void append_number (GString *, gdouble);
 
@@ -84,11 +87,36 @@ svgSnap (const gchar *data, const SvgCanvas *canvas)
     Layout layout;
     gchar *snapped;
 
+    if (has_group_transform (data))
+    {
+        return g_strdup (data);
+    }
     layout_collect (&layout, data, canvas);
     snapped = layout_apply (&layout, data);
     layout_free (&layout);
 
     return snapped;
+}
+
+static gboolean
+has_group_transform (const gchar *data)
+{
+    const gchar *tag, *end;
+    GArray *attrs;
+    gboolean found;
+
+    found = FALSE;
+    for (tag = data; !found && (tag = svgNextElement (tag, &end)); tag = end)
+    {
+        if (svgTagIs (tag, "<rect") || svgTagIs (tag, "<path"))
+        {
+            continue;
+        }
+        attrs = svgTagAttrs (tag, end);
+        found = svgAttrGet (attrs, "transform") != NULL;
+        svgAttrsFree (attrs);
+    }
+    return found;
 }
 
 static void
@@ -321,7 +349,7 @@ static const gchar *
 map_command (PathState *state, const gchar *p)
 {
     static const gchar commands[] = "MLHVCSQTAZ";
-    static const gchar *const patterns[] = { "xy", "xy", "x", "y", "xyxyxy", "xyxy", "xyxy", "xy", "nnnnnxy", "" };
+    static const gchar *const patterns[] = { "xy", "xy", "x", "y", "xyxyxy", "xyxy", "xyxy", "xy", "nnnffxy", "" };
     const gchar *c;
 
     c = strchr (commands, (*p == 'z') ? 'Z' : *p);
@@ -338,42 +366,64 @@ map_command (PathState *state, const gchar *p)
 static const gchar *
 map_number (PathState *state, const gchar *p)
 {
-    gchar *end;
-    gdouble v;
+    gchar arg;
 
     if (!state->pattern || !*state->pattern)
     {
         return NULL;
     }
+    arg = next_arg (state);
+    if (!g_ascii_isalpha (state->out->str[state->out->len - 1]))
+    {
+        g_string_append_c (state->out, ' ');
+    }
+    if (arg == 'f')
+    {
+        return map_flag (state, p);
+    }
+    return map_value (state, arg, p);
+}
+
+static gchar
+next_arg (PathState *state)
+{
+    if (!*state->arg)
+    {
+        state->arg = state->pattern;
+    }
+    return *state->arg++;
+}
+
+static const gchar *
+map_flag (PathState *state, const gchar *p)
+{
+    if (*p != '0' && *p != '1')
+    {
+        return NULL;
+    }
+    g_string_append_c (state->out, *p);
+
+    return p + 1;
+}
+
+static const gchar *
+map_value (PathState *state, gchar arg, const gchar *p)
+{
+    gchar *end;
+    gdouble v;
+
     v = g_ascii_strtod (p, &end);
     if (end == p)
     {
         return NULL;
     }
-    if (!g_ascii_isalpha (state->out->str[state->out->len - 1]))
+    if (arg != 'n')
     {
-        g_string_append_c (state->out, ' ');
+        v = svgAxisMap (&state->layout->axis[arg == 'y'], v);
     }
-    append_number (state->out, map_next_arg (state, v));
+    append_number (state->out, v);
 
     return end;
-}
-
-static gdouble
-map_next_arg (PathState *state, gdouble v)
-{
-    gchar arg;
-
-    if (!*state->arg)
-    {
-        state->arg = state->pattern;
-    }
-    arg = *state->arg++;
-    if (arg == 'n')
-    {
-        return v;
-    }
-    return svgAxisMap (&state->layout->axis[arg == 'y'], v);
 }
 
 static void

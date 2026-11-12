@@ -69,7 +69,7 @@ typedef struct compositor_painter {
     void *self;
     cairo_surface_t *(*paint_frame)(void *self, const frame_paint_request *request);
     wm_size (*measure_title)(void *self, const char *title);
-    shadow_template (*shadow_template)(void *self, double opacity);
+    shadow_template (*shadow_template)(void *self);
     compositor_osd_painter osd;
 } compositor_painter;
 

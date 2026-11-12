@@ -89,13 +89,8 @@ void xfce_outputs_refresh(xfce_outputs *xo)
 
 static void bind_manager(struct wl_client *client, void *data, uint32_t version, uint32_t id)
 {
-    struct wl_resource *resource =
-        wl_resource_create(client, &xfce_output_manager_private_v1_interface, (int) version, id);
-    if (resource == NULL) {
-        wl_client_post_no_memory(client);
-        return;
-    }
-    wl_resource_set_implementation(resource, &manager_implementation, data, NULL);
+    resource_bind(client, &xfce_output_manager_private_v1_interface, version, id,
+                  &manager_implementation, data, NULL);
 }
 
 static void handle_get_output(struct wl_client *client, struct wl_resource *manager,

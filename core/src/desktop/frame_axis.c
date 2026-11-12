@@ -38,10 +38,10 @@ static bool zoom_scroll(wm_desktop *desktop, const wm_axis_event *event)
 {
     if (!desktop->config.mouse.zoom_desktop || !effects_enabled(desktop)
         || !frame_input_is_easy_click(desktop, event->pointer.modifiers)
-        || event->vertical_steps == 0) {
+        || event->axis != WM_AXIS_VERTICAL) {
         return false;
     }
-    int steps = event->vertical_steps;
+    int steps = event->steps;
     for (; steps < 0; steps++) {
         zoom_in(desktop, event->pointer.position);
     }
@@ -53,14 +53,18 @@ static bool zoom_scroll(wm_desktop *desktop, const wm_axis_event *event)
 
 static void title_scroll(wm_desktop *desktop, wm_window *window, const wm_axis_event *event)
 {
+    if (event->steps == 0) {
+        return;
+    }
     bool easy = frame_input_is_easy_click(desktop, event->pointer.modifiers)
                 && effects_enabled(desktop);
-    if (event->vertical_steps != 0 && easy) {
-        opacity_scroll(desktop, window, -event->vertical_steps);
-    } else if (event->vertical_steps != 0) {
-        rollup_scroll(desktop, window, event->vertical_steps);
+    bool vertical = event->axis == WM_AXIS_VERTICAL;
+    if (vertical && easy) {
+        opacity_scroll(desktop, window, -event->steps);
+    } else if (vertical) {
+        rollup_scroll(desktop, window, event->steps);
     } else if (desktop->config.mouse.horiz_scroll_opacity) {
-        opacity_scroll(desktop, window, event->horizontal_steps);
+        opacity_scroll(desktop, window, event->steps);
     }
 }
 
@@ -87,8 +91,11 @@ static void rollup_scroll(wm_desktop *desktop, wm_window *window, int steps)
 
 static wm_dispatch desktop_scroll(wm_desktop *desktop, const wm_axis_event *event)
 {
-    if (!desktop->config.mouse.scroll_workspaces || event->vertical_steps == 0) {
+    if (!desktop->config.mouse.scroll_workspaces || event->axis != WM_AXIS_VERTICAL) {
         return WM_FORWARD;
+    }
+    if (event->steps == 0) {
+        return WM_CONSUMED;
     }
     uint32_t time_ms = event->pointer.time_ms;
     if (desktop->has_scrolled && time_ms - desktop->last_scroll_ms < SCROLL_DROP_MS) {
@@ -96,7 +103,7 @@ static wm_dispatch desktop_scroll(wm_desktop *desktop, const wm_axis_event *even
     }
     desktop->has_scrolled = true;
     desktop->last_scroll_ms = time_ms;
-    int delta = event->vertical_steps < 0 ? -1 : 1;
+    int delta = event->steps < 0 ? -1 : 1;
     workspaces_switch(desktop, desktop->workspaces.current + delta, NULL);
     return WM_CONSUMED;
 }

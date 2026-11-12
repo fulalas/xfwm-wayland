@@ -36,7 +36,9 @@ typedef enum device_setting_id {
 
 enum {
     SETTING_WORDS = 3,
-    SETTING_NUMBERS = 12,
+    SETTING_MATRIX_VALUES = 6,
+    SETTING_AREA_VALUES = 4,
+    SETTING_NUMBERS = 2 * SETTING_MATRIX_VALUES,
 };
 
 typedef struct device_setting {

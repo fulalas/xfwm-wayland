@@ -23,7 +23,6 @@ typedef enum tool_route {
 } tool_route;
 
 typedef struct tablet_device {
-    tablet_input *owner;
     struct wlr_tablet *tablet;
     struct wlr_tablet_v2_tablet *v2;
     struct wl_list link;
@@ -36,6 +35,8 @@ typedef struct tablet_tool {
     struct wlr_tablet_v2_tablet_tool *v2;
     tool_route route;
     bool tip_down;
+    bool tip_in_core;
+    const struct wlr_input_device *tip_device;
     input_point position;
     input_point tilt;
     struct wlr_scene_node *grab_node;

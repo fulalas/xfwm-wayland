@@ -21,6 +21,7 @@ static void on_state_changed(GDBusConnection *bus, const gchar *sender, const gc
                              const gchar *interface, const gchar *signal, GVariant *parameters,
                              gpointer data);
 static void finish_waiting(GDBusConnection *bus, guint32 state);
+static void fail_waiting(GDBusConnection *bus, GError *error);
 static gboolean on_state_timeout(gpointer data);
 static void stop_waiting(GDBusConnection *bus);
 static void send_logout(GDBusConnection *bus);
@@ -70,8 +71,7 @@ static void on_state_replied(GObject *source, GAsyncResult *result, gpointer dat
 
     (void) data;
     if (!reply) {
-        stop_waiting(bus);
-        handle_call_error(error);
+        fail_waiting(bus, error);
         g_error_free(error);
         return;
     }
@@ -105,6 +105,15 @@ static void finish_waiting(GDBusConnection *bus, guint32 state)
     }
     stop_waiting(bus);
     send_logout(bus);
+}
+
+static void fail_waiting(GDBusConnection *bus, GError *error)
+{
+    if (state_watch == 0) {
+        return;
+    }
+    stop_waiting(bus);
+    handle_call_error(error);
 }
 
 static gboolean on_state_timeout(gpointer data)

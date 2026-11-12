@@ -1,7 +1,6 @@
 #include "zoom.h"
 
 #include "desktop_state.h"
-#include "effects.h"
 
 enum {
     ZOOM_UNIT = 1 << 16,
@@ -29,9 +28,6 @@ void zoom_reset(wm_desktop *desktop)
 void zoom_in(wm_desktop *desktop, wm_point pointer)
 {
     zoom_state *zoom = &desktop->zoom;
-    if (!effects_enabled(desktop)) {
-        return;
-    }
     zoom->inverse_scale -= ZOOM_STEP;
     if (zoom->inverse_scale < ZOOM_MIN_INVERSE) {
         zoom->inverse_scale = ZOOM_MIN_INVERSE;
@@ -42,7 +38,7 @@ void zoom_in(wm_desktop *desktop, wm_point pointer)
 void zoom_out(wm_desktop *desktop, wm_point pointer)
 {
     zoom_state *zoom = &desktop->zoom;
-    if (!effects_enabled(desktop) || !is_zoomed(zoom)) {
+    if (!is_zoomed(zoom)) {
         return;
     }
     zoom->inverse_scale += ZOOM_STEP;

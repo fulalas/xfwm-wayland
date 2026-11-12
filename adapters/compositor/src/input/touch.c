@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_touch.h>
 
 #include "absolute_input.h"
+#include "click_focus.h"
 #include "util/listener.h"
 #include "xwayland/xwayland.h"
 #include "pointer_target.h"
@@ -16,9 +17,9 @@ enum {
 };
 
 typedef struct touch_point {
-    touch_input *owner;
     bool used;
     int32_t id;
+    layout_point position;
     struct wlr_scene_node *node;
     struct wl_listener node_destroy;
 } touch_point;
@@ -39,14 +40,13 @@ static void handle_motion(struct wl_listener *listener, void *data);
 static void handle_cancel(struct wl_listener *listener, void *data);
 static void handle_frame(struct wl_listener *listener, void *data);
 static void handle_node_destroy(struct wl_listener *listener, void *data);
-static layout_point to_layout(const touch_input *touch, struct wlr_touch *device,
-                              layout_point_fraction where);
-static void tap_window(touch_input *touch, const pointer_hit *hit,
-                       const struct wlr_touch_down_event *event);
-static wm_button_event tap_click(touch_input *touch, const pointer_hit *hit,
-                                 const struct wlr_touch_down_event *event);
+static layout_point to_layout(const touch_input *touch, struct wlr_touch *device, double x,
+                              double y);
+static void tap(touch_input *touch, const pointer_hit *hit, layout_point point,
+                uint32_t time_ms);
 static touch_point *point_find(touch_input *touch, int32_t id);
-static touch_point *point_claim(touch_input *touch, int32_t id, struct wlr_scene_node *node);
+static touch_point *point_claim(touch_input *touch, int32_t id, struct wlr_scene_node *node,
+                                layout_point position);
 static void point_release(touch_point *point);
 
 touch_input *touch_input_create(seat *s)
@@ -57,7 +57,6 @@ touch_input *touch_input_create(seat *s)
     }
     touch->seat = s;
     for (int i = 0; i < TOUCH_POINTS_MAX; i++) {
-        touch->points[i].owner = touch;
         wl_list_init(&touch->points[i].node_destroy.link);
     }
     listener_connect(&touch->down, &s->cursor->events.touch_down, handle_down);
@@ -95,20 +94,29 @@ void touch_input_cancel_all(touch_input *touch)
     }
 }
 
+bool touch_input_position(touch_input *touch, int32_t id, layout_point *position)
+{
+    const touch_point *point = point_find(touch, id);
+    if (point == NULL) {
+        return false;
+    }
+    *position = point->position;
+    return true;
+}
+
 static void handle_down(struct wl_listener *listener, void *data)
 {
     touch_input *touch = wl_container_of(listener, touch, down);
     const struct wlr_touch_down_event *event = data;
     seat *s = touch->seat;
     seat_notify_activity(s);
-    layout_point_fraction where = {event->x, event->y};
-    layout_point point = to_layout(touch, event->touch, where);
+    layout_point point = to_layout(touch, event->touch, event->x, event->y);
     pointer_hit hit = pointer_target_at(s->server, point);
-    tap_window(touch, &hit, event);
+    tap(touch, &hit, point, event->time_msec);
     if (hit.surface == NULL || !wlr_surface_accepts_touch(hit.surface, s->wlr_seat)) {
         return;
     }
-    if (point_claim(touch, event->touch_id, hit.node) != NULL) {
+    if (point_claim(touch, event->touch_id, hit.node, point) != NULL) {
         wlr_seat_touch_notify_down(s->wlr_seat, hit.surface, event->time_msec, event->touch_id,
                                    hit.sx, hit.sy);
     }
@@ -131,14 +139,18 @@ static void handle_motion(struct wl_listener *listener, void *data)
     touch_input *touch = wl_container_of(listener, touch, motion);
     const struct wlr_touch_motion_event *event = data;
     touch_point *point = point_find(touch, event->touch_id);
-    if (point == NULL || point->node == NULL) {
+    if (point == NULL) {
         return;
     }
-    layout_point_fraction where = {event->x, event->y};
-    layout_point position = to_layout(touch, event->touch, where);
+    point->position = to_layout(touch, event->touch, event->x, event->y);
+    selection_move_icons(touch->seat->selection);
+    if (point->node == NULL) {
+        return;
+    }
     double sx = 0.0;
     double sy = 0.0;
-    xwayland_node_local(touch->seat->server, point->node, position.x, position.y, &sx, &sy);
+    xwayland_node_local(touch->seat->server, point->node, point->position.x, point->position.y,
+                        &sx, &sy);
     wlr_seat_touch_notify_motion(touch->seat->wlr_seat, event->time_msec, event->touch_id, sx,
                                  sy);
 }
@@ -174,47 +186,40 @@ static void handle_node_destroy(struct wl_listener *listener, void *data)
     point->node = NULL;
 }
 
-static layout_point to_layout(const touch_input *touch, struct wlr_touch *device,
-                              layout_point_fraction where)
+static layout_point to_layout(const touch_input *touch, struct wlr_touch *device, double x,
+                              double y)
 {
     layout_point point = {0};
-    input_point mapped = absolute_input_position(touch->seat->absolute, &device->base,
-                                                 (input_point){where.x, where.y});
+    input_point mapped =
+        absolute_input_position(touch->seat->absolute, &device->base, (input_point){x, y});
     wlr_cursor_absolute_to_layout_coords(touch->seat->cursor, &device->base, mapped.x, mapped.y,
                                          &point.x, &point.y);
     return point;
 }
 
-static void tap_window(touch_input *touch, const pointer_hit *hit,
-                       const struct wlr_touch_down_event *event)
+static void tap(touch_input *touch, const pointer_hit *hit, layout_point point,
+                uint32_t time_ms)
 {
     seat *s = touch->seat;
-    wm_desktop *desktop = s->server->desktop;
-    if (hit->target.window == NULL || seat_input_route(s) != INPUT_ROUTE_NORMAL) {
+    if (seat_input_route(s) != INPUT_ROUTE_NORMAL) {
         return;
     }
-    wm_button_event click = tap_click(touch, hit, event);
-    wm_pointer_button(desktop, &click);
-    click.pressed = false;
-    wm_pointer_button(desktop, &click);
-}
-
-static wm_button_event tap_click(touch_input *touch, const pointer_hit *hit,
-                                 const struct wlr_touch_down_event *event)
-{
-    layout_point_fraction where = {event->x, event->y};
-    layout_point point = to_layout(touch, event->touch, where);
-    return (wm_button_event){
+    wm_desktop *desktop = s->server->desktop;
+    wm_button_event click = {
         .pointer =
             {
                 .position = {(int) floor(point.x), (int) floor(point.y)},
-                .time_ms = event->time_msec,
-                .modifiers = seat_modifiers(touch->seat),
+                .time_ms = time_ms,
+                .modifiers = seat_modifiers(s),
                 .target = hit->target,
             },
         .button = WM_MOUSE_LEFT,
         .pressed = true,
     };
+    wm_pointer_button(desktop, &click);
+    click_focus(s, hit);
+    click.pressed = false;
+    wm_pointer_button(desktop, &click);
 }
 
 static touch_point *point_find(touch_input *touch, int32_t id)
@@ -227,7 +232,8 @@ static touch_point *point_find(touch_input *touch, int32_t id)
     return NULL;
 }
 
-static touch_point *point_claim(touch_input *touch, int32_t id, struct wlr_scene_node *node)
+static touch_point *point_claim(touch_input *touch, int32_t id, struct wlr_scene_node *node,
+                                layout_point position)
 {
     for (int i = 0; i < TOUCH_POINTS_MAX; i++) {
         touch_point *point = &touch->points[i];
@@ -235,6 +241,7 @@ static touch_point *point_claim(touch_input *touch, int32_t id, struct wlr_scene
             point->used = true;
             point->id = id;
             point->node = node;
+            point->position = position;
             listener_connect(&point->node_destroy, &node->events.destroy, handle_node_destroy);
             return point;
         }

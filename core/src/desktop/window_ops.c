@@ -3,8 +3,10 @@
 #include "desktop_state.h"
 #include "fill.h"
 #include "maximize.h"
+#include "placement.h"
 #include "stack.h"
 #include "states.h"
+#include "tile.h"
 #include "visibility.h"
 
 void window_ops_close(wm_desktop *desktop, wm_window *window)
@@ -20,18 +22,11 @@ void window_ops_hide(wm_desktop *desktop, wm_window *window)
     }
 }
 
-void window_ops_maximize(wm_desktop *desktop, wm_window *window, uint32_t mode)
-{
-    if (window_can_maximize(window)) {
-        maximize_toggle(desktop, window, mode);
-    }
-}
-
 void window_ops_double_click(wm_desktop *desktop, wm_window *window)
 {
     switch (desktop->config.mouse.double_click_action) {
     case WM_DOUBLE_CLICK_MAXIMIZE:
-        window_ops_maximize(desktop, window, WM_STATE_MAXIMIZED);
+        maximize_toggle(desktop, window, WM_STATE_MAXIMIZED);
         break;
     case WM_DOUBLE_CLICK_SHADE:
         states_toggle_shade(desktop, window);
@@ -81,4 +76,18 @@ void window_ops_toggle_stick(wm_desktop *desktop, wm_window *window)
     if (window_has_flag(window, WINDOW_HAS_STICK)) {
         states_toggle_stick(desktop, window);
     }
+}
+
+void window_ops_refit(wm_desktop *desktop, wm_window *window)
+{
+    if (window_is_fullscreen(window)) {
+        states_update_fullscreen_size(desktop, window);
+    } else if (window->tile != TILE_NONE) {
+        tile_update_size(desktop, window);
+    } else if (window_has_state(window, WM_STATE_MAXIMIZED)) {
+        maximize_update_size(desktop, window);
+    } else if (window_is_constrained(window)) {
+        placement_constrain(desktop, window);
+    }
+    window_mark_dirty(window);
 }

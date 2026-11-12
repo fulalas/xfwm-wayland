@@ -25,6 +25,7 @@ static int wrapped(int value, int limit);
 static void store_count(wm_desktop *desktop, int count);
 static void assign_new_ids(workspace_state *state, int from, int to);
 static void remove_id(workspace_state *state, int position);
+static void renumber_after(wm_desktop *desktop, int position);
 static void insert_id(workspace_state *state, int position);
 
 void workspaces_switch(wm_desktop *desktop, int workspace, wm_window *carried)
@@ -117,12 +118,7 @@ void workspaces_delete(wm_desktop *desktop, int position)
     if (count <= 1 || position < 0 || position >= count) {
         return;
     }
-    for (size_t i = 0; i < desktop->stack.count; i++) {
-        wm_window *window = desktop->stack.items[i];
-        if (window->workspace > position) {
-            visibility_set_workspace(desktop, window, window->workspace - 1);
-        }
-    }
+    renumber_after(desktop, position);
     launches_workspace_removed(desktop, position);
     remove_id(&desktop->workspaces, position);
     workspaces_change_count(desktop, count - 1);
@@ -298,6 +294,25 @@ static void remove_id(workspace_state *state, int position)
     for (int i = position; i < state->count - 1; i++) {
         state->ids[i] = state->ids[i + 1];
     }
+}
+
+static void renumber_after(wm_desktop *desktop, int position)
+{
+    workspace_state *state = &desktop->workspaces;
+    for (size_t i = 0; i < desktop->stack.count; i++) {
+        wm_window *window = desktop->stack.items[i];
+        if (window->workspace > position) {
+            window->workspace--;
+            window_mark_dirty(window);
+        }
+    }
+    if (state->current > position) {
+        state->current--;
+    }
+    if (state->previous > position) {
+        state->previous--;
+    }
+    show_new_workspace(desktop);
 }
 
 static void insert_id(workspace_state *state, int position)

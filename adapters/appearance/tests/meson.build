@@ -6,7 +6,7 @@ appearance_fixture = static_library(
 )
 
 foreach name : ['themerc', 'xpm', 'color_symbols', 'theme_metrics', 'shadow', 'menu_labels',
-                'painter', 'canvas', 'color', 'menu_layout']
+                'painter', 'canvas', 'color', 'menu_layout', 'mysvgsnap']
   exe = executable(
     'test_appearance_' + name,
     'test_' + name + '.c',

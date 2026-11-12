@@ -6,6 +6,7 @@
 #include "display_choice.h"
 #include "display_table.h"
 #include "display_transform.h"
+#include "value_text.h"
 
 enum {
     MILLIHERTZ_PER_HERTZ = 1000,
@@ -135,7 +136,7 @@ static profile_value int_value(int value)
 
 static profile_value double_value(double value)
 {
-    return (profile_value) { .kind = PROFILE_VALUE_DOUBLE, .text = display_double_text(value) };
+    return (profile_value) { .kind = PROFILE_VALUE_DOUBLE, .text = value_text_of_double(value) };
 }
 
 static void free_write(void *data)

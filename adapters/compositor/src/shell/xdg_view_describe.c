@@ -85,10 +85,10 @@ void xdg_view_send_states(void *self, const wm_window_view *state)
     set_tiled(toplevel, state->tiled_edges);
 }
 
-void xdg_view_modal_changed(xdg_view *xv)
+void xdg_view_modal_changed(xdg_view *xv, bool modal)
 {
     if (xv->view != NULL) {
-        wm_state_change change = view_state_change(WM_STATE_MODAL, is_modal(xv));
+        wm_state_change change = view_state_change(WM_STATE_MODAL, modal);
         view_request_state(xv->view, &change);
     }
 }

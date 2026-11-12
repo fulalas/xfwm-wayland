@@ -22,6 +22,7 @@ static void remember_cancel_state(move_session *session, const wm_window *window
 static void finish(wm_desktop *desktop);
 static void finish_resize(wm_desktop *desktop, wm_window *window);
 static void cancel(wm_desktop *desktop);
+static void release_window(wm_window *window);
 static void end_session(wm_desktop *desktop);
 static bool release_pending(const move_session *session);
 static void track_origin(wm_desktop *desktop, wm_point origin, uint32_t button);
@@ -129,12 +130,13 @@ wm_dispatch moveresize_key(wm_desktop *desktop, const wm_key_event *event)
     return WM_CONSUMED;
 }
 
-void moveresize_window_gone(wm_desktop *desktop, const wm_window *window)
+void moveresize_window_gone(wm_desktop *desktop, wm_window *window)
 {
     move_session *session = &desktop->session;
     if (!moveresize_is_active(desktop) || session->window != window) {
         return;
     }
+    release_window(window);
     end_session(desktop);
     session->waiting_release = release_pending(session);
 }
@@ -251,6 +253,15 @@ static void cancel(wm_desktop *desktop)
     desktop->session.waiting_release = release_pending(&desktop->session);
 }
 
+static void release_window(wm_window *window)
+{
+    window->moving = false;
+    window->resizing = false;
+    window->frozen = false;
+    window->moving_edges = 0;
+    window_mark_dirty(window);
+}
+
 static void end_session(wm_desktop *desktop)
 {
     move_session *session = &desktop->session;
@@ -283,9 +294,6 @@ static void track_origin(wm_desktop *desktop, wm_point origin, uint32_t button)
 
 static void handle_arrow(wm_desktop *desktop, move_direction direction)
 {
-    if (direction == DIRECTION_NONE) {
-        return;
-    }
     if (desktop->session.kind == SESSION_MOVE) {
         move_arrow(desktop, direction_offset(direction));
     } else {

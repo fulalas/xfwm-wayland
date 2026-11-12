@@ -1,6 +1,7 @@
 #include "icon_surface.h"
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#include <math.h>
 #include <stdint.h>
 
 enum {
@@ -11,6 +12,8 @@ enum {
     GREEN_SHIFT = 8,
 };
 
+static cairo_surface_t *new_surface(int width, int height);
+static int scaled_length(int length, double factor);
 static cairo_surface_t *surface_from_pixbuf(GdkPixbuf *pixbuf);
 static void fill_surface(cairo_surface_t *surface, GdkPixbuf *pixbuf);
 static uint32_t premultiply(const guchar *pixel, int channels);
@@ -31,17 +34,51 @@ cairo_surface_t *icon_surface_load(const char *path, int size)
     return surface;
 }
 
-static cairo_surface_t *surface_from_pixbuf(GdkPixbuf *pixbuf)
+cairo_surface_t *icon_surface_scale(cairo_surface_t *source, double factor)
 {
-    int width = gdk_pixbuf_get_width(pixbuf);
-    int height = gdk_pixbuf_get_height(pixbuf);
+    int source_width = cairo_image_surface_get_width(source);
+    int source_height = cairo_image_surface_get_height(source);
+    int width = scaled_length(source_width, factor);
+    int height = scaled_length(source_height, factor);
+    cairo_surface_t *surface = new_surface(width, height);
+    cairo_t *cr;
+
+    if (!surface) {
+        return NULL;
+    }
+    cr = cairo_create(surface);
+    cairo_scale(cr, (double) width / source_width, (double) height / source_height);
+    cairo_set_source_surface(cr, source, 0, 0);
+    cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_GOOD);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+    return surface;
+}
+
+static cairo_surface_t *new_surface(int width, int height)
+{
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
 
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         cairo_surface_destroy(surface);
         return NULL;
     }
-    fill_surface(surface, pixbuf);
+    return surface;
+}
+
+static int scaled_length(int length, double factor)
+{
+    return MAX(1, (int) lround(length * factor));
+}
+
+static cairo_surface_t *surface_from_pixbuf(GdkPixbuf *pixbuf)
+{
+    cairo_surface_t *surface =
+        new_surface(gdk_pixbuf_get_width(pixbuf), gdk_pixbuf_get_height(pixbuf));
+
+    if (surface) {
+        fill_surface(surface, pixbuf);
+    }
     return surface;
 }
 

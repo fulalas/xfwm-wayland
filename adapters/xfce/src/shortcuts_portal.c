@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "app_shortcuts.h"
+#include "name_watches.h"
 
 static const char bus_name[] = "org.freedesktop.impl.portal.desktop.xfwm";
 static const char object_path[] = "/org/freedesktop/portal/desktop";
@@ -102,11 +103,9 @@ static app_shortcut_request request_from(GVariant *shortcut);
 static GVariant *shortcuts_of(const shortcuts_portal *portal, const char *session);
 static bool owns_session(const shortcuts_portal *portal, GDBusMethodInvocation *invocation,
                          const char *session);
-static void watch_owner(shortcuts_portal *portal, const char *owner);
 static void on_owner_vanished(GDBusConnection *connection, const char *name, gpointer data);
 static void close_session(shortcuts_portal *portal, const char *session);
 static void session_free(gpointer data);
-static void unwatch(gpointer data);
 static void notify_changed(shortcuts_portal *portal);
 
 static const GDBusInterfaceVTable portal_vtable = { on_method, on_get_property, NULL, { 0 } };
@@ -121,7 +120,7 @@ shortcuts_portal *shortcuts_portal_create(const shortcuts_portal_listener *liste
     portal->shortcuts = app_shortcuts_create();
     portal->node = g_dbus_node_info_new_for_xml(introspection, NULL);
     portal->sessions = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, session_free);
-    portal->owner_watches = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, unwatch);
+    portal->owner_watches = name_watches_new();
     portal->owner = g_bus_own_name(G_BUS_TYPE_SESSION, bus_name, G_BUS_NAME_OWNER_FLAGS_NONE,
                                    on_bus_acquired, NULL, NULL, portal, NULL);
     return portal;
@@ -254,7 +253,8 @@ static void create_session(shortcuts_portal *portal, GVariant *parameters,
     entry->registration = registration;
     entry->owner = g_strdup(g_dbus_method_invocation_get_sender(invocation));
     g_hash_table_replace(portal->sessions, g_strdup(session), entry);
-    watch_owner(portal, entry->owner);
+    name_watches_add(portal->owner_watches, portal->connection, entry->owner, on_owner_vanished,
+                     portal);
     return_results(invocation, empty_vardict());
 }
 
@@ -391,17 +391,6 @@ static bool owns_session(const shortcuts_portal *portal, GDBusMethodInvocation *
            && g_strcmp0(entry->owner, g_dbus_method_invocation_get_sender(invocation)) == 0;
 }
 
-static void watch_owner(shortcuts_portal *portal, const char *owner)
-{
-    if (owner == NULL || g_hash_table_contains(portal->owner_watches, owner)) {
-        return;
-    }
-    guint watch = g_bus_watch_name_on_connection(portal->connection, owner,
-                                                 G_BUS_NAME_WATCHER_FLAGS_NONE, NULL,
-                                                 on_owner_vanished, portal, NULL);
-    g_hash_table_insert(portal->owner_watches, g_strdup(owner), GUINT_TO_POINTER(watch));
-}
-
 static void on_owner_vanished(GDBusConnection *connection, const char *name, gpointer data)
 {
     (void) connection;
@@ -430,11 +419,6 @@ static void session_free(gpointer data)
 
     g_free(session->owner);
     g_free(session);
-}
-
-static void unwatch(gpointer data)
-{
-    g_bus_unwatch_name(GPOINTER_TO_UINT(data));
 }
 
 static void notify_changed(shortcuts_portal *portal)

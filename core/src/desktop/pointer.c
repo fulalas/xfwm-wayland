@@ -24,6 +24,7 @@ static const pointer_grab click_grab = {click_motion, click_button, NULL};
 static const pointer_grab moveresize_grab = {moveresize_motion, moveresize_button, NULL};
 static const pointer_grab frame_button_grab = {frame_buttons_motion, frame_buttons_button, NULL};
 
+static void track(wm_desktop *desktop, wm_point position);
 static const pointer_grab *active_grab(const wm_desktop *desktop);
 static wm_dispatch dispatch_motion(wm_desktop *desktop, const wm_pointer_event *event);
 static wm_dispatch free_motion(wm_desktop *desktop, const wm_pointer_event *event);
@@ -36,11 +37,16 @@ static bool has_window_target(const wm_pointer_target *target);
 
 wm_dispatch wm_pointer_motion(wm_desktop *desktop, const wm_pointer_event *event)
 {
-    desktop->pointer = event->position;
-    zoom_follow_pointer(desktop, event->position);
+    track(desktop, event->position);
     wm_dispatch result = dispatch_motion(desktop, event);
     present_flush(desktop);
     return result;
+}
+
+void wm_pointer_track(wm_desktop *desktop, wm_point position)
+{
+    track(desktop, position);
+    present_flush(desktop);
 }
 
 bool wm_pointer_repick(wm_desktop *desktop, const wm_pointer_event *event, wm_dispatch *result)
@@ -73,6 +79,12 @@ wm_dispatch wm_pointer_axis(wm_desktop *desktop, const wm_axis_event *event)
     wm_dispatch result = dispatch_axis(desktop, event);
     present_flush(desktop);
     return result;
+}
+
+static void track(wm_desktop *desktop, wm_point position)
+{
+    desktop->pointer = position;
+    zoom_follow_pointer(desktop, position);
 }
 
 static const pointer_grab *active_grab(const wm_desktop *desktop)

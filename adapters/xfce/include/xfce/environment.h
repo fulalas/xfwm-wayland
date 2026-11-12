@@ -65,6 +65,7 @@ typedef struct xfce_listener {
     void (*shortcuts_changed)(void *self);
     void (*input_changed)(void *self);
     void (*style_changed)(void *self);
+    void (*icon_theme_changed)(void *self);
     void (*session_ended)(void *self);
     void (*displays_changed)(void *self);
     void (*x11_settings_changed)(void *self);

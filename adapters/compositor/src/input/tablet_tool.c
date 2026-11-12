@@ -73,9 +73,10 @@ void tablet_tool_press_tip(tablet_tool *tool, const tool_event *event)
         .button = BTN_LEFT,
         .pressed = true,
         .time_ms = event->time_ms,
-        .device = event->tablet != NULL ? &event->tablet->tablet->base : NULL,
+        .device = &event->tablet->tablet->base,
     };
     tool->tip_down = true;
+    tool->tip_device = input.device;
     if (tool->route != TOOL_ROUTE_CLIENT) {
         pointer_input_button(tool->owner->seat->pointer, &input);
         return;
@@ -84,6 +85,7 @@ void tablet_tool_press_tip(tablet_tool *tool, const tool_event *event)
     if (tablet_route_tip_to_core(tool, &input) != WM_FORWARD) {
         wlr_tablet_v2_tablet_tool_notify_proximity_out(tool->v2);
         tool->route = TOOL_ROUTE_EMULATED;
+        tool->tip_in_core = true;
         return;
     }
     tablet_route_hold_target(tool);
@@ -106,6 +108,18 @@ void tablet_input_release_tips(tablet_input *tablets, uint32_t time_ms)
     wl_list_for_each(tool, &tablets->tools, link) {
         release_tip(tool, time_ms);
     }
+}
+
+bool tablet_input_holds_serial(const tablet_input *tablets, uint32_t serial)
+{
+    const tablet_tool *tool;
+    wl_list_for_each(tool, &tablets->tools, link) {
+        if (tool->route == TOOL_ROUTE_CLIENT && tool->v2->is_down &&
+            tool->v2->down_serial == serial) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void tablet_tool_button(tablet_tool *tool, const button_input *input)
@@ -212,8 +226,18 @@ static void release_tip(tablet_tool *tool, uint32_t time_ms)
     if (!tool->tip_down) {
         return;
     }
-    button_input input = {.button = BTN_LEFT, .pressed = false, .time_ms = time_ms};
+    button_input input = {
+        .button = BTN_LEFT,
+        .pressed = false,
+        .time_ms = time_ms,
+        .device = tool->tip_device,
+    };
     tool->tip_down = false;
+    if (tool->tip_in_core) {
+        tool->tip_in_core = false;
+        tablet_route_tip_to_core(tool, &input);
+        return;
+    }
     if (tool->route != TOOL_ROUTE_CLIENT) {
         pointer_input_button(tool->owner->seat->pointer, &input);
         return;

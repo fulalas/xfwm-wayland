@@ -57,6 +57,12 @@ wm_rect layer_surface_configure(layer_surface *ls, const layer_area *area)
     return (wm_rect){usable.x, usable.y, usable.width, usable.height};
 }
 
+void layer_surface_set_shown(layer_surface *ls, bool shown)
+{
+    wlr_scene_node_set_enabled(&ls->tree->node, shown);
+    wlr_scene_node_set_enabled(&ls->popups->node, shown);
+}
+
 static bool build_scene(layer_surface *ls)
 {
     const scene_layers *layers = ls->shell->server->layers;

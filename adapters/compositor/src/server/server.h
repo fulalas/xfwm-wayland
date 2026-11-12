@@ -79,6 +79,8 @@ typedef struct renderer_state {
     renderer_kind current;
     renderer_kind failed;
     bool forced;
+    int recover_attempts;
+    struct wl_event_source *retry;
     struct wl_listener lost;
 } renderer_state;
 

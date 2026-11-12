@@ -17,18 +17,23 @@ char *value_text_of(const GValue *value)
     return number_to_text(value);
 }
 
+char *value_text_of_double(double value)
+{
+    char buffer[G_ASCII_DTOSTR_BUF_SIZE];
+
+    return g_strdup(g_ascii_dtostr(buffer, sizeof(buffer), value));
+}
+
 static char *number_to_text(const GValue *value)
 {
     GValue number = G_VALUE_INIT;
-    char buffer[G_ASCII_DTOSTR_BUF_SIZE];
 
     if (!g_value_type_transformable(G_VALUE_TYPE(value), G_TYPE_DOUBLE)) {
         return NULL;
     }
     g_value_init(&number, G_TYPE_DOUBLE);
     g_value_transform(value, &number);
-    g_ascii_dtostr(buffer, sizeof(buffer), g_value_get_double(&number));
-    return g_strdup(buffer);
+    return value_text_of_double(g_value_get_double(&number));
 }
 
 static char *array_to_text(const GPtrArray *values)

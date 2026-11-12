@@ -13,10 +13,19 @@ enum {
     TIMERS_GROWTH_FACTOR = 2,
 };
 
+typedef struct timer_match {
+    bool by_kind;
+    timer_kind kind;
+    bool by_window;
+    const wm_window *window;
+} timer_match;
+
 static void add_timer(wm_desktop *desktop, timer_entry entry);
 static uint32_t deadline_after(const wm_desktop *desktop, int delay_ms);
 static bool is_due(uint32_t deadline_ms, uint32_t now_ms);
 static bool find_due(const timer_set *timers, uint32_t now_ms, timer_entry *due);
+static bool matches(const timer_entry *entry, const timer_match *match);
+static void cancel_matching(wm_desktop *desktop, const timer_match *match);
 static void remove_at(timer_set *timers, size_t index);
 static bool grow(timer_set *timers);
 static void dispatch(wm_desktop *desktop, const timer_entry *entry);
@@ -53,39 +62,26 @@ static uint32_t deadline_after(const wm_desktop *desktop, int delay_ms)
 
 void timers_cancel(wm_desktop *desktop, timer_kind kind, wm_window *window)
 {
-    timer_set *timers = &desktop->timers;
-    for (size_t i = timers->count; i > 0; i--) {
-        if (timers->entries[i - 1].kind == kind && timers->entries[i - 1].window == window) {
-            remove_at(timers, i - 1);
-        }
-    }
+    timer_match match = {.by_kind = true, .kind = kind, .by_window = true, .window = window};
+    cancel_matching(desktop, &match);
 }
 
 void timers_cancel_kind(wm_desktop *desktop, timer_kind kind)
 {
-    timer_set *timers = &desktop->timers;
-    for (size_t i = timers->count; i > 0; i--) {
-        if (timers->entries[i - 1].kind == kind) {
-            remove_at(timers, i - 1);
-        }
-    }
+    cancel_matching(desktop, &(timer_match) {.by_kind = true, .kind = kind});
 }
 
 void timers_cancel_window(wm_desktop *desktop, const wm_window *window)
 {
-    timer_set *timers = &desktop->timers;
-    for (size_t i = timers->count; i > 0; i--) {
-        if (timers->entries[i - 1].window == window) {
-            remove_at(timers, i - 1);
-        }
-    }
+    cancel_matching(desktop, &(timer_match) {.by_window = true, .window = window});
 }
 
 bool timers_is_running(const wm_desktop *desktop, timer_kind kind, const wm_window *window)
 {
     const timer_set *timers = &desktop->timers;
+    timer_match match = {.by_kind = true, .kind = kind, .by_window = true, .window = window};
     for (size_t i = 0; i < timers->count; i++) {
-        if (timers->entries[i].kind == kind && timers->entries[i].window == window) {
+        if (matches(&timers->entries[i], &match)) {
             return true;
         }
     }
@@ -138,6 +134,22 @@ static bool find_due(const timer_set *timers, uint32_t now_ms, timer_entry *due)
         }
     }
     return false;
+}
+
+static bool matches(const timer_entry *entry, const timer_match *match)
+{
+    return (!match->by_kind || entry->kind == match->kind)
+           && (!match->by_window || entry->window == match->window);
+}
+
+static void cancel_matching(wm_desktop *desktop, const timer_match *match)
+{
+    timer_set *timers = &desktop->timers;
+    for (size_t i = timers->count; i > 0; i--) {
+        if (matches(&timers->entries[i - 1], match)) {
+            remove_at(timers, i - 1);
+        }
+    }
 }
 
 static void remove_at(timer_set *timers, size_t index)

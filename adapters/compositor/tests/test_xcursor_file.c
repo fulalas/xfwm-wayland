@@ -1,6 +1,7 @@
 #include <ftw.h>
 #include <glib.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "check.h"
 #include "cursor/xcursor_file.h"
@@ -191,6 +192,18 @@ static void test_theme_follows_inherits(void)
     g_free(root);
 }
 
+static void test_search_path_expands_home(void)
+{
+    g_setenv("XCURSOR_PATH", "~/themes:/usr/share/icons", TRUE);
+    char **path = xcursor_search_path();
+    char *home_themes = g_build_filename(g_get_home_dir(), "themes", NULL);
+    CHECK(g_strv_length(path) == 2);
+    CHECK(strcmp(home_themes, path[0]) == 0);
+    CHECK(strcmp("/usr/share/icons", path[1]) == 0);
+    g_free(home_themes);
+    g_strfreev(path);
+}
+
 int main(void)
 {
     const check_case cases[] = {
@@ -199,6 +212,7 @@ int main(void)
         {"rejects_bad_files", test_rejects_bad_files},
         {"loads_larger_when_width_differs", test_loads_larger_when_width_differs},
         {"theme_follows_inherits", test_theme_follows_inherits},
+        {"search_path_expands_home", test_search_path_expands_home},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

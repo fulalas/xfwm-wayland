@@ -1,4 +1,5 @@
 #include "desktop_state.h"
+#include "maximize.h"
 #include "present.h"
 #include "stack.h"
 #include "states.h"
@@ -61,7 +62,7 @@ static void request_maximize(wm_desktop *desktop, wm_window *window, const wm_st
     uint32_t current = window->states & WM_STATE_MAXIMIZED;
     uint32_t wanted = ((current | change->set) & ~change->unset) & WM_STATE_MAXIMIZED;
     if (wanted != current) {
-        window_ops_maximize(desktop, window, wanted ^ current);
+        maximize_toggle(desktop, window, wanted ^ current);
     }
 }
 

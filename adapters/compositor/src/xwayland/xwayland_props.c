@@ -44,16 +44,13 @@ static bool is_group_transient(x11_link *link, const xwayland_view *xv, const x1
 
 void xwayland_view_read_properties(xwayland_view *xv)
 {
-    xwayland_shell *shell = xv->server->xwayland;
-    if (shell == NULL) {
-        return;
-    }
-    x11_link *link = &shell->link;
+    x11_link *link = &xv->server->xwayland->link;
     window_properties properties = {.window = xv->xsurface->window_id};
     const x11_read *reads = properties.reads;
     prepare_reads(&properties, link);
+    x11_shape_query shape = x11_link_request_shape(link, properties.window);
     x11_link_read(link, properties.reads, READ_COUNT);
-    xv->shaped = x11_link_is_shaped(link, properties.window);
+    xv->shaped = x11_link_collect_shape(link, &shape);
     apply_motif(xv, properties.motif, reads[READ_MOTIF].count);
     apply_old_strut(xv, properties.sides, reads[READ_STRUT].count);
     apply_remote_host(xv, properties.machine);
@@ -64,16 +61,27 @@ void xwayland_view_read_properties(xwayland_view *xv)
 
 void xwayland_view_read_motif(xwayland_view *xv)
 {
-    xwayland_shell *shell = xv->server->xwayland;
+    x11_link *link = &xv->server->xwayland->link;
     uint32_t motif[X11_MOTIF_HINT_WORDS];
-    x11_read read = {{0}, X11_READ_CARDINALS, motif, 0, 0};
+    x11_property property =
+        property_of(xv->xsurface->window_id, x11_link_atom(link, ATOM_MOTIF_WM_HINTS));
+    x11_read read = cardinals(property, motif, X11_MOTIF_HINT_WORDS);
+    x11_link_read(link, &read, 1);
+    apply_motif(xv, motif, read.count);
+}
+
+void xwayland_view_read_old_strut(xwayland_view *xv)
+{
+    xwayland_shell *shell = xv->server->xwayland;
+    uint32_t sides[OLD_STRUT_SIDES];
+    x11_read read = {{0}, X11_READ_CARDINALS, sides, 0, 0};
     if (shell != NULL) {
         x11_property property = property_of(xv->xsurface->window_id,
-                                             x11_link_atom(&shell->link, ATOM_MOTIF_WM_HINTS));
-        read = cardinals(property, motif, X11_MOTIF_HINT_WORDS);
+                                             x11_link_atom(&shell->link, ATOM_NET_WM_STRUT));
+        read = cardinals(property, sides, OLD_STRUT_SIDES);
         x11_link_read(&shell->link, &read, 1);
     }
-    apply_motif(xv, motif, read.count);
+    apply_old_strut(xv, sides, read.count);
 }
 
 char *xwayland_view_remote_title(const xwayland_view *xv)
@@ -129,7 +137,7 @@ static void apply_motif(xwayland_view *xv, const uint32_t *hints, uint32_t count
 
 static void apply_old_strut(xwayland_view *xv, const uint32_t *sides, uint32_t count)
 {
-    xv->has_old_strut = xv->xsurface->strut_partial == NULL && count == OLD_STRUT_SIDES;
+    xv->has_old_strut = count == OLD_STRUT_SIDES;
     if (xv->has_old_strut) {
         xv->old_strut = (xcb_ewmh_wm_strut_partial_t){
             .left = sides[0], .right = sides[1], .top = sides[2], .bottom = sides[3],
