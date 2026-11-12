@@ -32,7 +32,7 @@ Here's a quick comparison:
 
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
-| Written in                           | Rust, on `Smithay` | C, on `wlroots`          |
+| Language                             | Rust, on `Smithay` | C, on `wlroots`          |
 | Dependencies built                   | 286                | 23                       |
 | Build time (release)                 | 138 s              | 5 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
@@ -150,8 +150,8 @@ Other
 
 ## Scaling
 
-Unlike X11, Wayland programs stay sharp when scaled. There's no font DPI
-setting, so everything is scaled with the Scale value in the Display settings:
+Wayland programs stay sharp when scaled. There's no font DPI setting, so
+everything is scaled with the Scale value in the Display settings:
 
 <img width="1083" height="740" alt="Display settings" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
 
@@ -162,6 +162,33 @@ X11 programs draw at full resolution and scale themselves, so they also stay
 sharp. `Xft.dpi` and the X11 DPI setting become 96 × the largest output scale,
 which GTK and Qt programs follow. On outputs with a lower scale, X11 programs
 are shrunk. Running programs may need a restart after the scale changes.
+
+## Issues and possible solutions
+
+* X11 programs that ignore the DPI (Java, old toolkits) look small when
+  scaled. Turning off `xwayland_zero_scaling` makes the compositor scale
+  them instead, but blurry:
+  ```sh
+  xfconf-query -c xfwm4 -p /general/xwayland_zero_scaling -n -t bool -s false
+  ```
+* Many programs that support Wayland still use `XWayland` by default, which
+  means more CPU and input lag, possible issues with multiple displays and no
+  HDR. Set these to make them use Wayland when they can:
+  ```sh
+  QT_QPA_PLATFORM="wayland;xcb"
+  GDK_BACKEND=wayland,x11
+  ELECTRON_OZONE_PLATFORM_HINT=auto
+  SDL_VIDEODRIVER=wayland,x11
+  ```
+* Old Chromium-based browsers and Electron programs may need the parameter
+  `--ozone-platform-hint=auto`.
+* Window positions come back only for Wayland programs that support
+  `xdg-session-management`; X11 programs never get them back.
+* Ctrl+Shift drag doesn't create symlinks (Wayland limitation).
+* No keyboard layout plugin in the panel (Xfce plugin is currently X11 only).
+* Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter).
+* Multimedia keys need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin).
+* Power manager shortcuts need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager).
 
 ## Window rules
 
@@ -197,31 +224,6 @@ Add a rule, then move the window:
 
 Remove it with `xfconf-query -c xfwm4 -p /window-rules/0 -r -R`. Open windows
 keep what the rule gave them (position, above, taskbar, focus).
-
-## Issues and possible solutions
-
-* X11 programs that ignore the DPI (Java, old toolkits) look small when
-  scaled. Turning off `xwayland_zero_scaling` (on by default) makes the
-  compositor scale them instead, but blurry:
-  ```sh
-  xfconf-query -c xfwm4 -p /general/xwayland_zero_scaling -n -t bool -s false
-  ```
-* Many programs that support Wayland still use `XWayland` by default, so they
-  look blurry when scaled. Set these to make them use Wayland when they can:
-  ```sh
-  QT_QPA_PLATFORM="wayland;xcb"
-  GDK_BACKEND=wayland,x11
-  ELECTRON_OZONE_PLATFORM_HINT=auto
-  SDL_VIDEODRIVER=wayland,x11
-  ```
-* Old Chromium-based browsers and Electron programs may need the parameter
-  `--ozone-platform-hint=auto`.
-* X11 programs don't get their window positions back.
-* Ctrl+Shift drag doesn't create symlinks (Wayland limitation).
-* No keyboard layout plugin in the panel (the Xfce plugin is X11 only).
-* Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter).
-* Multimedia keys need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin).
-* Power manager shortcuts need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager).
 
 ## License
 
