@@ -41,7 +41,7 @@ Here's a quick comparison:
 | Power with a fullscreen window       | 8.6 W              | 6.7 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.2 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
-| Unit tests                           | 49                 | 733                      |
+| Unit tests                           | 49                 | 795                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
