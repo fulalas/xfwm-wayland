@@ -8,13 +8,13 @@ It supports:
 
 * `xfwm4` themes, the Window Manager, Tweaks and Workspaces settings and
   Xfce keyboard shortcuts
-* Alt+Tab with window previews, the window menu, snapping, tiling, zoom,
-  shadows and opacity
 * HDR10, switched on and off without logging out, with a brightness slider
 * 10-bit color, variable refresh rate, and tearing (frames shown without
   waiting for the screen refresh, for lower input lag) in fullscreen
   programs that ask for it
 * Xfce display profiles, fractional scaling and multiple monitors
+* Alt+Tab with window previews, the window menu, snapping, tiling, zoom,
+  shadows and opacity
 * screenshots and screen sharing (through `xdg-desktop-portal-wlr`),
   touchscreens, drawing tablets and VR headsets
 * restoring window size and position for programs that support it
@@ -47,15 +47,17 @@ Here's a quick comparison:
 | Tearing (optional)                   | no                 | yes                      |
 | Busy cursor while apps start         | no                 | yes                      |
 | xfwm4 compositing settings           | some ignored       | all                      |
-| Renderers                            | OpenGL             | OpenGL, Vulkan, software |
+| Renderers                            | OpenGL             | OpenGL, Vulkan, CPU      |
 | Sharp X11 programs when scaling      | yes, uneven sizes  | yes                      |
 
 Power, CPU time and delay come from [wmbench](https://github.com/fulalas/wmbench) on an AMD Ryzen 7 7840HS at
-3840x2160, 60 Hz. Memory is the compositor's total resident memory at scale 1.
+3840x2160, 60 Hz. Memory is the compositor's total resident memory at scale 1,
+right after login.
 
 ## Build
 
-Needs `wlroots` 0.20+, wayland, xkbcommon, libinput, pixman, cairo, pango,
+Needs `wlroots` 0.20+, wayland, wayland-protocols, xkbcommon, libinput,
+libdrm, EGL, xcb (with ewmh, icccm and shape), pixman, cairo, pango,
 gdk-pixbuf, glib, json-glib, librsvg, `xfconf` and GTK 3.
 
     meson setup build
@@ -153,15 +155,13 @@ setting, so everything is scaled with the Scale value in the Display settings:
 
 <img width="1083" height="740" alt="Display settings" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
 
-Also, icons and mouse cursor may have different sizes compared to X11 with a
+Also, icons and the mouse cursor may have different sizes compared to X11 with a
 similar font DPI. That's expected.
 
-X11 programs draw at full resolution and scale themselves, so they stay
-sharp (`xwayland_zero_scaling`, like Hyprland's `xwayland:force_zero_scaling`).
-`Xft.dpi` and the X11 DPI setting become 96 × the largest output scale, which
-GTK and Qt programs follow. On outputs with a lower scale, X11 programs are
-shrunk. Running programs may need a restart after the option or the scale
-changes.
+X11 programs draw at full resolution and scale themselves, so they also stay
+sharp. `Xft.dpi` and the X11 DPI setting become 96 × the largest output scale,
+which GTK and Qt programs follow. On outputs with a lower scale, X11 programs
+are shrunk. Running programs may need a restart after the scale changes.
 
 ## Window rules
 
@@ -201,8 +201,8 @@ keep what the rule gave them (position, above, taskbar, focus).
 ## Issues and possible solutions
 
 * X11 programs that ignore the DPI (Java, old toolkits) look small when
-  scaled. Turning off `xwayland_zero_scaling` makes the compositor scale them
-  instead, but blurry:
+  scaled. Turning off `xwayland_zero_scaling` (on by default) makes the
+  compositor scale them instead, but blurry:
   ```sh
   xfconf-query -c xfwm4 -p /general/xwayland_zero_scaling -n -t bool -s false
   ```
@@ -215,14 +215,13 @@ keep what the rule gave them (position, above, taskbar, focus).
   SDL_VIDEODRIVER=wayland,x11
   ```
 * Old Chromium-based browsers and Electron programs may need the parameter
-  `--ozone-platform-hint=auto`
-* Window positions are restored only for Wayland programs that support the
-  `xdg-session-management` protocol; X11 programs don't get them back
-* Ctrl+Shift drag doesn't create symlinks (Wayland limitation)
-* No keyboard layout plugin in the panel (Xfce plugin is X11 only)
-* Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter)
-* Multimedia keys need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin)
-* Power manager shortcuts need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager)
+  `--ozone-platform-hint=auto`.
+* X11 programs don't get their window positions back.
+* Ctrl+Shift drag doesn't create symlinks (Wayland limitation).
+* No keyboard layout plugin in the panel (the Xfce plugin is X11 only).
+* Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter).
+* Multimedia keys need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin).
+* Power manager shortcuts need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager).
 
 ## License
 
