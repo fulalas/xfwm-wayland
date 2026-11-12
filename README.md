@@ -192,38 +192,19 @@ are shrunk. Running programs may need a restart after the scale changes.
 
 ## Window rules
 
-Window rules are kept in the `xfwm4` channel under `/window-rules/<n>/`,
-where `<n>` is a number. They apply when a window opens, and again to open
-windows whenever a rule changes, so a script can move a window by editing its
-rule. When several rules match, the higher number wins for each property.
+Rules live in the `xfwm4` channel under `/window-rules/<n>/` and apply when a
+window opens or a rule changes. Higher `<n>` wins. A rule needs `title` or
+`app_id` (X11: class from `xprop WM_CLASS`), matched `exact` (default) or by
+`glob` with `match`.
 
-| Property       | Type   | Value                                                       |
-|----------------|--------|-------------------------------------------------------------|
-| `title`        | string | window title                                                |
-| `app_id`       | string | Wayland app id, or X11 class (second value of `xprop WM_CLASS`) |
-| `match`        | string | `exact` (default) or `glob` (`*`, `?`, `[...]`)             |
-| `position`     | string | `top-left`, `top`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom`, `bottom-right` |
-| `margin`       | int    | gap to the screen edges, in pixels at scale 1               |
-| `output`       | string | output name, e.g. `DP-1` (see `wlr-randr`)                  |
-| `workspace`    | int    | workspace number, from 1                                    |
-| `above`        | bool   | keep above other windows                                    |
-| `skip_taskbar` | bool   | hide from the taskbar                                       |
-| `no_focus`     | bool   | never take the keyboard focus                               |
-
-A rule needs a `title` or an `app_id`. `position` places the window in the
-work area (screen minus panels) of its output and keeps its size. Maximized
-and fullscreen windows keep their place. Rules don't run again when a window
-changes its title.
-
-Add a rule, then move the window:
+Properties: `position` (`top-left` … `bottom-right`, `center`), `margin` (px),
+`output` (e.g. `DP-1`), `workspace` (from 1), `above`, `skip_taskbar`,
+`no_focus` (bools).
 
     xfconf-query -c xfwm4 -p /window-rules/0/app_id -n -t string -s org.xfce.mousepad
-    xfconf-query -c xfwm4 -p /window-rules/0/position -n -t string -s bottom-right
-    xfconf-query -c xfwm4 -p /window-rules/0/margin -n -t int -s 10
-    xfconf-query -c xfwm4 -p /window-rules/0/position -s top-left
+    xfconf-query -c xfwm4 -p /window-rules/0/position -n -t string -s top-left
 
-Remove it with `xfconf-query -c xfwm4 -p /window-rules/0 -r -R`. Open windows
-keep what the rule gave them (position, above, taskbar, focus).
+Remove with `xfconf-query -c xfwm4 -p /window-rules/0 -r -R`.
 
 ## License
 
