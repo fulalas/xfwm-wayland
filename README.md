@@ -34,13 +34,13 @@ than `xfwl4`, while delivering more features in a more reliable way:
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
 | Language                             | Rust, on `Smithay` | C, on `wlroots`          |
-| Dependencies built                   | 286                | 23                       |
-| Build time (release)                 | 138 s              | 5 s                      |
+| Dependencies built                   | 246                | 23                       |
+| Build time (release)                 | 70 s               | 5 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
 | Memory consumption                   | 158.5 MB           | 33.4 MB                  |
-| Average power                        | 9.6 W              | 8.9 W                    |
-| Power with a fullscreen window       | 8.6 W              | 6.7 W                    |
-| Compositor CPU time                  | 10.9 s             | 7.1 s                    |
+| Average power                        | 9.7 W              | 8.9 W                    |
+| Power with a fullscreen window       | 8.9 W              | 6.7 W                    |
+| Compositor CPU time                  | 11.1 s             | 7.1 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
 | Unit tests                           | 49                 | 832                      |
 | HDR                                  | no                 | yes                      |
