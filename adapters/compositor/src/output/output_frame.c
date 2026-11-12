@@ -76,10 +76,10 @@ static void output_render_scene(output *o)
     }
     struct wlr_output_state state;
     wlr_output_state_init(&state);
-    struct wlr_scene_output_state_options options = {.timer = output_repaint_timer(o)};
+    struct wlr_scene_output_state_options options = {0};
     output_tell_scene_color(o, &state);
     output_brightness_frame(o, &state);
-    if (wlr_scene_output_build_state(o->scene_output, &state, &options)) {
+    if (output_repaint_build_state(o, &state, &options)) {
         output_commit_state(o, &state);
     }
     wlr_output_state_finish(&state);

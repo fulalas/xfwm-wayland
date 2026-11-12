@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 #include <wlr/render/allocator.h>
+#include <wlr/render/egl.h>
+#include <wlr/render/gles2.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/util/log.h>
@@ -28,7 +30,9 @@ static struct wlr_renderer *create_renderer(compositor *server, renderer_kind ki
 static bool replace_renderer(compositor *server, renderer_kind kind);
 static bool swap_in(compositor *server, const render_pair *pair, renderer_kind kind);
 static bool use_pair(compositor *server, const render_pair *pair, renderer_kind kind);
+static void adopt_pair(compositor *server, const render_pair *pair, renderer_kind kind);
 static void destroy_pair(const render_pair *pair);
+static void keep_context_current(struct wlr_renderer *renderer);
 static void redraw_everything(compositor *server);
 static void watch_lost(compositor *server);
 static void handle_lost(struct wl_listener *listener, void *data);
@@ -46,9 +50,8 @@ bool renderer_create_initial(compositor *c)
         kind = RENDERER_KIND_DEFAULT;
         create_pair(c, kind, &pair);
     }
-    c->renderer = pair.renderer;
-    c->allocator = pair.allocator;
-    c->render.current = kind;
+    adopt_pair(c, &pair, kind);
+    keep_context_current(c->renderer);
     watch_lost(c);
     return pair.allocator != NULL;
 }
@@ -155,6 +158,7 @@ static bool replace_renderer(compositor *c, renderer_kind kind)
     render_pair pair = {0};
     if (!create_pair(c, kind, &pair)) {
         wlr_log(WLR_ERROR, "cannot start the %s renderer", kind_name(kind));
+        keep_context_current(c->renderer);
         return false;
     }
     return swap_in(c, &pair, kind);
@@ -171,6 +175,7 @@ static bool swap_in(compositor *c, const render_pair *pair, renderer_kind kind)
         use_pair(c, &old, old_kind);
     }
     destroy_pair(ok ? &old : pair);
+    keep_context_current(c->renderer);
     watch_lost(c);
     protocols_create_color(c);
     redraw_everything(c);
@@ -179,11 +184,28 @@ static bool swap_in(compositor *c, const render_pair *pair, renderer_kind kind)
 
 static bool use_pair(compositor *c, const render_pair *pair, renderer_kind kind)
 {
+    adopt_pair(c, pair, kind);
+    wlr_compositor_set_renderer(c->globals.compositor, pair->renderer);
+    return outputs_renderer_changed(c->outputs);
+}
+
+static void adopt_pair(compositor *c, const render_pair *pair, renderer_kind kind)
+{
     c->renderer = pair->renderer;
     c->allocator = pair->allocator;
     c->render.current = kind;
-    wlr_compositor_set_renderer(c->globals.compositor, pair->renderer);
-    return outputs_renderer_changed(c->outputs);
+}
+
+static void keep_context_current(struct wlr_renderer *renderer)
+{
+    if (renderer == NULL || !wlr_renderer_is_gles2(renderer)) {
+        return;
+    }
+    struct wlr_egl *egl = wlr_gles2_renderer_get_egl(renderer);
+    if (!eglMakeCurrent(wlr_egl_get_display(egl), EGL_NO_SURFACE, EGL_NO_SURFACE,
+                        wlr_egl_get_context(egl))) {
+        wlr_log(WLR_ERROR, "cannot keep the OpenGL context current");
+    }
 }
 
 static void destroy_pair(const render_pair *pair)

@@ -18,7 +18,7 @@ struct helper_client {
     helper_session *session;
     guint restart_id;
     guint idle_id;
-    unsigned idle_stop_ms;
+    gint64 first_run_end_us;
     unsigned restart_delay_ms;
 };
 
@@ -26,6 +26,7 @@ static void spawn(helper_client *client);
 static void schedule_restart(helper_client *client);
 static gboolean on_restart(void *data);
 static void stay_awake(helper_client *client);
+static unsigned idle_stop_ms(helper_client *client);
 static void cancel_idle(helper_client *client);
 static void drop_session(helper_client *client);
 static gboolean on_idle(void *data);
@@ -38,7 +39,7 @@ helper_client *helper_client_create(const helper_events *events)
 
     client->events = *events;
     client->restart_delay_ms = RESTART_DELAY_MIN_MS;
-    client->idle_stop_ms = FIRST_IDLE_STOP_MS;
+    client->first_run_end_us = g_get_monotonic_time() + (gint64) FIRST_IDLE_STOP_MS * 1000;
     return client;
 }
 
@@ -107,10 +108,19 @@ static gboolean on_restart(void *data)
     return G_SOURCE_REMOVE;
 }
 
+static unsigned idle_stop_ms(helper_client *client)
+{
+    gint64 now_us = g_get_monotonic_time();
+    gint64 left_ms;
+
+    left_ms = (client->first_run_end_us - now_us + 999) / 1000;
+    return (unsigned) MAX(left_ms, IDLE_STOP_MS);
+}
+
 static void stay_awake(helper_client *client)
 {
     cancel_idle(client);
-    client->idle_id = g_timeout_add(client->idle_stop_ms, on_idle, client);
+    client->idle_id = g_timeout_add(idle_stop_ms(client), on_idle, client);
 }
 
 static void cancel_idle(helper_client *client)
@@ -135,7 +145,6 @@ static gboolean on_idle(void *data)
     helper_client *client = data;
 
     client->idle_id = 0;
-    client->idle_stop_ms = IDLE_STOP_MS;
     drop_session(client);
     client->events.stopped(client->events.self);
     return G_SOURCE_REMOVE;

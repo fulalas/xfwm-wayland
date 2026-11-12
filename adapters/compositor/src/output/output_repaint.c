@@ -1,5 +1,6 @@
 #include "output_repaint.h"
 
+#include <wlr/render/swapchain.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
@@ -13,6 +14,9 @@ static void collect_render_time(output_repaint *repaint);
 static int planned_delay(output *output);
 static int64_t render_budget(const output *output);
 static bool wants_auto(const output *output);
+static bool gpu_timed(const output *output);
+static bool drew_frame(const output *output, const struct wlr_output_state *state,
+                       const struct wlr_scene_output_state_options *options);
 static void drop_render_timer(output_repaint *repaint);
 
 bool output_repaint_init(output *o)
@@ -46,11 +50,6 @@ void output_repaint_frame(output *o)
     output_send_frame_done(o);
 }
 
-struct wlr_scene_timer *output_repaint_timer(output *o)
-{
-    return wants_auto(o) ? &o->repaint.render_timer : NULL;
-}
-
 bool output_repaint_renderer_can_time(struct wlr_renderer *renderer)
 {
     struct wlr_render_timer *probe = wlr_render_timer_create(renderer);
@@ -65,6 +64,20 @@ void output_repaint_reset_timing(output *o)
 {
     drop_render_timer(&o->repaint);
     o->repaint.history = (render_history) {0};
+}
+
+bool output_repaint_build_state(output *o, struct wlr_output_state *state,
+                                struct wlr_scene_output_state_options *options)
+{
+    int64_t start_ns = clock_now_ns() - o->repaint.wake_lateness_ns;
+    options->timer = gpu_timed(o) ? &o->repaint.render_timer : NULL;
+    if (!wlr_scene_output_build_state(o->scene_output, state, options)) {
+        return false;
+    }
+    if (wants_auto(o) && !gpu_timed(o) && drew_frame(o, state, options)) {
+        render_history_add(&o->repaint.history, clock_now_ns() - start_ns);
+    }
+    return true;
 }
 
 static int handle_timer(void *data)
@@ -116,8 +129,21 @@ static int64_t render_budget(const output *o)
 
 static bool wants_auto(const output *o)
 {
-    return o->server->config.compositing.max_render_time.mode == WM_RENDER_TIME_AUTO &&
-           o->server->outputs->can_time_renders;
+    return o->server->config.compositing.max_render_time.mode == WM_RENDER_TIME_AUTO;
+}
+
+static bool gpu_timed(const output *o)
+{
+    return wants_auto(o) && o->server->outputs->can_time_renders;
+}
+
+static bool drew_frame(const output *o, const struct wlr_output_state *state,
+                       const struct wlr_scene_output_state_options *options)
+{
+    struct wlr_swapchain *swapchain =
+        options->swapchain != NULL ? options->swapchain : o->wlr_output->swapchain;
+    return (state->committed & WLR_OUTPUT_STATE_BUFFER) != 0 && swapchain != NULL &&
+           wlr_swapchain_has_buffer(swapchain, state->buffer);
 }
 
 static void drop_render_timer(output_repaint *r)
@@ -125,3 +151,4 @@ static void drop_render_timer(output_repaint *r)
     wlr_scene_timer_finish(&r->render_timer);
     r->render_timer = (struct wlr_scene_timer) {0};
 }
+

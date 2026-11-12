@@ -11,34 +11,40 @@
 #include "mapping_line.h"
 #include "page_runs.h"
 #include "util/clock.h"
+#include "wm/geometry.h"
 
 enum {
-    TICK_MS = 2000,
+    TICK_MS = 500,
+    BACKOFF_MIN_MS = 2000,
+    BACKOFF_MAX_MS = 64000,
     ROUTINE_INTERVAL_MS = 60000,
-    CALM_FRAMES_MAX = 10,
+    CALM_FRAMES_MAX = 2,
     GROWTH_BYTES = 16 * 1024 * 1024,
+    LEFTOVER_BYTES = 1024 * 1024,
     MAPS_LINE_MAX = 512,
     PAGEMAP_CHUNK = 512,
 };
 
 struct memory_trim {
     struct wl_event_source *timer;
-    bool armed;
+    int64_t due_ms;
     unsigned frames;
-    bool settling;
+    int backoff_ms;
     int64_t released_ms;
-    size_t file_pages_kept;
+    size_t pages_before;
+    size_t pages_after;
 };
 
-static void arm(memory_trim *trim);
+static void arm(memory_trim *trim, int delay_ms);
 static int handle_timer(void *data);
-static bool release_is_due(const memory_trim *trim);
+static void schedule(memory_trim *trim, bool calm, int64_t since, size_t pages);
+static bool above(size_t pages, size_t base, size_t bytes);
 static size_t resident_file_pages(void);
-static size_t page_size(void);
-static void release_pages(memory_trim *trim);
+static void release_pages(memory_trim *trim, int64_t now, int backoff_ms);
 static void release_mappings(int pagemap);
 static void release_file_pages(const mapping *mapping, int pagemap);
 static void release_runs(uintptr_t base, const uint64_t *entries, size_t count);
+static size_t page_size(void);
 
 memory_trim *memory_trim_create(struct wl_event_loop *loop)
 {
@@ -46,6 +52,7 @@ memory_trim *memory_trim_create(struct wl_event_loop *loop)
     if (trim == NULL) {
         return NULL;
     }
+    trim->backoff_ms = BACKOFF_MIN_MS;
     trim->released_ms = clock_now_ms() - ROUTINE_INTERVAL_MS;
     trim->timer = wl_event_loop_add_timer(loop, handle_timer, trim);
     if (trim->timer == NULL) {
@@ -67,45 +74,56 @@ void memory_trim_note_frame(memory_trim *trim)
         return;
     }
     trim->frames++;
-    if (!trim->armed) {
-        arm(trim);
+    if (trim->due_ms == 0 || trim->due_ms - clock_now_ms() > TICK_MS) {
+        arm(trim, TICK_MS);
     }
 }
 
-static void arm(memory_trim *trim)
+static void arm(memory_trim *trim, int delay_ms)
 {
-    trim->armed = wl_event_source_timer_update(trim->timer, TICK_MS) == 0;
+    bool armed = wl_event_source_timer_update(trim->timer, delay_ms) == 0;
+    trim->due_ms = armed ? clock_now_ms() + delay_ms : 0;
 }
 
 static int handle_timer(void *data)
 {
     memory_trim *trim = data;
     bool calm = trim->frames <= CALM_FRAMES_MAX;
-    trim->armed = false;
+    int64_t now = clock_now_ms();
+    int64_t since = now - trim->released_ms;
+    size_t pages = resident_file_pages();
+    trim->due_ms = 0;
     trim->frames = 0;
-    if (!calm) {
-        arm(trim);
-    } else if (trim->settling) {
-        trim->settling = false;
-        trim->file_pages_kept = resident_file_pages();
-    } else if (release_is_due(trim)) {
-        release_pages(trim);
-        arm(trim);
+    if (above(pages, trim->pages_before, GROWTH_BYTES)) {
+        release_pages(trim, now, BACKOFF_MIN_MS);
+    } else if (since >= trim->backoff_ms && above(pages, trim->pages_after, GROWTH_BYTES)) {
+        release_pages(trim, now, wm_min(trim->backoff_ms * 2, BACKOFF_MAX_MS));
+    } else if (calm && since >= ROUTINE_INTERVAL_MS &&
+               above(pages, trim->pages_after, LEFTOVER_BYTES)) {
+        release_pages(trim, now, BACKOFF_MIN_MS);
+    } else {
+        schedule(trim, calm, since, pages);
     }
     return 0;
 }
 
-static bool release_is_due(const memory_trim *trim)
+static void schedule(memory_trim *trim, bool calm, int64_t since, size_t pages)
 {
-    if (clock_now_ms() - trim->released_ms >= ROUTINE_INTERVAL_MS) {
-        return true;
+    if (since >= trim->backoff_ms) {
+        trim->backoff_ms = BACKOFF_MIN_MS;
     }
-    return resident_file_pages() >= trim->file_pages_kept + GROWTH_BYTES / page_size();
+    if (!calm) {
+        arm(trim, TICK_MS);
+    } else if (above(pages, trim->pages_after, GROWTH_BYTES)) {
+        arm(trim, wm_max((int) (trim->backoff_ms - since), TICK_MS));
+    } else if (above(pages, trim->pages_after, LEFTOVER_BYTES)) {
+        arm(trim, wm_max((int) (ROUTINE_INTERVAL_MS - since), TICK_MS));
+    }
 }
 
-static size_t page_size(void)
+static bool above(size_t pages, size_t base, size_t bytes)
 {
-    return (size_t) sysconf(_SC_PAGESIZE);
+    return pages >= base + bytes / page_size();
 }
 
 static size_t resident_file_pages(void)
@@ -122,15 +140,17 @@ static size_t resident_file_pages(void)
     return pages;
 }
 
-static void release_pages(memory_trim *trim)
+static void release_pages(memory_trim *trim, int64_t now, int backoff_ms)
 {
     int pagemap = open("/proc/self/pagemap", O_RDONLY | O_CLOEXEC);
+    trim->pages_before = resident_file_pages();
     if (pagemap >= 0) {
         release_mappings(pagemap);
         close(pagemap);
     }
-    trim->settling = true;
-    trim->released_ms = clock_now_ms();
+    trim->pages_after = resident_file_pages();
+    trim->released_ms = now;
+    trim->backoff_ms = backoff_ms;
 }
 
 static void release_mappings(int pagemap)
@@ -175,4 +195,9 @@ static void release_runs(uintptr_t base, const uint64_t *entries, size_t count)
     while (page_runs_next(entries, count, &run)) {
         madvise((void *) (base + run.first * page), run.count * page, MADV_DONTNEED);
     }
+}
+
+static size_t page_size(void)
+{
+    return (size_t) sysconf(_SC_PAGESIZE);
 }

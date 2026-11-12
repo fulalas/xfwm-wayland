@@ -80,11 +80,10 @@ static bool render_frame(const zoom *z, output *o)
     wlr_output_state_init(&state);
     struct wlr_scene_output_state_options options = {
         .swapchain = o->zoom.swapchain,
-        .timer = output_repaint_timer(o),
     };
     output_tell_scene_color(o, &state);
     output_brightness_frame(o, &state);
-    bool ok = wlr_scene_output_build_state(o->scene_output, &state, &options);
+    bool ok = output_repaint_build_state(o, &state, &options);
     if (ok) {
         keep_source(o, &state);
         ok = compose(z, o, &state) && output_commit_state(o, &state);

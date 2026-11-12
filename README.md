@@ -36,7 +36,7 @@ Here's a quick comparison:
 | Dependencies built                   | 286                | 23                       |
 | Build time (release)                 | 138 s              | 4 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
-| Memory consumption                   | 158.5 MB           | 168.7 MB                 |
+| Memory consumption                   | 158.5 MB           | 33.4 MB                 |
 | Average power                        | 9.6 W              | 8.6 W                    |
 | Power with a fullscreen window       | 8.6 W              | 6.4 W                    |
 | Compositor CPU time                  | 10.9 s             | 7.0 s                    |
@@ -99,7 +99,7 @@ Screen
   for the refresh: lowest input lag, but may tear). Fullscreen programs that
   ask for tearing get it even with `auto`. `glx` and `xpresent` act as `auto`.
 * `max_render_time` (new): draws as late as possible before each refresh to
-  lower input lag. `auto` (default, OpenGL only) measures it, a number sets the
+  lower input lag. `auto` (default) measures it, a number sets the
   milliseconds, `off` draws right away.
 * `ten_bit_color` (new): 10-bit color, falling back to 8-bit.
 * **Enable HDR** (new): HDR10 on monitors that support it. Switches to Vulkan

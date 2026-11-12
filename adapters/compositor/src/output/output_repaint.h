@@ -6,13 +6,15 @@
 #include "output.h"
 
 struct wlr_renderer;
-struct wlr_scene_timer;
+struct wlr_output_state;
+struct wlr_scene_output_state_options;
 
 bool output_repaint_renderer_can_time(struct wlr_renderer *renderer);
 bool output_repaint_init(output *output);
 void output_repaint_finish(output *output);
 void output_repaint_frame(output *output);
-struct wlr_scene_timer *output_repaint_timer(output *output);
 void output_repaint_reset_timing(output *output);
+bool output_repaint_build_state(output *output, struct wlr_output_state *state,
+                                struct wlr_scene_output_state_options *options);
 
 #endif
