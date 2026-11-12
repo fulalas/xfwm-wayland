@@ -34,7 +34,7 @@ Here's a quick comparison:
 |--------------------------------------|--------------------|--------------------------|
 | Written in                           | Rust, on `Smithay` | C, on `wlroots`          |
 | Dependencies built                   | 286                | 23                       |
-| Build time (release)                 | 138 s              | 4 s                      |
+| Build time (release)                 | 138 s              | 5 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
 | Memory consumption                   | 158.5 MB           | 33.4 MB                  |
 | Average power                        | 9.6 W              | 8.9 W                    |
