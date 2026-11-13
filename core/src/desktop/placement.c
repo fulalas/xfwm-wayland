@@ -115,15 +115,17 @@ static bool is_centered_dialog(const wm_desktop *desktop, const wm_window *windo
     if (!window->has_position) {
         return window->parent == NULL;
     }
-    if (window->client.x == 0 && window->client.y == 0) {
+    wm_point requested = {window->client.x - window->gravity_offset.x,
+                          window->client.y - window->gravity_offset.y};
+    if (requested.x == 0 && requested.y == 0) {
         return true;
     }
     if (monitors_count(desktop) < 2) {
         return false;
     }
     wm_rect screen = monitors_screen_bounds(desktop);
-    int dx = abs(window->client.x - (screen.width - window->client.width) / 2);
-    int dy = abs(window->client.y - (screen.height - window->client.height) / 2);
+    int dx = abs(requested.x - (screen.width - window->client.width) / 2);
+    int dy = abs(requested.y - (screen.height - window->client.height) / 2);
     return dx < CENTERED_TOLERANCE && dy < CENTERED_TOLERANCE;
 }
 

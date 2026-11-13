@@ -38,7 +38,6 @@ struct wm_window {
     uint32_t capabilities;
     uint32_t states;
     uint32_t flags;
-    unsigned long serial;
     uint32_t mapped_ms;
     wm_rect client;
     wm_rect saved;
@@ -78,6 +77,7 @@ struct wm_window {
     bool opacity_locked;
     bool opaque;
     bool has_position;
+    wm_point gravity_offset;
     bool close_requested;
     bool title_measured;
     wm_size title_size;
@@ -90,7 +90,7 @@ struct wm_window {
     wm_window_view view;
 };
 
-wm_window *window_create(const wm_window_desc *desc, unsigned long serial);
+wm_window *window_create(const wm_window_desc *desc);
 void window_destroy(wm_window *window);
 void window_set_title(wm_window *window, const char *title);
 void window_set_app_id(wm_window *window, const char *app_id);

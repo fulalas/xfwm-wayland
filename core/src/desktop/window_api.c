@@ -1,4 +1,5 @@
 #include "desktop_state.h"
+#include "focus.h"
 #include "present.h"
 #include "size_hints.h"
 #include "stack.h"
@@ -55,6 +56,10 @@ void wm_window_set_parent(wm_desktop *desktop, wm_window *window, wm_window *par
         window->parent = parent;
         refresh_type(desktop, window);
         stack_place_above_parent(desktop, window);
+        if (parent != NULL && desktop->focus.focused == parent && transient_is_modal(window)
+            && window->visible) {
+            focus_set(desktop, window);
+        }
     }
     present_flush(desktop);
 }

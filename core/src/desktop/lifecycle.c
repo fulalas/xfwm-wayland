@@ -65,7 +65,7 @@ wm_window_view wm_window_current_view(const wm_window *window)
 
 static wm_window *attach(wm_desktop *desktop, const wm_window_desc *desc)
 {
-    wm_window *window = window_create(desc, desktop->next_serial++);
+    wm_window *window = window_create(desc);
     if (window == NULL) {
         return NULL;
     }

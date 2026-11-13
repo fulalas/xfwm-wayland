@@ -54,14 +54,20 @@ wm_window_desc xwayland_view_describe(const xwayland_view *xv)
     const struct wlr_xwayland_surface *xs = xv->xsurface;
     bool positioned = has_position(xs);
     wm_rect geometry = xwayland_shell_logical_rect(xv->server->xwayland, xs);
-    wm_point position =
-        positioned ? xwayland_view_initial_position(xv) : (wm_point){geometry.x, geometry.y};
+    wm_point position = {geometry.x, geometry.y};
+    wm_point offset = {0, 0};
+    if (positioned) {
+        wm_point requested = xwayland_view_requested_position(xv);
+        offset = xwayland_view_gravity_offset(xv);
+        position = (wm_point){requested.x + offset.x, requested.y + offset.y};
+    }
     return (wm_window_desc){
         .type = xwayland_view_type(xv),
         .capabilities = xwayland_view_capabilities(xv),
         .states = current_states(xs),
         .geometry = {position.x, position.y, geometry.width, geometry.height},
         .has_position = positioned,
+        .gravity_offset = offset,
         .size_hints = xwayland_view_size_hints(xv),
         .parent = xwayland_view_parent_window(xv),
         .title = xs->title,

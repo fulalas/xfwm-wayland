@@ -100,6 +100,7 @@ void xwayland_view_send_states(void *self, const wm_window_view *state);
 void xwayland_view_settle_if_current(xwayland_view *view);
 int xwayland_view_gravity(const xwayland_view *view);
 wm_rect xwayland_view_requested_rect(const xwayland_view *view, const x11_configure *request);
-wm_point xwayland_view_initial_position(const xwayland_view *view);
+wm_point xwayland_view_requested_position(const xwayland_view *view);
+wm_point xwayland_view_gravity_offset(const xwayland_view *view);
 
 #endif

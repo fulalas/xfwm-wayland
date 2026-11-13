@@ -16,13 +16,12 @@ static bool dimension_resizable(int min, int max);
 static bool window_has_all_flags(const wm_window *window, uint32_t flags);
 static bool window_has_all_states(const wm_window *window, uint32_t states);
 
-wm_window *window_create(const wm_window_desc *desc, unsigned long serial)
+wm_window *window_create(const wm_window_desc *desc)
 {
     wm_window *window = calloc(1, sizeof(*window));
     if (window == NULL) {
         return NULL;
     }
-    window->serial = serial;
     window->layer = WM_LAYER_NORMAL;
     window->dirty = true;
     copy_desc(window, desc);
@@ -45,6 +44,7 @@ static void copy_desc(wm_window *window, const wm_window_desc *desc)
     window->activation_allowed = desc->activation_allowed;
     window->opacity_locked = desc->opacity_locked;
     window->has_position = desc->has_position;
+    window->gravity_offset = desc->gravity_offset;
     window->has_icon = desc->has_icon;
 }
 

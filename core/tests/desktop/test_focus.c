@@ -253,6 +253,35 @@ static void test_modal_dialog_takes_focus_from_parent(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_modal_dialog_mapped_before_parent_takes_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc modal = fake_dialog_desc(2, NULL);
+    modal.states = WM_STATE_MODAL;
+    wm_window *dialog = wm_window_map(desktop, &modal);
+    wm_window *parent = fake_map(desktop, 1, small);
+    CHECK(world.focused == fake_handle(1));
+    wm_window_set_parent(desktop, dialog, parent);
+    CHECK(world.focused == fake_handle(2));
+    CHECK(fake_stack_index(&world, fake_handle(2)) > fake_stack_index(&world, fake_handle(1)));
+    wm_desktop_destroy(desktop);
+}
+
+static void test_plain_dialog_mapped_before_parent_leaves_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window_desc plain = fake_dialog_desc(2, NULL);
+    wm_window *dialog = wm_window_map(desktop, &plain);
+    wm_window *parent = fake_map(desktop, 1, small);
+    wm_window_set_parent(desktop, dialog, parent);
+    CHECK(world.focused == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_window_without_focus_capability_is_skipped(void)
 {
     fake_world world;
@@ -340,6 +369,10 @@ static const check_case CASES[] = {
     {"repick_keeps_focus_until_motion", test_repick_keeps_focus_until_motion},
     {"prevented_focus_stealing_marks_urgent", test_prevented_focus_stealing_marks_urgent},
     {"modal_dialog_takes_focus_from_parent", test_modal_dialog_takes_focus_from_parent},
+    {"modal_dialog_mapped_before_parent_takes_focus",
+     test_modal_dialog_mapped_before_parent_takes_focus},
+    {"plain_dialog_mapped_before_parent_leaves_focus",
+     test_plain_dialog_mapped_before_parent_leaves_focus},
     {"window_without_focus_capability_is_skipped",
      test_window_without_focus_capability_is_skipped},
     {"pager_activation_switches_workspace", test_pager_activation_switches_workspace},

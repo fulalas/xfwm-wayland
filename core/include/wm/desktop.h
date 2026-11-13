@@ -78,6 +78,7 @@ typedef struct wm_window_desc {
     uint32_t states;
     wm_rect geometry;
     bool has_position;
+    wm_point gravity_offset;
     wm_size_hints size_hints;
     wm_window *parent;
     const char *title;

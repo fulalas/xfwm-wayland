@@ -29,8 +29,7 @@ bool transient_is_modal(const wm_window *window)
 
 bool transient_is_modal_for(const wm_window *modal, const wm_window *parent)
 {
-    return transient_is_modal(modal) && modal->serial >= parent->serial
-           && transient_is_for(modal, parent);
+    return transient_is_modal(modal) && transient_is_for(modal, parent);
 }
 
 bool transient_same_application(const wm_window *a, const wm_window *b)

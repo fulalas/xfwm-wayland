@@ -21,6 +21,7 @@ static void handle_icon_changed(void *self);
 static void detach_surface(xwayland_view *view);
 static void map_any(xwayland_view *view);
 static void map_managed(xwayland_view *view);
+static void adopt_children(const xwayland_view *view);
 static void unmap_any(xwayland_view *view);
 static void release_queries_when_idle(const xwayland_view *view);
 static struct wlr_surface *impl_surface(void *self);
@@ -231,9 +232,23 @@ static void map_managed(xwayland_view *xv)
     }
     view_map(xv->view, &desc);
     free(remote_title);
+    adopt_children(xv);
     xwayland_view_fetch_icon(xv);
     if (xwayland_view_has_strut(xv)) {
         outputs_schedule_arrange(xv->server->outputs);
+    }
+}
+
+static void adopt_children(const xwayland_view *xv)
+{
+    struct wlr_xwayland_surface *child;
+    wl_list_for_each(child, &xv->xsurface->children, parent_link) {
+        xwayland_view *child_view = child->data;
+        wm_window *window = child_view != NULL ? xwayland_view_window(child_view) : NULL;
+        if (window != NULL) {
+            wm_window *parent = xwayland_view_parent_window(child_view);
+            wm_window_set_parent(xv->server->desktop, window, parent);
+        }
     }
 }
 

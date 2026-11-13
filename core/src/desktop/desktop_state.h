@@ -26,7 +26,6 @@ struct wm_desktop {
     keybindings keys;
     window_list stack;
     window_list mru;
-    unsigned long next_serial;
     focus_state focus;
     workspace_state workspaces;
     timer_set timers;

@@ -54,6 +54,20 @@ static void test_transient_centered_on_parent(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_dialog_asking_for_origin_is_centered(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_window_desc desc = fake_desc_at(1, (wm_rect) {4, 20, 200, 100});
+    desc.type = WM_TYPE_DIALOG;
+    desc.gravity_offset = (wm_point) {4, 20};
+    wm_window *dialog = wm_window_map(desktop, &desc);
+    CHECK_RECT_EQ(((wm_rect) {860, 490, 200, 100}), fake_client_of(dialog));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_given_position_is_kept_visible(void)
 {
     fake_world world;
@@ -259,6 +273,7 @@ static const check_case CASES[] = {
     {"mouse_placement", test_mouse_placement},
     {"smart_placement_avoids_overlap", test_smart_placement_avoids_overlap},
     {"transient_centered_on_parent", test_transient_centered_on_parent},
+    {"dialog_asking_for_origin_is_centered", test_dialog_asking_for_origin_is_centered},
     {"given_position_is_kept_visible", test_given_position_is_kept_visible},
     {"large_window_is_auto_maximized", test_large_window_is_auto_maximized},
     {"margins_reduce_work_area", test_margins_reduce_work_area},
