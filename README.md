@@ -37,10 +37,10 @@ than `xfwl4`, while delivering more features in a more reliable way:
 | Dependencies built                   | 246                | 23                       |
 | Build time (release)                 | 70 s               | 5 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
-| Memory consumption                   | 158.5 MB           | 33.4 MB                  |
+| Memory consumption                   | 196.2 MB           | 33.4 MB                  |
 | Average power                        | 9.7 W              | 8.9 W                    |
-| Power with a fullscreen window       | 8.9 W              | 6.7 W                    |
-| Compositor CPU time                  | 11.1 s             | 7.1 s                    |
+| Power with a fullscreen window       | 9.0 W              | 6.7 W                    |
+| Compositor CPU time                  | 11.0 s             | 7.1 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
 | Unit tests                           | 49                 | 832                      |
 | HDR                                  | no                 | yes                      |
