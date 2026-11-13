@@ -8,3 +8,7 @@ executable(
   install: true,
   install_dir: get_option('libexecdir'),
 )
+
+if get_option('setcap')
+  meson.add_install_script(find_program('sh'), files('setcap.sh'), realtime_helper_install_path)
+endif

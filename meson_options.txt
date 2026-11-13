@@ -1,0 +1,2 @@
+option('setcap', type: 'boolean', value: true,
+       description: 'Give xfwm-wayland-realtime cap_sys_nice when installing (needs root)')

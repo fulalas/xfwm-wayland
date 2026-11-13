@@ -143,8 +143,8 @@ Windows
 Other
 
 * `xfwm-wayland-realtime` gives the compositor realtime priority so the screen
-  keeps up under load. It needs `cap_sys_nice`: the package sets it; from
-  source, run `sudo setcap cap_sys_nice+ep /usr/local/libexec/xfwm-wayland-realtime`.
+  keeps up under load. It needs `cap_sys_nice`, which `ninja install` sets when
+  run as root (`-Dsetcap=false` skips it).
 * `--compositor on|off|auto` and `--vblank` override the settings until they
   change or the next login, like `xfwm4`. `--replace` is ignored.
 
