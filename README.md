@@ -39,8 +39,8 @@ than `xfwl4`, while delivering more features in a more reliable way:
 | Program size                         | 26.4 MB            | 0.7 MB                   |
 | Memory consumption                   | 196.2 MB           | 33.4 MB                  |
 | Average power                        | 9.7 W              | 8.9 W                    |
-| Power with a fullscreen window       | 9.0 W              | 6.7 W                    |
-| Compositor CPU time                  | 11.0 s             | 7.1 s                    |
+| Power with a fullscreen window       | 9.0 W              | 6.6 W                    |
+| Compositor CPU time                  | 11.0 s             | 6.7 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
 | Unit tests                           | 49                 | 832                      |
 | HDR                                  | no                 | yes                      |
@@ -94,6 +94,11 @@ Although it works with `xfwm4`, [xfwm4-gl](https://github.com/fulalas/xfwm4-gl) 
 
 Screen
 
+* **Enable HDR** (new): HDR10 on monitors that support it. Switches to Vulkan
+  or stays off if Vulkan can't drive the screens. Running programs may need
+  a restart.
+  **HDR brightness** (50% to 200%) scales everything. Night-light programs
+  override it while running.
 * **Use the GPU for compositing** applies at the next login. Compositing can't
   be fully off: turning it off only removes shadows, transparency, zoom and
   Alt+Tab previews.
@@ -104,11 +109,6 @@ Screen
   lower input lag. `auto` (default) measures it, a number sets the
   milliseconds, `off` draws right away.
 * `ten_bit_color` (new): 10-bit color, falling back to 8-bit.
-* **Enable HDR** (new): HDR10 on monitors that support it. Switches to Vulkan
-  or stays off if Vulkan can't drive the screens. Running programs may need
-  a restart.
-  **HDR brightness** (50% to 200%) scales everything. Night-light programs
-  override it while running.
 * New monitors get a scale guessed from their size (1 to 3); TVs get 1.
 
 Input
@@ -155,13 +155,13 @@ everything is scaled with the Scale value in the Display settings:
 
 <img width="1083" height="740" alt="Display settings" src="https://github.com/user-attachments/assets/97011ed2-e015-44c0-b75c-b181512a3a59" />
 
-Also, icons and the mouse cursor may have different sizes compared to X11 with a
-similar font DPI. That's expected.
-
 X11 programs draw at full resolution and scale themselves, so they also stay
 sharp. `Xft.dpi` and the X11 DPI setting become 96 × the largest output scale,
 which GTK and Qt programs follow. On outputs with a lower scale, X11 programs
 are shrunk. Running programs may need a restart after the scale changes.
+
+Icons and the mouse cursor may have different sizes compared to X11 with a
+similar font DPI. That's expected.
 
 ## Issues and possible solutions
 
