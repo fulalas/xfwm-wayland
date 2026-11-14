@@ -57,13 +57,19 @@ right after login.
 
 ## Build
 
-Needs `wlroots` 0.20+, wayland, wayland-protocols, xkbcommon, libinput,
-libdrm, EGL, xcb (with ewmh, icccm and shape), pixman, cairo, pango,
-gdk-pixbuf, glib, json-glib, librsvg, `xfconf` and GTK 3.
-
     meson setup build
     ninja -C build
     sudo ninja -C build install
+
+Needs:    
+- xfconf
+- wlroots
+- wayland
+- wayland-protocols
+- Xwayland
+- librsvg
+- json-glib
+- xcb-util-wm
 
 ## Usage
 
