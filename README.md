@@ -2,7 +2,7 @@
 
 A very fast and efficient Wayland compositor for Xfce built on `wlroots`
 that behaves like [xfwm4](https://gitlab.xfce.org/xfce/xfwm4): same themes, settings,
-shortcuts and window management. X11 programs run through `XWayland`.
+shortcuts and window management. X11 programs run through `Xwayland`.
 
 It supports:
 
@@ -57,7 +57,7 @@ right after login.
 
 ## Build
 
-    meson setup build
+    meson setup build --prefix=/usr
     ninja -C build
     sudo ninja -C build install
 
@@ -134,7 +134,7 @@ Input
   (if the file is not found, 10 minutes on AC or 5 on battery).
 * Programs keep the screen on through Wayland's idle inhibit or
   `org.freedesktop.ScreenSaver` (xfwm-wayland provides it when no screensaver
-  does). X11's own screensaver calls don't work through `XWayland`.
+  does). X11's own screensaver calls don't work through `Xwayland`.
 * X11 programs with global hotkeys (e.g. Audacious) still get those keys when
   a Wayland window has focus. Typed text isn't shared.
 
@@ -171,7 +171,7 @@ similar font DPI. That's expected.
 
 ## Issues and possible solutions
 
-* Many programs that support Wayland still use `XWayland` by default, which
+* Many programs that support Wayland still use `Xwayland` by default, which
   means more CPU and input lag, possible issues with multiple displays and no
   HDR. Set these to make them use Wayland when they can:
   ```sh
