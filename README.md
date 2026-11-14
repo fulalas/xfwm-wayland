@@ -61,6 +61,10 @@ right after login.
     ninja -C build
     sudo ninja -C build install
 
+Installing as root lets `xfwm-wayland-realtime` raise the compositor's
+priority, so the screen stays smooth when the system is busy. To skip
+this, add `-Dsetcap=false` to `meson setup`.
+
 Needs:    
 - xfconf
 - wlroots
