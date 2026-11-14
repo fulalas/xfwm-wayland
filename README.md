@@ -47,7 +47,7 @@ than `xfwl4`, while delivering more features in a more reliable way:
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
 | Busy cursor while apps start         | no                 | yes                      |
-| xfwm4 compositing settings           | some ignored       | all but one              |
+| xfwm4 compositing settings           | some               | all                      |
 | Renderers                            | OpenGL             | OpenGL, Vulkan, CPU      |
 | Sharp X11 programs when scaling      | yes, uneven sizes  | yes                      |
 
