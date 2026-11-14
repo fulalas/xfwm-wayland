@@ -24,6 +24,7 @@ static void run_tapped_modifier(wm_desktop *desktop, const wm_key_event *event);
 static wm_dispatch press_app_shortcut(wm_desktop *desktop, const wm_key_event *event);
 static void send_app_shortcut(wm_desktop *desktop, const wm_app_shortcut_event *event);
 static bool is_grab_only(wm_action action);
+static bool is_repeatable(wm_action action);
 static void run_action(wm_desktop *desktop, wm_action action);
 static bool is_window_action(wm_action action);
 static void run_focused(wm_desktop *desktop, wm_window *window, wm_action action);
@@ -45,6 +46,17 @@ static const window_action WINDOW_ACTIONS[] = {
     {WM_ACTION_LOWER_WINDOW, stack_lower},
     {WM_ACTION_RAISELOWER_WINDOW, window_ops_raise_or_lower},
     {WM_ACTION_POPUP_MENU, popup_menu},
+};
+
+static const wm_action REPEATABLE_ACTIONS[] = {
+    WM_ACTION_CYCLE_WINDOWS, WM_ACTION_CYCLE_REVERSE_WINDOWS,
+    WM_ACTION_SWITCH_WINDOW, WM_ACTION_SWITCH_APPLICATION,
+    WM_ACTION_NEXT_WORKSPACE, WM_ACTION_PREV_WORKSPACE,
+    WM_ACTION_LEFT_WORKSPACE, WM_ACTION_RIGHT_WORKSPACE,
+    WM_ACTION_UP_WORKSPACE, WM_ACTION_DOWN_WORKSPACE,
+    WM_ACTION_MOVE_NEXT_WORKSPACE, WM_ACTION_MOVE_PREV_WORKSPACE,
+    WM_ACTION_MOVE_LEFT_WORKSPACE, WM_ACTION_MOVE_RIGHT_WORKSPACE,
+    WM_ACTION_MOVE_UP_WORKSPACE, WM_ACTION_MOVE_DOWN_WORKSPACE,
 };
 
 static const struct {
@@ -125,6 +137,12 @@ wm_dispatch actions_handle_key(wm_desktop *desktop, const wm_key_event *event)
     return WM_CONSUMED;
 }
 
+bool actions_key_repeats(const wm_desktop *desktop, const wm_key_event *event)
+{
+    return keybindings_command_for(&desktop->keys, event) == NULL
+           && is_repeatable(keybindings_action_for(&desktop->keys, event));
+}
+
 void actions_cancel_tap(wm_desktop *desktop)
 {
     desktop->tapped_modifier = (wm_key_event) {0};
@@ -176,6 +194,16 @@ static bool is_grab_only(wm_action action)
 {
     return action == WM_ACTION_CANCEL || action == WM_ACTION_UP || action == WM_ACTION_DOWN
            || action == WM_ACTION_LEFT || action == WM_ACTION_RIGHT;
+}
+
+static bool is_repeatable(wm_action action)
+{
+    for (size_t i = 0; i < sizeof(REPEATABLE_ACTIONS) / sizeof(REPEATABLE_ACTIONS[0]); i++) {
+        if (REPEATABLE_ACTIONS[i] == action) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static void run_action(wm_desktop *desktop, wm_action action)

@@ -190,7 +190,22 @@ static void test_transient_menu_disables_layers_and_stick(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_held_menu_keys_do_not_repeat(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map(desktop, 1, small);
+    fake_key(desktop, FAKE_KEY_SPACE, WM_MOD_ALT);
+    CHECK_INT_EQ(WM_FORWARD, fake_key_repeat(desktop, FAKE_KEY_SPACE, WM_MOD_ALT));
+    CHECK_INT_EQ(WM_CONSUMED, fake_key_repeat(desktop, WM_KEYSYM_DOWN, 0));
+    CHECK_INT_EQ(WM_FORWARD, fake_key_repeat(desktop, WM_KEYSYM_ESCAPE, 0));
+    CHECK(world.menu_visible);
+    wm_desktop_destroy(desktop);
+}
+
 static const check_case CASES[] = {
+    {"held_menu_keys_do_not_repeat", test_held_menu_keys_do_not_repeat},
     {"popup_key_builds_menu", test_popup_key_builds_menu},
     {"letter_picks_its_item", test_letter_picks_its_item},
     {"keyboard_navigation_activates_above", test_keyboard_navigation_activates_above},

@@ -28,6 +28,34 @@ static void test_zoom_steps_in_and_out(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_held_workspace_key_repeats(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    uint32_t mods = WM_MOD_CTRL | WM_MOD_ALT;
+    fake_key(desktop, WM_KEYSYM_RIGHT, mods);
+    CHECK_INT_EQ(1, world.workspaces.current);
+    CHECK_INT_EQ(WM_CONSUMED, fake_key_repeat(desktop, WM_KEYSYM_RIGHT, mods));
+    CHECK_INT_EQ(2, world.workspaces.current);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_held_one_shot_keys_do_not_repeat(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    CHECK_INT_EQ(WM_FORWARD, fake_key_repeat(desktop, FAKE_KEY_F4, WM_MOD_ALT));
+    CHECK(world.closed == NULL);
+    CHECK_INT_EQ(WM_FORWARD, fake_key_repeat(desktop, FAKE_KEY_T, WM_MOD_CTRL | WM_MOD_ALT));
+    CHECK(world.spawned[0] == '\0');
+    CHECK_INT_EQ(WM_FORWARD, fake_key_repeat(desktop, FAKE_KEY_M, WM_MOD_SUPER));
+    CHECK(!wm_window_current_view(window).maximized);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_zoom_is_clamped(void)
 {
     fake_world world;
@@ -308,6 +336,8 @@ static void test_timer_is_scheduled_for_focus_delay(void)
 static const check_case CASES[] = {
     {"zoom_steps_in_and_out", test_zoom_steps_in_and_out},
     {"zoom_is_clamped", test_zoom_is_clamped},
+    {"held_workspace_key_repeats", test_held_workspace_key_repeats},
+    {"held_one_shot_keys_do_not_repeat", test_held_one_shot_keys_do_not_repeat},
     {"zoom_consumes_partial_scroll", test_zoom_consumes_partial_scroll},
     {"zoom_follows_tracked_pointer", test_zoom_follows_tracked_pointer},
     {"urgent_blink_stops_looking_active", test_urgent_blink_stops_looking_active},

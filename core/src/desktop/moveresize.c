@@ -130,6 +130,11 @@ wm_dispatch moveresize_key(wm_desktop *desktop, const wm_key_event *event)
     return WM_CONSUMED;
 }
 
+bool moveresize_key_repeats(const wm_desktop *desktop, const wm_key_event *event)
+{
+    return keybindings_direction_of(&desktop->keys, event->keysym) != DIRECTION_NONE;
+}
+
 void moveresize_window_gone(wm_desktop *desktop, wm_window *window)
 {
     move_session *session = &desktop->session;

@@ -3,7 +3,15 @@
 #include "desktop_state.h"
 #include "keybindings.h"
 
+typedef enum cycle_move {
+    CYCLE_MOVE_NONE,
+    CYCLE_MOVE_DIRECTION,
+    CYCLE_MOVE_NEXT,
+    CYCLE_MOVE_PREVIOUS,
+} cycle_move;
+
 static void move_by_key(wm_desktop *desktop, const wm_key_event *event);
+static cycle_move move_for_key(const wm_desktop *desktop, const wm_key_event *event);
 static bool is_reverse_key(const wm_desktop *desktop, const wm_key_event *event);
 static void move_selection(wm_desktop *desktop, move_direction direction);
 static void select_next(wm_desktop *desktop);
@@ -28,17 +36,36 @@ wm_dispatch cycle_key(wm_desktop *desktop, const wm_key_event *event)
 
 static void move_by_key(wm_desktop *desktop, const wm_key_event *event)
 {
-    move_direction direction = keybindings_direction_of(&desktop->keys, event->keysym);
-    if (direction != DIRECTION_NONE) {
-        move_selection(desktop, direction);
-        return;
+    switch (move_for_key(desktop, event)) {
+    case CYCLE_MOVE_DIRECTION:
+        move_selection(desktop, keybindings_direction_of(&desktop->keys, event->keysym));
+        break;
+    case CYCLE_MOVE_NEXT:
+        select_next(desktop);
+        break;
+    case CYCLE_MOVE_PREVIOUS:
+        select_previous(desktop);
+        break;
+    case CYCLE_MOVE_NONE:
+        break;
+    }
+}
+
+static cycle_move move_for_key(const wm_desktop *desktop, const wm_key_event *event)
+{
+    if (keybindings_direction_of(&desktop->keys, event->keysym) != DIRECTION_NONE) {
+        return CYCLE_MOVE_DIRECTION;
     }
     wm_action action = keybindings_action_for(&desktop->keys, event);
     if (action == WM_ACTION_CYCLE_REVERSE_WINDOWS || is_reverse_key(desktop, event)) {
-        select_previous(desktop);
-    } else if (action == WM_ACTION_CYCLE_WINDOWS) {
-        select_next(desktop);
+        return CYCLE_MOVE_PREVIOUS;
     }
+    return action == WM_ACTION_CYCLE_WINDOWS ? CYCLE_MOVE_NEXT : CYCLE_MOVE_NONE;
+}
+
+bool cycle_key_repeats(const wm_desktop *desktop, const wm_key_event *event)
+{
+    return move_for_key(desktop, event) != CYCLE_MOVE_NONE;
 }
 
 wm_dispatch cycle_key_release(wm_desktop *desktop, const wm_key_event *event)

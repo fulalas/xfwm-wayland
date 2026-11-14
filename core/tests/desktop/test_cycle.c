@@ -55,6 +55,19 @@ static void test_reverse_cycle_selects_last(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_held_tab_keeps_cycling(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = create_with_three(&world, &config);
+    fake_key(desktop, WM_KEYSYM_TAB, WM_MOD_ALT);
+    CHECK_INT_EQ(WM_CONSUMED, fake_key_repeat(desktop, WM_KEYSYM_TAB, WM_MOD_ALT));
+    CHECK_INT_EQ(2, world.cycle.selected);
+    fake_key_repeat(desktop, WM_KEYSYM_TAB, WM_MOD_ALT);
+    CHECK_INT_EQ(0, world.cycle.selected);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_cancel_keeps_focus(void)
 {
     fake_world world;
@@ -164,6 +177,7 @@ static void test_switcher_uses_primary_monitor(void)
 
 static const check_case CASES[] = {
     {"switcher_uses_primary_monitor", test_switcher_uses_primary_monitor},
+    {"held_tab_keeps_cycling", test_held_tab_keeps_cycling},
     {"cycle_lists_windows_in_focus_order", test_cycle_lists_windows_in_focus_order},
     {"releasing_modifier_activates_selection", test_releasing_modifier_activates_selection},
     {"reverse_cycle_selects_last", test_reverse_cycle_selects_last},

@@ -43,6 +43,11 @@ wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event)
     return WM_CONSUMED;
 }
 
+bool menu_key_repeats(const wm_desktop *desktop, const wm_key_event *event)
+{
+    return keybindings_direction_of(&desktop->keys, event->keysym) != DIRECTION_NONE;
+}
+
 static void cancel(wm_desktop *desktop)
 {
     if (desktop->menu.view.submenu_open) {

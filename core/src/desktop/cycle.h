@@ -32,6 +32,7 @@ void cycle_switch_window(wm_desktop *desktop);
 void cycle_switch_application(wm_desktop *desktop);
 
 wm_dispatch cycle_key(wm_desktop *desktop, const wm_key_event *event);
+bool cycle_key_repeats(const wm_desktop *desktop, const wm_key_event *event);
 wm_dispatch cycle_key_release(wm_desktop *desktop, const wm_key_event *event);
 void cycle_modifiers_changed(wm_desktop *desktop, uint32_t modifiers);
 wm_dispatch cycle_motion(wm_desktop *desktop, const wm_pointer_event *event);

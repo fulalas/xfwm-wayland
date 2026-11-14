@@ -7,6 +7,7 @@
 #include "present.h"
 
 static wm_dispatch dispatch_key(wm_desktop *desktop, const wm_key_event *event);
+static bool is_grabbed(const wm_desktop *desktop);
 
 wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event)
 {
@@ -17,13 +18,26 @@ wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event)
     return result;
 }
 
+bool wm_key_repeats(const wm_desktop *desktop, const wm_key_event *event)
+{
+    if (menu_is_active(desktop)) {
+        return menu_key_repeats(desktop, event);
+    }
+    if (cycle_is_active(desktop)) {
+        return cycle_key_repeats(desktop, event);
+    }
+    if (moveresize_is_active(desktop)) {
+        return moveresize_key_repeats(desktop, event);
+    }
+    return actions_key_repeats(desktop, event);
+}
+
 wm_dispatch wm_key_released(wm_desktop *desktop, const wm_key_event *event)
 {
     wm_dispatch result = actions_release_key(desktop, event);
-    bool grabbed = menu_is_active(desktop) || moveresize_is_active(desktop);
     if (result == WM_FORWARD && cycle_is_active(desktop)) {
         result = cycle_key_release(desktop, event);
-    } else if (result == WM_FORWARD && grabbed) {
+    } else if (result == WM_FORWARD && is_grabbed(desktop)) {
         result = WM_CONSUMED;
     }
     present_flush(desktop);
@@ -45,6 +59,11 @@ void wm_modifiers_changed(wm_desktop *desktop, uint32_t modifiers)
         cycle_modifiers_changed(desktop, modifiers);
     }
     present_flush(desktop);
+}
+
+static bool is_grabbed(const wm_desktop *desktop)
+{
+    return menu_is_active(desktop) || cycle_is_active(desktop) || moveresize_is_active(desktop);
 }
 
 static wm_dispatch dispatch_key(wm_desktop *desktop, const wm_key_event *event)

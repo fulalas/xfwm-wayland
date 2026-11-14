@@ -69,6 +69,12 @@ wm_dispatch fake_key(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers)
     return wm_key_pressed(desktop, &event);
 }
 
+wm_dispatch fake_key_repeat(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers)
+{
+    wm_key_event event = {keysym, modifiers, 0};
+    return wm_key_repeats(desktop, &event) ? wm_key_pressed(desktop, &event) : WM_FORWARD;
+}
+
 wm_dispatch fake_key_release(wm_desktop *desktop, uint32_t keysym, uint32_t modifiers)
 {
     wm_key_event event = {keysym, modifiers, 0};

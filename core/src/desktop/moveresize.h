@@ -49,6 +49,7 @@ bool moveresize_grabs_pointer(const wm_desktop *desktop);
 wm_dispatch moveresize_motion(wm_desktop *desktop, const wm_pointer_event *event);
 wm_dispatch moveresize_button(wm_desktop *desktop, const wm_button_event *event);
 wm_dispatch moveresize_key(wm_desktop *desktop, const wm_key_event *event);
+bool moveresize_key_repeats(const wm_desktop *desktop, const wm_key_event *event);
 void moveresize_window_gone(wm_desktop *desktop, wm_window *window);
 void moveresize_set_handle(wm_desktop *desktop, wm_part handle);
 void moveresize_move_pointer(wm_desktop *desktop, int dx, int dy);

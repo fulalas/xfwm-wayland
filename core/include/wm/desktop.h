@@ -227,6 +227,7 @@ bool wm_pointer_repick(wm_desktop *desktop, const wm_pointer_event *event, wm_di
 wm_dispatch wm_pointer_button(wm_desktop *desktop, const wm_button_event *event);
 wm_dispatch wm_pointer_axis(wm_desktop *desktop, const wm_axis_event *event);
 wm_dispatch wm_key_pressed(wm_desktop *desktop, const wm_key_event *event);
+bool wm_key_repeats(const wm_desktop *desktop, const wm_key_event *event);
 wm_dispatch wm_key_released(wm_desktop *desktop, const wm_key_event *event);
 bool wm_key_is_bound(const wm_desktop *desktop, const wm_key_event *event);
 void wm_modifiers_changed(wm_desktop *desktop, uint32_t modifiers);

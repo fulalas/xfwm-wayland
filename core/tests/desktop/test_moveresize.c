@@ -34,6 +34,20 @@ static void test_keyboard_move_and_cancel(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_held_move_key_only_repeats_arrows(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_key(desktop, FAKE_KEY_F7, WM_MOD_ALT);
+    CHECK_INT_EQ(WM_FORWARD, fake_key_repeat(desktop, FAKE_KEY_F7, WM_MOD_ALT));
+    CHECK(wm_window_current_view(window).moving);
+    CHECK_INT_EQ(WM_CONSUMED, fake_key_repeat(desktop, WM_KEYSYM_RIGHT, 0));
+    CHECK_INT_EQ(776, fake_client_of(window).x);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_keyboard_move_ends_on_return(void)
 {
     fake_world world;
@@ -387,6 +401,7 @@ static void test_minimize_ends_keyboard_move(void)
 
 static const check_case CASES[] = {
     {"keyboard_move_and_cancel", test_keyboard_move_and_cancel},
+    {"held_move_key_only_repeats_arrows", test_held_move_key_only_repeats_arrows},
     {"fullscreen_ends_drag", test_fullscreen_ends_drag},
     {"minimize_ends_keyboard_move", test_minimize_ends_keyboard_move},
     {"keyboard_move_ends_on_return", test_keyboard_move_ends_on_return},

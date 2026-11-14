@@ -30,6 +30,7 @@ void menu_build_submenu(const wm_desktop *desktop, wm_menu_label label, wm_menu_
 void menu_perform(wm_desktop *desktop, const menu_choice *choice);
 
 wm_dispatch menu_key(wm_desktop *desktop, const wm_key_event *event);
+bool menu_key_repeats(const wm_desktop *desktop, const wm_key_event *event);
 wm_dispatch menu_motion(wm_desktop *desktop, const wm_pointer_event *event);
 wm_dispatch menu_button(wm_desktop *desktop, const wm_button_event *event);
 void menu_show_mnemonics(wm_desktop *desktop);

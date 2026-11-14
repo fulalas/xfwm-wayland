@@ -9,6 +9,7 @@
 #include "input_mapping.h"
 #include "keymap_cache.h"
 #include "osd/osd.h"
+#include "util/clock.h"
 #include "util/listener.h"
 #include "seat_private.h"
 #include "xwayland/xwayland.h"
@@ -45,6 +46,9 @@ struct keyboards {
     keymap_cache *keymaps;
     bool numlock_pref;
     struct wl_list list;
+    struct wl_event_source *repeat;
+    keyboard *repeating;
+    uint32_t repeat_keycode;
 };
 
 static keyboard *keyboard_create(keyboards *owner, struct wlr_keyboard *wlr_keyboard);
@@ -55,12 +59,20 @@ static void lock_numlock(struct wlr_keyboard *keyboard);
 static void handle_key(struct wl_listener *listener, void *data);
 static void handle_modifiers(struct wl_listener *listener, void *data);
 static void handle_destroy(struct wl_listener *listener, void *data);
+static void start_repeat(keyboard *keyboard, uint32_t keycode, const key_chord *chord);
+static void stop_repeat(keyboards *keyboards);
+static int handle_repeat(void *data);
+static int repeat_interval_ms(const struct wlr_keyboard *keyboard);
+static bool key_repeats(const struct wlr_keyboard *keyboard, uint32_t keycode);
 static void report_modifiers(keyboards *keyboards);
 static uint32_t combined_modifiers(const keyboards *keyboards);
 static bool switch_vt(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
                       const key_chord *chord);
 static wm_dispatch dispatch_key(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
                                 const key_chord *chord);
+static wm_dispatch run_core_press(keyboard *keyboard, const key_chord *chord,
+                                  const wm_key_event *key);
+static uint32_t pressed_keysym(const keyboard *keyboard, uint32_t keycode);
 static bool core_receives_keys(const seat *seat);
 static uint32_t core_keysym(keyboard *keyboard, const struct wlr_keyboard_key_event *event,
                             const key_chord *chord);
@@ -92,6 +104,12 @@ keyboards *keyboards_create(seat *s)
         free(kbs);
         return NULL;
     }
+    kbs->repeat = wl_event_loop_add_timer(s->server->loop, handle_repeat, kbs);
+    if (kbs->repeat == NULL) {
+        keymap_cache_destroy(kbs->keymaps);
+        free(kbs);
+        return NULL;
+    }
     return kbs;
 }
 
@@ -102,6 +120,7 @@ void keyboards_destroy(keyboards *kbs)
     wl_list_for_each_safe(kb, tmp, &kbs->list, link) {
         keyboard_destroy(kb);
     }
+    wl_event_source_remove(kbs->repeat);
     keymap_cache_destroy(kbs->keymaps);
     free(kbs);
 }
@@ -186,6 +205,9 @@ static keyboard *keyboard_create(keyboards *owner, struct wlr_keyboard *wlr_keyb
 static void keyboard_destroy(keyboard *kb)
 {
     release_shared_keys(kb);
+    if (kb->owner->repeating == kb) {
+        stop_repeat(kb->owner);
+    }
     listener_disconnect(&kb->key);
     listener_disconnect(&kb->modifiers);
     listener_disconnect(&kb->destroy);
@@ -229,15 +251,23 @@ static void handle_key(struct wl_listener *listener, void *data)
     keyboard *kb = wl_container_of(listener, kb, key);
     const struct wlr_keyboard_key_event *event = data;
     seat_notify_activity(kb->owner->seat);
+    bool pressed = event->state == WL_KEYBOARD_KEY_STATE_PRESSED;
+    keyboards *kbs = kb->owner;
+    if (pressed || (kbs->repeating == kb && event->keycode == kbs->repeat_keycode)) {
+        stop_repeat(kbs);
+    }
     key_chord chord = chord_for(kb->wlr_keyboard, event->keycode);
     if (switch_vt(kb, event, &chord)) {
         return;
     }
     wm_dispatch result = dispatch_key(kb, event, &chord);
+    if (pressed && result == WM_CONSUMED) {
+        start_repeat(kb, event->keycode, &chord);
+    }
     if (result == WM_FORWARD) {
         forward_key(kb, event);
     }
-    if (result == WM_FORWARD || event->state != WL_KEYBOARD_KEY_STATE_PRESSED) {
+    if (result == WM_FORWARD || !pressed) {
         share_with_x11(kb, event, &chord);
     }
 }
@@ -247,6 +277,7 @@ static void handle_modifiers(struct wl_listener *listener, void *data)
     (void) data;
     keyboard *kb = wl_container_of(listener, kb, modifiers);
     seat *s = kb->owner->seat;
+    stop_repeat(kb->owner);
     wlr_seat_set_keyboard(s->wlr_seat, kb->wlr_keyboard);
     wlr_seat_keyboard_notify_modifiers(s->wlr_seat, &kb->wlr_keyboard->modifiers);
     share_modifiers_with_x11(kb);
@@ -260,6 +291,74 @@ static void handle_destroy(struct wl_listener *listener, void *data)
     keyboards *kbs = kb->owner;
     keyboard_destroy(kb);
     report_modifiers(kbs);
+}
+
+static void start_repeat(keyboard *kb, uint32_t keycode, const key_chord *chord)
+{
+    struct wlr_keyboard *wlr_keyboard = kb->wlr_keyboard;
+    if (repeat_interval_ms(wlr_keyboard) == 0 || !key_repeats(wlr_keyboard, keycode)) {
+        return;
+    }
+    wm_key_event key = {pressed_keysym(kb, keycode), chord->modifiers, 0};
+    if (!wm_key_repeats(kb->owner->seat->server->desktop, &key)) {
+        return;
+    }
+    keyboards *kbs = kb->owner;
+    kbs->repeating = kb;
+    kbs->repeat_keycode = keycode;
+    int delay = wlr_keyboard->repeat_info.delay;
+    wl_event_source_timer_update(kbs->repeat, delay > 0 ? delay : 1);
+}
+
+static void stop_repeat(keyboards *kbs)
+{
+    kbs->repeating = NULL;
+    wl_event_source_timer_update(kbs->repeat, 0);
+}
+
+static int handle_repeat(void *data)
+{
+    keyboards *kbs = data;
+    keyboard *kb = kbs->repeating;
+    if (kb == NULL) {
+        return 0;
+    }
+    uint32_t keycode = kbs->repeat_keycode;
+    seat *s = kbs->seat;
+    int interval = repeat_interval_ms(kb->wlr_keyboard);
+    if (interval == 0 || !core_receives_keys(s)) {
+        kbs->repeating = NULL;
+        return 0;
+    }
+    key_chord chord = chord_for(kb->wlr_keyboard, keycode);
+    wm_key_event key = {
+        .keysym = pressed_keysym(kb, keycode),
+        .modifiers = chord.modifiers,
+        .time_ms = (uint32_t) clock_now_ms(),
+    };
+    if (!wm_key_repeats(s->server->desktop, &key)
+        || run_core_press(kb, &chord, &key) != WM_CONSUMED) {
+        stop_repeat(kbs);
+        return 0;
+    }
+    wl_event_source_timer_update(kbs->repeat, interval);
+    return 0;
+}
+
+static int repeat_interval_ms(const struct wlr_keyboard *wlr_keyboard)
+{
+    int rate = wlr_keyboard->repeat_info.rate;
+    if (rate <= 0) {
+        return 0;
+    }
+    int interval = CLOCK_MS_PER_SECOND / rate;
+    return interval > 0 ? interval : 1;
+}
+
+static bool key_repeats(const struct wlr_keyboard *wlr_keyboard, uint32_t keycode)
+{
+    return wlr_keyboard->keymap != NULL
+           && xkb_keymap_key_repeats(wlr_keyboard->keymap, keycode + XKB_KEYCODE_OFFSET);
 }
 
 static void report_modifiers(keyboards *kbs)
@@ -313,18 +412,29 @@ static wm_dispatch dispatch_key(keyboard *kb, const struct wlr_keyboard_key_even
         wm_key_released(s->server->desktop, &key);
         return press_was_consumed ? WM_CONSUMED : WM_FORWARD;
     }
-    struct wlr_surface *focused = s->wlr_seat->keyboard_state.focused_surface;
     size_t consumed_count = kb->consumed.count;
     key_list_add(&kb->consumed, event->keycode);
+    wm_dispatch result = run_core_press(kb, chord, &key);
+    if (result != WM_CONSUMED) {
+        kb->consumed.count = consumed_count;
+    }
+    return result;
+}
+
+static wm_dispatch run_core_press(keyboard *kb, const key_chord *chord, const wm_key_event *key)
+{
+    seat *s = kb->owner->seat;
+    struct wlr_surface *focused = s->wlr_seat->keyboard_state.focused_surface;
+    size_t held_count = kb->consumed.count;
     if (chord->modifiers != 0) {
         hide_held_keys(kb);
     }
-    wm_dispatch result = wm_key_pressed(s->server->desktop, &key);
+    wm_dispatch result = wm_key_pressed(s->server->desktop, key);
     if (result != WM_CONSUMED) {
-        kb->consumed.count = consumed_count;
+        kb->consumed.count = held_count;
         return result;
     }
-    bool hid_keys = kb->consumed.count > consumed_count + 1;
+    bool hid_keys = kb->consumed.count > held_count;
     if (!hid_keys || s->wlr_seat->keyboard_state.focused_surface != focused) {
         return result;
     }
@@ -332,9 +442,14 @@ static wm_dispatch dispatch_key(keyboard *kb, const struct wlr_keyboard_key_even
         wlr_seat_set_keyboard(s->wlr_seat, kb->wlr_keyboard);
         seat_focus_reenter(s);
     } else {
-        kb->consumed.count = consumed_count + 1;
+        kb->consumed.count = held_count;
     }
     return result;
+}
+
+static uint32_t pressed_keysym(const keyboard *kb, uint32_t keycode)
+{
+    return keycode < KEY_CNT ? kb->pressed_keysyms[keycode] : XKB_KEY_NoSymbol;
 }
 
 static bool core_receives_keys(const seat *s)
@@ -349,15 +464,14 @@ static bool core_receives_keys(const seat *s)
 static uint32_t core_keysym(keyboard *kb, const struct wlr_keyboard_key_event *event,
                             const key_chord *chord)
 {
-    bool remembered = event->keycode < KEY_CNT;
     if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
         uint32_t keysym = bound_keysym(kb->owner->seat->server->desktop, chord);
-        if (remembered) {
+        if (event->keycode < KEY_CNT) {
             kb->pressed_keysyms[event->keycode] = keysym;
         }
         return keysym;
     }
-    uint32_t pressed = remembered ? kb->pressed_keysyms[event->keycode] : XKB_KEY_NoSymbol;
+    uint32_t pressed = pressed_keysym(kb, event->keycode);
     return pressed != XKB_KEY_NoSymbol ? pressed : input_mapping_keysym(chord->base_keysym);
 }
 
