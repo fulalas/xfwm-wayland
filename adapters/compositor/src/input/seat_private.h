@@ -94,6 +94,7 @@ pointer_input *pointer_input_create(seat *seat);
 void pointer_input_destroy(pointer_input *pointer);
 void pointer_input_motion(pointer_input *pointer, uint32_t time_ms);
 void pointer_input_repick(pointer_input *pointer, uint32_t time_ms);
+void pointer_input_forget_hit(pointer_input *pointer);
 void pointer_input_button(pointer_input *pointer, const button_input *input);
 void pointer_input_surface_gone(pointer_input *pointer, struct wlr_surface *surface);
 void pointer_input_release_device(pointer_input *pointer, const struct wlr_input_device *device,
@@ -118,6 +119,8 @@ void cursor_image_set_core_shape(cursor_image *image, wm_cursor_shape shape);
 void cursor_image_use_core(cursor_image *image);
 void cursor_image_use_client(cursor_image *image);
 void cursor_image_set_busy(cursor_image *image, bool busy);
+void cursor_image_drag_started(cursor_image *image);
+void cursor_image_show_drag_action(cursor_image *image, uint32_t action);
 struct xcursor_cache *cursor_image_xcursors(const cursor_image *image);
 
 touch_input *touch_input_create(seat *seat);
@@ -135,7 +138,7 @@ void constraints_destroy(constraints *constraints);
 motion_delta constraints_filter_motion(const constraints *constraints, motion_delta delta);
 selection *selection_create(seat *seat);
 void selection_destroy(selection *selection);
-void selection_move_icons(selection *selection);
+void selection_drag_moved(selection *selection);
 void selection_modifiers_changed(selection *selection, uint32_t modifiers);
 virtual_input *virtual_input_create(seat *seat);
 void virtual_input_destroy(virtual_input *virtual_input);

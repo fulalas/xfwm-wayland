@@ -1,4 +1,5 @@
 #include <string.h>
+#include <wayland-server-protocol.h>
 
 #include "check.h"
 #include "cursor/cursor_names.h"
@@ -33,6 +34,18 @@ static void test_every_shape_ends_with_default(void)
     }
 }
 
+static void test_drag_actions_end_with_default(void)
+{
+    for (uint32_t action = WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+         action <= WL_DATA_DEVICE_MANAGER_DND_ACTION_ASK; action++) {
+        CHECK(ends_with_default(cursor_names_for_drag_action(action)));
+    }
+    cursor_name_list copy = cursor_names_for_drag_action(WL_DATA_DEVICE_MANAGER_DND_ACTION_COPY);
+    cursor_name_list none = cursor_names_for_drag_action(WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE);
+    CHECK(strcmp("copy", copy.names[0]) == 0);
+    CHECK(strcmp("no-drop", none.names[0]) == 0);
+}
+
 static void test_unknown_shape_uses_default(void)
 {
     cursor_name_list list = cursor_names_for_shape((wm_cursor_shape) 99);
@@ -46,6 +59,7 @@ int main(void)
         {"move_falls_back_to_fleur", test_move_falls_back_to_fleur},
         {"every_shape_ends_with_default", test_every_shape_ends_with_default},
         {"unknown_shape_uses_default", test_unknown_shape_uses_default},
+        {"drag_actions_end_with_default", test_drag_actions_end_with_default},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

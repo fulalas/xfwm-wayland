@@ -10,7 +10,6 @@ compositor_pure_tests = {
   'shadow_layout': ['../src/decor/shadow_layout.c'],
   'zoom_math': ['../src/output/zoom_math.c'],
   'usable_area': ['../src/output/usable_area.c'],
-  'cursor_names': ['../src/cursor/cursor_names.c'],
   'cursor_owner': ['../src/cursor/cursor_owner.c'],
   'brightness_curve': ['../src/output/brightness_curve.c'],
   'color_plan': ['../src/output/color_plan.c'],
@@ -55,6 +54,16 @@ test(
     include_directories: compositor_test_inc,
     c_args: compositor_c_args,
     dependencies: [check_dep, wm_core_dep, wlroots_dep, xkbcommon_dep],
+  ),
+)
+
+test(
+  'compositor_cursor_names',
+  executable(
+    'test_compositor_cursor_names',
+    ['test_cursor_names.c', '../src/cursor/cursor_names.c'],
+    include_directories: compositor_test_inc,
+    dependencies: [check_dep, wm_core_dep, wayland_server_dep],
   ),
 )
 

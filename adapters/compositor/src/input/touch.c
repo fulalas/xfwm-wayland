@@ -143,7 +143,7 @@ static void handle_motion(struct wl_listener *listener, void *data)
         return;
     }
     point->position = to_layout(touch, event->touch, event->x, event->y);
-    selection_move_icons(touch->seat->selection);
+    selection_drag_moved(touch->seat->selection);
     if (point->node == NULL) {
         return;
     }

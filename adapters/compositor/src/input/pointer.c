@@ -122,7 +122,7 @@ void pointer_input_destroy(pointer_input *p)
 void pointer_input_motion(pointer_input *p, uint32_t time_ms)
 {
     seat *s = p->seat;
-    selection_move_icons(s->selection);
+    selection_drag_moved(s->selection);
     if (seat_input_route(s) == INPUT_ROUTE_LOCKED) {
         pointer_input_release_grab(p);
     }
@@ -142,6 +142,11 @@ void pointer_input_motion(pointer_input *p, uint32_t time_ms)
     p->last_hit = hit;
     p->has_last_hit = true;
     apply_hit(p, &hit, result, time_ms);
+}
+
+void pointer_input_forget_hit(pointer_input *p)
+{
+    p->has_last_hit = false;
 }
 
 void pointer_input_button(pointer_input *p, const button_input *input)

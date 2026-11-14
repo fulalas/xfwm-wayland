@@ -6,6 +6,7 @@
 #include <wlr/types/wlr_seat.h>
 
 #include "drag_actions.h"
+#include "util/clock.h"
 #include "util/listener.h"
 #include "render/scene_layers.h"
 #include "seat_private.h"
@@ -18,7 +19,14 @@ struct selection {
     struct wl_listener start_drag;
     struct wl_listener drag_drop;
     struct wl_listener drag_destroy;
+    struct wl_listener drag_focus;
     int32_t offered_actions;
+    struct wl_event_source *drag_cursor_tick;
+    int64_t drag_focus_ms;
+};
+
+enum {
+    DRAG_CURSOR_TICK_MS = 50,
 };
 
 static void handle_request_set_selection(struct wl_listener *listener, void *data);
@@ -27,6 +35,7 @@ static void handle_request_start_drag(struct wl_listener *listener, void *data);
 static void handle_start_drag(struct wl_listener *listener, void *data);
 static void handle_drag_drop(struct wl_listener *listener, void *data);
 static void handle_drag_destroy(struct wl_listener *listener, void *data);
+static void handle_drag_focus(struct wl_listener *listener, void *data);
 static void offer_actions(selection *selection, struct wlr_drag *drag, uint32_t button);
 static void keep_target_after_drop(struct wlr_drag *drag);
 static void refresh_offers(const struct wlr_drag *drag);
@@ -34,6 +43,9 @@ static void refresh_offer(struct wlr_data_offer *offer);
 static drag_choice choice_for(const struct wlr_data_offer *offer);
 static struct wlr_scene_tree *drag_tree(const selection *selection);
 static layout_point drag_position(const selection *selection);
+static void stop_drag_cursor(selection *selection);
+static void show_drag_cursor(selection *selection);
+static int handle_drag_cursor_tick(void *data);
 
 selection *selection_create(seat *s)
 {
@@ -42,6 +54,11 @@ selection *selection_create(seat *s)
         return NULL;
     }
     sel->seat = s;
+    sel->drag_cursor_tick = wl_event_loop_add_timer(s->server->loop, handle_drag_cursor_tick, sel);
+    if (sel->drag_cursor_tick == NULL) {
+        free(sel);
+        return NULL;
+    }
     struct wlr_seat *wlr_seat = s->wlr_seat;
     listener_connect(&sel->request_set_selection, &wlr_seat->events.request_set_selection,
                      handle_request_set_selection);
@@ -52,6 +69,7 @@ selection *selection_create(seat *s)
     listener_connect(&sel->start_drag, &wlr_seat->events.start_drag, handle_start_drag);
     wl_list_init(&sel->drag_drop.link);
     wl_list_init(&sel->drag_destroy.link);
+    wl_list_init(&sel->drag_focus.link);
     return sel;
 }
 
@@ -63,11 +81,14 @@ void selection_destroy(selection *sel)
     listener_disconnect(&sel->start_drag);
     listener_disconnect(&sel->drag_drop);
     listener_disconnect(&sel->drag_destroy);
+    listener_disconnect(&sel->drag_focus);
+    wl_event_source_remove(sel->drag_cursor_tick);
     free(sel);
 }
 
-void selection_move_icons(selection *sel)
+void selection_drag_moved(selection *sel)
 {
+    show_drag_cursor(sel);
     struct wlr_scene_tree *tree = drag_tree(sel);
     if (wl_list_empty(&tree->children)) {
         return;
@@ -75,6 +96,7 @@ void selection_move_icons(selection *sel)
     layout_point position = drag_position(sel);
     wlr_scene_node_set_position(&tree->node, (int) position.x, (int) position.y);
 }
+
 
 static void handle_request_set_selection(struct wl_listener *listener, void *data)
 {
@@ -100,6 +122,7 @@ void selection_modifiers_changed(selection *sel, uint32_t modifiers)
     if (drag->source->actions != actions) {
         drag->source->actions = actions;
         refresh_offers(drag);
+        show_drag_cursor(sel);
     }
 }
 
@@ -130,18 +153,26 @@ static void handle_start_drag(struct wl_listener *listener, void *data)
     struct wlr_drag *drag = data;
     listener_disconnect(&sel->drag_drop);
     listener_disconnect(&sel->drag_destroy);
+    listener_disconnect(&sel->drag_focus);
     listener_connect(&sel->drag_drop, &drag->events.drop, handle_drag_drop);
     listener_connect(&sel->drag_destroy, &drag->events.destroy, handle_drag_destroy);
+    listener_connect(&sel->drag_focus, &drag->events.focus, handle_drag_focus);
     if (drag->icon != NULL) {
         wlr_scene_drag_icon_create(drag_tree(sel), drag->icon);
     }
-    selection_move_icons(sel);
+    cursor_image_drag_started(sel->seat->image);
+    sel->drag_focus_ms = clock_now_ms();
+    if (drag->grab_type == WLR_DRAG_GRAB_KEYBOARD_POINTER) {
+        wl_event_source_timer_update(sel->drag_cursor_tick, DRAG_CURSOR_TICK_MS);
+    }
+    selection_drag_moved(sel);
 }
 
 static void handle_drag_drop(struct wl_listener *listener, void *data)
 {
-    (void) listener;
+    selection *sel = wl_container_of(listener, sel, drag_drop);
     const struct wlr_drag_drop_event *event = data;
+    stop_drag_cursor(sel);
     keep_target_after_drop(event->drag);
 }
 
@@ -151,6 +182,9 @@ static void handle_drag_destroy(struct wl_listener *listener, void *data)
     selection *sel = wl_container_of(listener, sel, drag_destroy);
     listener_disconnect(&sel->drag_drop);
     listener_disconnect(&sel->drag_destroy);
+    stop_drag_cursor(sel);
+    pointer_input_forget_hit(sel->seat->pointer);
+    seat_repick_pointer(sel->seat);
 }
 
 static void offer_actions(selection *sel, struct wlr_drag *drag, uint32_t button)
@@ -220,6 +254,47 @@ static drag_choice choice_for(const struct wlr_data_offer *offer)
         .preferred_action = offer->preferred_action,
         .source_actions = offer->source->actions,
     };
+}
+
+static void handle_drag_focus(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    selection *sel = wl_container_of(listener, sel, drag_focus);
+    sel->drag_focus_ms = clock_now_ms();
+    show_drag_cursor(sel);
+}
+
+static void stop_drag_cursor(selection *sel)
+{
+    listener_disconnect(&sel->drag_focus);
+    wl_event_source_timer_update(sel->drag_cursor_tick, 0);
+}
+
+static void show_drag_cursor(selection *sel)
+{
+    const struct wlr_drag *drag = sel->seat->wlr_seat->drag;
+    if (drag == NULL || drag->source == NULL
+        || drag->grab_type != WLR_DRAG_GRAB_KEYBOARD_POINTER) {
+        return;
+    }
+    bool accepted = drag->focus_client != NULL && drag->source->accepted;
+    uint32_t action = accepted ? drag->source->current_dnd_action
+                               : WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE;
+    bool target_answering = clock_now_ms() - sel->drag_focus_ms < DRAG_CURSOR_TICK_MS;
+    if (action == WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE && target_answering) {
+        return;
+    }
+    cursor_image_show_drag_action(sel->seat->image, action);
+}
+
+static int handle_drag_cursor_tick(void *data)
+{
+    selection *sel = data;
+    show_drag_cursor(sel);
+    if (sel->seat->wlr_seat->drag != NULL) {
+        wl_event_source_timer_update(sel->drag_cursor_tick, DRAG_CURSOR_TICK_MS);
+    }
+    return 0;
 }
 
 static struct wlr_scene_tree *drag_tree(const selection *sel)

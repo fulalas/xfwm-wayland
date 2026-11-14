@@ -18,6 +18,7 @@
 #include "seat_private.h"
 
 enum {
+    DRAG_ACTION_UNSET = -1,
     DEFAULT_CURSOR_SIZE = 24,
     SIZE_TEXT_MAX = 16,
 };
@@ -34,6 +35,8 @@ struct cursor_image {
     bool client_mode;
     bool busy;
     bool showing_busy;
+    bool drag_cursor_from_source;
+    int32_t drag_action;
     cursor_surface client;
     struct wl_listener client_surface_destroy;
     struct wl_listener request_set_cursor;
@@ -51,6 +54,8 @@ static void close_scalable(cursor_image *image);
 static void apply_current(cursor_image *image);
 static void apply_core_shape(cursor_image *image);
 static void apply_shape(cursor_image *image, wm_cursor_shape shape);
+static void show_names(cursor_image *image, cursor_name_list names);
+static bool shows_drag_action(const cursor_image *image);
 static void apply_client(cursor_image *image);
 static bool busy_over_client(const cursor_image *image);
 static void remember_surface(cursor_image *image, const cursor_surface *surface);
@@ -70,6 +75,7 @@ cursor_image *cursor_image_create(seat *s)
         return NULL;
     }
     image->seat = s;
+    image->drag_action = DRAG_ACTION_UNSET;
     image->sprite = cursor_sprite_create(s->cursor, s->server->loop);
     if (image->sprite == NULL) {
         free(image);
@@ -157,7 +163,7 @@ void cursor_image_set_busy(cursor_image *image, bool busy)
     if (image->busy != busy) {
         image->busy = busy;
         if (image->client_mode) {
-            apply_client(image);
+            apply_current(image);
         }
     }
 }
@@ -165,6 +171,20 @@ void cursor_image_set_busy(cursor_image *image, bool busy)
 void cursor_image_use_client(cursor_image *image)
 {
     image->client_mode = true;
+}
+
+void cursor_image_drag_started(cursor_image *image)
+{
+    image->drag_cursor_from_source = false;
+    image->drag_action = DRAG_ACTION_UNSET;
+}
+
+void cursor_image_show_drag_action(cursor_image *image, uint32_t action)
+{
+    if (!image->drag_cursor_from_source && image->drag_action != (int32_t) action) {
+        image->drag_action = (int32_t) action;
+        apply_current(image);
+    }
 }
 
 xcursor_cache *cursor_image_xcursors(const cursor_image *image)
@@ -243,7 +263,10 @@ static void close_scalable(cursor_image *image)
 
 static void apply_current(cursor_image *image)
 {
-    if (image->client_mode) {
+    if (shows_drag_action(image)) {
+        image->showing_busy = false;
+        show_names(image, cursor_names_for_drag_action((uint32_t) image->drag_action));
+    } else if (image->client_mode) {
         apply_client(image);
     } else if (!drag_active(image)) {
         apply_core_shape(image);
@@ -305,8 +328,12 @@ static void handle_client_surface_destroy(struct wl_listener *listener, void *da
 static void apply_shape(cursor_image *image, wm_cursor_shape shape)
 {
     image->showing_busy = shape == WM_CURSOR_BUSY;
+    show_names(image, cursor_names_for_shape(shape));
+}
+
+static void show_names(cursor_image *image, cursor_name_list names)
+{
     cursor_theme_view view = theme_view(image);
-    cursor_name_list names = cursor_names_for_shape(shape);
     for (int i = 0; i < CURSOR_NAME_CHOICES && names.names[i] != NULL; i++) {
         if (cursor_sprite_show(image->sprite, &view, names.names[i])) {
             return;
@@ -314,11 +341,18 @@ static void apply_shape(cursor_image *image, wm_cursor_shape shape)
     }
 }
 
+static bool shows_drag_action(const cursor_image *image)
+{
+    return drag_active(image) && !image->drag_cursor_from_source
+           && image->drag_action != DRAG_ACTION_UNSET;
+}
+
 static void handle_request_set_cursor(struct wl_listener *listener, void *data)
 {
     cursor_image *image = wl_container_of(listener, image, request_set_cursor);
     const struct wlr_seat_pointer_request_set_cursor_event *event = data;
     if (accepts_request(image, event->seat_client)) {
+        image->drag_cursor_from_source = drag_active(image);
         cursor_surface surface = {event->surface, event->hotspot_x, event->hotspot_y};
         cursor_image_set_surface(image, &surface);
     }
@@ -332,6 +366,7 @@ static void handle_request_set_shape(struct wl_listener *listener, void *data)
     bool accepted = tablet ? tablet_focus_owned_by(event->tablet_tool, event->seat_client)
                            : accepts_request(image, event->seat_client);
     if (accepted) {
+        image->drag_cursor_from_source = drag_active(image);
         image->client_mode = true;
         image->client_shape = wlr_cursor_shape_v1_name(event->shape);
         apply_client(image);

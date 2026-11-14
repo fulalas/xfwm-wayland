@@ -1,6 +1,8 @@
 #ifndef COMPOSITOR_CURSOR_NAMES_H
 #define COMPOSITOR_CURSOR_NAMES_H
 
+#include <stdint.h>
+
 #include "wm/views.h"
 
 enum {
@@ -12,5 +14,6 @@ typedef struct cursor_name_list {
 } cursor_name_list;
 
 cursor_name_list cursor_names_for_shape(wm_cursor_shape shape);
+cursor_name_list cursor_names_for_drag_action(uint32_t action);
 
 #endif
