@@ -68,8 +68,10 @@ void shadow_show(shadow *s, const shadow_image *image, const wm_rect *rect)
 void shadow_show_around(shadow *s, compositor *server, const wm_rect *frame)
 {
     const wm_compositing_config *config = &server->config.compositing;
-    wm_rect rect = wm_shadow_rect(frame, config);
+    wm_rect local = {0, 0, frame->width, frame->height};
+    wm_rect rect = wm_shadow_rect(&local, config);
     shadow_image image = shadow_cache_get(server->shadows);
+    wlr_scene_node_set_position(&s->tree->node, frame->x, frame->y);
     shadow_show(s, &image, &rect);
     shadow_set_opacity(s, (float) scene_opacity_from_percent(config->shadow_opacity_percent));
 }
