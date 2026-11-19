@@ -4,14 +4,21 @@
 
 #include "render/scene_buffers.h"
 #include "shadow.h"
+#include "util/node_owner.h"
 #include "wm/shadow.h"
 
 struct shadow {
     struct wlr_scene_tree *tree;
     struct wlr_scene_buffer *parts[SHADOW_PART_COUNT];
     struct wlr_buffer *image;
+    shadow_geometry placed_geometry;
+    wm_rect placed_rect;
 };
 
+static node_owner shadow_owner = {NODE_SHADOW, NULL};
+
+static bool placed_as(const shadow *shadow, const shadow_image *image, const wm_rect *rect);
+static void place(shadow *shadow, const shadow_image *image, const wm_rect *rect);
 static void use_image(shadow *shadow, struct wlr_buffer *image);
 static void place_part(struct wlr_scene_buffer *part, const shadow_piece *piece);
 
@@ -26,6 +33,7 @@ shadow *shadow_create(struct wlr_scene_tree *parent)
         free(s);
         return NULL;
     }
+    node_owner_attach(&s->tree->node, &shadow_owner);
     for (int i = 0; i < SHADOW_PART_COUNT; i++) {
         s->parts[i] = wlr_scene_buffer_create(s->tree, NULL);
         if (s->parts[i] != NULL) {
@@ -57,10 +65,9 @@ void shadow_show(shadow *s, const shadow_image *image, const wm_rect *rect)
         shadow_hide(s);
         return;
     }
-    use_image(s, image->buffer);
-    shadow_pieces pieces = shadow_layout_compute(rect, &image->geometry);
-    for (int i = 0; i < SHADOW_PART_COUNT; i++) {
-        place_part(s->parts[i], &pieces.pieces[i]);
+    if (!placed_as(s, image, rect)) {
+        wlr_scene_node_set_enabled(&s->tree->node, false);
+        place(s, image, rect);
     }
     wlr_scene_node_set_enabled(&s->tree->node, true);
 }
@@ -88,6 +95,25 @@ void shadow_set_opacity(shadow *s, float opacity)
             wlr_scene_buffer_set_opacity(s->parts[i], opacity);
         }
     }
+}
+
+static bool placed_as(const shadow *s, const shadow_image *image, const wm_rect *rect)
+{
+    const shadow_geometry *placed = &s->placed_geometry;
+    return s->image == image->buffer && wm_rect_equals(&s->placed_rect, rect) &&
+           wm_size_equals(placed->size, image->geometry.size) &&
+           placed->corner == image->geometry.corner;
+}
+
+static void place(shadow *s, const shadow_image *image, const wm_rect *rect)
+{
+    use_image(s, image->buffer);
+    shadow_pieces pieces = shadow_layout_compute(rect, &image->geometry);
+    for (int i = 0; i < SHADOW_PART_COUNT; i++) {
+        place_part(s->parts[i], &pieces.pieces[i]);
+    }
+    s->placed_geometry = image->geometry;
+    s->placed_rect = *rect;
 }
 
 static void use_image(shadow *s, struct wlr_buffer *image)

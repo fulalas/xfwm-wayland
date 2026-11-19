@@ -33,6 +33,7 @@ xcb_shape_dep = dependency('xcb-shape')
 libdrm_dep = dependency('libdrm')
 egl_dep = dependency('egl')
 compositor_m_dep = meson.get_compiler('c').find_library('m', required: false)
+compositor_dl_dep = meson.get_compiler('c').find_library('dl', required: false)
 
 display_hash_lib = static_library(
   'display_hash',
@@ -259,6 +260,7 @@ compositor_sources = files(
   'src/server/protocols_input.c',
   'src/server/protocols_security.c',
   'src/render/render_sync.c',
+  'src/server/egl_current.c',
   'src/server/renderer_switch.c',
   'src/render/repaint_timing.c',
   'src/util/resource.c',
@@ -383,6 +385,7 @@ compositor_lib = static_library(
     libdrm_dep,
     egl_dep,
     compositor_m_dep,
+    compositor_dl_dep,
   ],
 )
 
@@ -406,6 +409,7 @@ compositor_dep = declare_dependency(
     libdrm_dep,
     egl_dep,
     compositor_m_dep,
+    compositor_dl_dep,
   ],
 )
 

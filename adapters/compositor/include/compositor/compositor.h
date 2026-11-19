@@ -19,6 +19,8 @@ typedef struct compositor_listener {
     void (*x11_display_changed)(void *self);
 } compositor_listener;
 
+typedef void (*compositor_fd_ready)(void *data);
+
 typedef struct compositor_options {
     const compositor_painter *painter;
     const compositor_services *services;
@@ -47,8 +49,9 @@ void compositor_power_prefs_changed(compositor *compositor);
 void compositor_user_activity(compositor *compositor);
 void compositor_x11_settings_changed(compositor *compositor);
 
-int compositor_event_fd(compositor *compositor);
-void compositor_dispatch(compositor *compositor);
+bool compositor_watch_fd(compositor *compositor, int fd, compositor_fd_ready ready, void *data);
+void compositor_unwatch_fd(compositor *compositor);
+void compositor_dispatch(compositor *compositor, int timeout_ms);
 void compositor_flush(compositor *compositor);
 const char *compositor_socket_name(compositor *compositor);
 const char *compositor_x11_display(compositor *compositor);

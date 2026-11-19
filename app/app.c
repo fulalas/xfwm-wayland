@@ -4,6 +4,9 @@
 
 #include "app.h"
 
+static GMainContext *create_context(void);
+static void destroy_context(GMainContext *context);
+static void watch_signal(app *app, int signal_number);
 static bool create_adapters(app *app);
 static xfce_listener xfce_listener_for(app *app);
 static bool create_compositor(app *app);
@@ -33,7 +36,7 @@ app *app_create(const app_options *options)
     app->startup_command = g_strdup(options->startup_command);
     app->overrides = options->overrides;
     app->max_output_scale = 1.0;
-    app->loop = g_main_loop_new(NULL, FALSE);
+    app->context = create_context();
     if (!create_adapters(app) || !create_compositor(app) || !create_desktop(app)) {
         app_destroy(app);
         return NULL;
@@ -44,9 +47,8 @@ app *app_create(const app_options *options)
 
 void app_destroy(app *app)
 {
-    if (app->wayland_source) {
-        g_source_destroy(app->wayland_source);
-        g_source_unref(app->wayland_source);
+    if (app->glib) {
+        glib_bridge_destroy(app->glib);
     }
     if (app->compositor) {
         compositor_destroy(app->compositor);
@@ -58,7 +60,7 @@ void app_destroy(app *app)
     if (app->xfce) {
         xfce_environment_destroy(app->xfce);
     }
-    g_main_loop_unref(app->loop);
+    destroy_context(app->context);
     g_free(app->startup_command);
     free(app);
 }
@@ -69,10 +71,38 @@ int app_run(app *app)
         g_warning("Cannot start the Wayland compositor");
         return EXIT_FAILURE;
     }
-    app->wayland_source = app_wayland_source_new(app->compositor);
-    g_source_attach(app->wayland_source, NULL);
-    g_main_loop_run(app->loop);
+    app->glib = glib_bridge_create(app->compositor, app->context);
+    if (!app->glib) {
+        g_warning("Cannot watch the GLib main context");
+        return EXIT_FAILURE;
+    }
+    while (!app->quit) {
+        compositor_flush(app->compositor);
+        bool pending = glib_bridge_prepare(app->glib);
+        compositor_dispatch(app->compositor, pending ? 0 : -1);
+        glib_bridge_dispatch(app->glib);
+    }
     return xfce_environment_session_exit_code(app->xfce);
+}
+
+static GMainContext *create_context(void)
+{
+#if GLIB_CHECK_VERSION(2, 72, 0)
+    GMainContext *context = g_main_context_new_with_flags(G_MAIN_CONTEXT_FLAGS_OWNERLESS_POLLING);
+
+    g_main_context_push_thread_default(context);
+    return context;
+#else
+    return NULL;
+#endif
+}
+
+static void destroy_context(GMainContext *context)
+{
+    if (context) {
+        g_main_context_pop_thread_default(context);
+        g_main_context_unref(context);
+    }
 }
 
 static bool create_adapters(app *app)
@@ -150,9 +180,18 @@ static bool create_desktop(app *app)
 
 static void connect_signals(app *app)
 {
-    g_unix_signal_add(SIGINT, on_terminate_signal, app);
-    g_unix_signal_add(SIGTERM, on_terminate_signal, app);
+    watch_signal(app, SIGINT);
+    watch_signal(app, SIGTERM);
     signal(SIGPIPE, SIG_IGN);
+}
+
+static void watch_signal(app *app, int signal_number)
+{
+    GSource *source = g_unix_signal_source_new(signal_number);
+
+    g_source_set_callback(source, on_terminate_signal, app, NULL);
+    g_source_attach(source, app->context);
+    g_source_unref(source);
 }
 
 static void on_compositor_started(void *self)
@@ -175,7 +214,7 @@ static void on_quit_requested(void *self)
 {
     app *app = self;
 
-    g_main_loop_quit(app->loop);
+    app->quit = true;
 }
 
 static void on_theme_changed(void *self)
@@ -255,6 +294,6 @@ static gboolean on_terminate_signal(gpointer data)
 {
     app *app = data;
 
-    g_main_loop_quit(app->loop);
+    app->quit = true;
     return G_SOURCE_CONTINUE;
 }

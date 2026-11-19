@@ -133,6 +133,9 @@ struct compositor {
     struct wl_list views;
     view_signals view_events;
     struct wl_event_source *timer;
+    struct wl_event_source *watched_fd;
+    compositor_fd_ready fd_ready;
+    void *fd_ready_data;
     struct wl_listener backend_destroy;
     const char *socket;
     bool scanout_allowed;

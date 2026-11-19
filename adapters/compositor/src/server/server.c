@@ -37,6 +37,7 @@ static void destroy_renderer(compositor *server);
 static void apply_scanout(compositor *server);
 static void handle_backend_destroy(struct wl_listener *listener, void *data);
 static int handle_timer(void *data);
+static int handle_watched_fd(int fd, uint32_t mask, void *data);
 
 compositor *compositor_create(const compositor_options *options)
 {
@@ -142,14 +143,28 @@ void compositor_input_prefs_changed(compositor *c)
     }
 }
 
-int compositor_event_fd(compositor *c)
+bool compositor_watch_fd(compositor *c, int fd, compositor_fd_ready ready, void *data)
 {
-    return wl_event_loop_get_fd(c->loop);
+    if (c->watched_fd != NULL) {
+        return false;
+    }
+    c->fd_ready = ready;
+    c->fd_ready_data = data;
+    c->watched_fd = wl_event_loop_add_fd(c->loop, fd, WL_EVENT_READABLE, handle_watched_fd, c);
+    return c->watched_fd != NULL;
 }
 
-void compositor_dispatch(compositor *c)
+void compositor_unwatch_fd(compositor *c)
 {
-    wl_event_loop_dispatch(c->loop, 0);
+    if (c->watched_fd != NULL) {
+        wl_event_source_remove(c->watched_fd);
+        c->watched_fd = NULL;
+    }
+}
+
+void compositor_dispatch(compositor *c, int timeout_ms)
+{
+    wl_event_loop_dispatch(c->loop, timeout_ms);
 }
 
 void compositor_flush(compositor *c)
@@ -252,6 +267,7 @@ static void destroy_backend(compositor *c)
     if (c->timer != NULL) {
         wl_event_source_remove(c->timer);
     }
+    compositor_unwatch_fd(c);
     if (c->backend != NULL) {
         wlr_backend_destroy(c->backend);
     }
@@ -304,6 +320,15 @@ static int handle_timer(void *data)
 {
     compositor *c = data;
     wm_desktop_handle_timer(c->desktop);
+    return 0;
+}
+
+static int handle_watched_fd(int fd, uint32_t mask, void *data)
+{
+    (void) fd;
+    (void) mask;
+    compositor *c = data;
+    c->fd_ready(c->fd_ready_data);
     return 0;
 }
 

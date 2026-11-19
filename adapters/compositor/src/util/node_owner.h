@@ -1,6 +1,8 @@
 #ifndef COMPOSITOR_NODE_OWNER_H
 #define COMPOSITOR_NODE_OWNER_H
 
+#include <stdbool.h>
+
 struct wlr_scene_node;
 
 typedef enum node_role {
@@ -14,6 +16,7 @@ typedef enum node_role {
     NODE_OSD_SUBMENU,
     NODE_OSD_CYCLE,
     NODE_LOCK_SURFACE,
+    NODE_SHADOW,
 } node_role;
 
 typedef struct node_owner {
@@ -23,5 +26,6 @@ typedef struct node_owner {
 
 void node_owner_attach(struct wlr_scene_node *node, node_owner *owner);
 const node_owner *node_owner_find(struct wlr_scene_node *node);
+bool node_owner_is_decor(const struct wlr_scene_node *node);
 
 #endif

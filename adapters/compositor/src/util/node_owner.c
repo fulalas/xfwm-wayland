@@ -17,3 +17,9 @@ const node_owner *node_owner_find(struct wlr_scene_node *node)
     }
     return NULL;
 }
+
+bool node_owner_is_decor(const struct wlr_scene_node *node)
+{
+    const node_owner *owner = node->data;
+    return owner != NULL && (owner->role == NODE_VIEW_FRAME || owner->role == NODE_SHADOW);
+}

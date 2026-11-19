@@ -26,9 +26,12 @@ typedef struct app_options {
     config_overrides overrides;
 } app_options;
 
+typedef struct glib_bridge glib_bridge;
+
 typedef struct app {
-    GMainLoop *loop;
-    GSource *wayland_source;
+    GMainContext *context;
+    glib_bridge *glib;
+    bool quit;
     xfce_environment *xfce;
     appearance *appearance;
     compositor *compositor;
@@ -54,7 +57,10 @@ void app_reload_config(app *app);
 void app_reload_keymap(app *app);
 void app_reload_window_rules(app *app);
 wm_commands app_commands(app *app);
-GSource *app_wayland_source_new(compositor *compositor);
+glib_bridge *glib_bridge_create(compositor *compositor, GMainContext *quiet_context);
+void glib_bridge_destroy(glib_bridge *bridge);
+bool glib_bridge_prepare(glib_bridge *bridge);
+void glib_bridge_dispatch(glib_bridge *bridge);
 void app_start_session(app *app);
 void app_export_x11_display(app *app);
 void app_realtime_start(void);

@@ -4,7 +4,7 @@ executable(
   'app.c',
   'appearance_sync.c',
   'commands.c',
-  'wayland_source.c',
+  'glib_bridge.c',
   'session_environment.c',
   'session_bus.c',
   'realtime.c',
