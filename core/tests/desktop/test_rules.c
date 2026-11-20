@@ -271,6 +271,39 @@ static void test_wide_window_stays_inside_left_edge(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_right_without_margin_tiles(void)
+{
+    fake_world world;
+    wm_desktop *desktop = desktop_with_panel(&world);
+    wm_window_rule rule = rule_for_app("app", WM_ANCHOR_RIGHT, 0);
+    wm_desktop_set_window_rules(desktop, &rule, 1);
+    wm_window *window = fake_map(desktop, 1, (wm_rect) {0, 0, 400, 300});
+    wm_rect frame = frame_of(window);
+    CHECK_INT_EQ(FAKE_SCREEN_WIDTH / 2, frame.x);
+    CHECK_INT_EQ(FAKE_SCREEN_WIDTH, wm_rect_right(&frame));
+    CHECK_INT_EQ(0, frame.y);
+    CHECK_INT_EQ(FAKE_SCREEN_HEIGHT - 30, wm_rect_bottom(&frame));
+    rule.anchor = WM_ANCHOR_CENTER;
+    wm_desktop_set_window_rules(desktop, &rule, 1);
+    CHECK_INT_EQ(400, wm_window_current_view(window).client.width);
+    CHECK_INT_EQ(300, wm_window_current_view(window).client.height);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_maximized_new_window_is_not_tiled(void)
+{
+    fake_world world;
+    wm_desktop *desktop = desktop_with_panel(&world);
+    wm_window_rule rule = rule_for_app("app", WM_ANCHOR_RIGHT, 0);
+    wm_desktop_set_window_rules(desktop, &rule, 1);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 300});
+    desc.states = WM_STATE_MAXIMIZED;
+    wm_window *window = wm_window_map(desktop, &desc);
+    CHECK(wm_window_current_view(window).maximized);
+    CHECK_INT_EQ(0, frame_of(window).x);
+    wm_desktop_destroy(desktop);
+}
+
 static const check_case CASES[] = {
     {"bottom_right_uses_work_area_and_margin", test_bottom_right_uses_work_area_and_margin},
     {"top_and_center_anchors", test_top_and_center_anchors},
@@ -286,6 +319,8 @@ static const check_case CASES[] = {
     {"workspace_above_and_skip_taskbar", test_workspace_above_and_skip_taskbar},
     {"maximized_window_keeps_its_place", test_maximized_window_keeps_its_place},
     {"wide_window_stays_inside_left_edge", test_wide_window_stays_inside_left_edge},
+    {"right_without_margin_tiles", test_right_without_margin_tiles},
+    {"maximized_new_window_is_not_tiled", test_maximized_new_window_is_not_tiled},
 };
 
 int main(void)

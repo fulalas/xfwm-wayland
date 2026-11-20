@@ -6,6 +6,7 @@
 #include "highlight.h"
 #include "initial_state.h"
 #include "launches.h"
+#include "maximize.h"
 #include "menu.h"
 #include "moveresize.h"
 #include "placement.h"
@@ -119,7 +120,7 @@ static void show_new(wm_desktop *desktop, wm_window *window)
 {
     placement_init_position(desktop, window);
     rules_apply_to_new(desktop, window);
-    window->saved = window->client;
+    maximize_save_geometry(window);
     window->pre_fullscreen = window->client;
     initial_state_apply(desktop, window);
     present_request_configure(window);

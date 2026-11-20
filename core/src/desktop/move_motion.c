@@ -132,7 +132,7 @@ static bool tile_edges(wm_desktop *desktop, wm_window *window, const tile_zone *
 {
     tile_mode side = side_tile(zone);
     if (side != TILE_NONE) {
-        return tile_window_at(desktop, window, &(tile_placement) {zone->pointer, side});
+        return tile_window_at(desktop, window, &(tile_placement) {zone->pointer, side, false});
     }
     bool middle_horizontal = !near_left(zone, zone->corner) && !near_right(zone, zone->corner);
     if (middle_horizontal && near_top(zone, zone->distance)) {
@@ -156,7 +156,7 @@ static bool tile_corners(wm_desktop *desktop, wm_window *window, const tile_zone
 {
     tile_mode corner = corner_tile(zone);
     return corner != TILE_NONE
-           && tile_window_at(desktop, window, &(tile_placement) {zone->pointer, corner});
+           && tile_window_at(desktop, window, &(tile_placement) {zone->pointer, corner, false});
 }
 
 static tile_mode corner_tile(const tile_zone *zone)

@@ -10,6 +10,7 @@
 #include "monitors.h"
 #include "placement.h"
 #include "states.h"
+#include "tile.h"
 #include "window_ops.h"
 
 static rule_set copy_rules(const wm_window_rule *rules, size_t count);
@@ -35,6 +36,8 @@ static void place_live(wm_desktop *desktop, wm_window *window, const wm_window_r
 static bool find_output(const wm_desktop *desktop, const wm_window_rule *effect, size_t *index);
 static void anchor(wm_desktop *desktop, wm_window *window, size_t monitor,
                    const wm_window_rule *effect);
+static tile_mode tile_for(wm_rule_anchor anchor);
+static bool keeps_place(const wm_window *window);
 
 void wm_desktop_set_window_rules(wm_desktop *desktop, const wm_window_rule *rules, size_t count)
 {
@@ -276,9 +279,7 @@ static void place_live(wm_desktop *desktop, wm_window *window, const wm_window_r
     if (has_target) {
         monitor_move_to(desktop, window, target);
     }
-    bool keeps_place = window_is_fullscreen(window)
-                       || window_has_state(window, WM_STATE_MAXIMIZED);
-    if (effect->anchor != WM_ANCHOR_NONE && !keeps_place) {
+    if (effect->anchor != WM_ANCHOR_NONE && !keeps_place(window)) {
         anchor(desktop, window, has_target ? target : monitors_index_of(desktop, window), effect);
     }
 }
@@ -295,8 +296,30 @@ static void anchor(wm_desktop *desktop, wm_window *window, size_t monitor,
         return;
     }
     wm_rect area = monitors_work_area_of(desktop, monitor);
+    bool tiles = effect->margin == 0 && !keeps_place(window);
+    tile_mode mode = tiles ? tile_for(effect->anchor) : TILE_NONE;
+    tile_placement tiled = {wm_rect_center(&area), mode, true};
+    if (mode != TILE_NONE && tile_window_at(desktop, window, &tiled)) {
+        return;
+    }
+    tile_clear(window);
     placement_anchor(desktop, window, &area, effect->anchor, effect->margin);
-    window->tile = TILE_NONE;
     window_placed(window);
     window_mark_dirty(window);
+}
+
+static tile_mode tile_for(wm_rule_anchor anchor)
+{
+    static const tile_mode modes[] = {
+        [WM_ANCHOR_TOP_LEFT] = TILE_UP_LEFT,       [WM_ANCHOR_TOP] = TILE_UP,
+        [WM_ANCHOR_TOP_RIGHT] = TILE_UP_RIGHT,     [WM_ANCHOR_LEFT] = TILE_LEFT,
+        [WM_ANCHOR_RIGHT] = TILE_RIGHT,            [WM_ANCHOR_BOTTOM_LEFT] = TILE_DOWN_LEFT,
+        [WM_ANCHOR_BOTTOM] = TILE_DOWN,            [WM_ANCHOR_BOTTOM_RIGHT] = TILE_DOWN_RIGHT,
+    };
+    return modes[anchor];
+}
+
+static bool keeps_place(const wm_window *window)
+{
+    return window_is_fullscreen(window) || window_has_state(window, WM_STATE_MAXIMIZED);
 }

@@ -8,9 +8,11 @@
 typedef struct tile_placement {
     wm_point point;
     tile_mode mode;
+    bool restore_position;
 } tile_placement;
 
 bool tile_window_at(wm_desktop *desktop, wm_window *window, const tile_placement *placement);
+void tile_clear(wm_window *window);
 void tile_toggle(wm_desktop *desktop, wm_window *window, tile_mode mode);
 void tile_update_size(wm_desktop *desktop, wm_window *window);
 

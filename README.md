@@ -209,7 +209,8 @@ window opens or a rule changes. Higher `<n>` wins. A rule needs `title` or
 
 Properties: `position` (`top-left` … `bottom-right`, `center`), `margin` (px),
 `output` (e.g. `DP-1`), `workspace` (from 1), `above`, `skip_taskbar`,
-`no_focus` (bools).
+`no_focus` (bools). Edge and corner positions tile the window like the tile
+shortcuts; with a `margin` they only move it.
 
     xfconf-query -c xfwm4 -p /window-rules/0/app_id -n -t string -s org.xfce.mousepad
     xfconf-query -c xfwm4 -p /window-rules/0/position -n -t string -s top-left

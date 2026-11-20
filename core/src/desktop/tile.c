@@ -32,7 +32,7 @@ static bool tile_window(wm_desktop *desktop, wm_window *window, tile_mode mode);
 
 bool tile_window_at(wm_desktop *desktop, wm_window *window, const tile_placement *placement)
 {
-    tile_request request = {placement->point, placement->mode, false};
+    tile_request request = {placement->point, placement->mode, placement->restore_position};
     return tile(desktop, window, &request);
 }
 
@@ -42,10 +42,17 @@ void tile_toggle(wm_desktop *desktop, wm_window *window, tile_mode mode)
         tile_window(desktop, window, mode);
         return;
     }
-    window->tile = TILE_NONE;
-    maximize_restore_geometry(window);
+    tile_clear(window);
     window_placed(window);
     window_mark_dirty(window);
+}
+
+void tile_clear(wm_window *window)
+{
+    if (window->tile != TILE_NONE) {
+        window->tile = TILE_NONE;
+        maximize_restore_geometry(window);
+    }
 }
 
 void tile_update_size(wm_desktop *desktop, wm_window *window)
