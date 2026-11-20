@@ -33,18 +33,18 @@ typedef struct window_properties {
     x11_read reads[READ_COUNT];
 } window_properties;
 
-static void prepare_reads(window_properties *properties, x11_link *link);
+static void prepare_reads(window_properties *properties, const x11_link *link);
 static x11_property property_of(xcb_window_t window, xcb_atom_t atom);
 static x11_read cardinals(x11_property property, uint32_t *values, uint32_t size);
 static void apply_motif(xwayland_view *xv, const uint32_t *hints, uint32_t count);
 static void apply_old_strut(xwayland_view *xv, const uint32_t *sides, uint32_t count);
 static void apply_remote_host(xwayland_view *xv, const char *machine);
-static void apply_user_time(xwayland_view *xv, x11_link *link, const x11_read *reads);
-static bool is_group_transient(x11_link *link, const xwayland_view *xv, const x11_read *read);
+static void apply_user_time(xwayland_view *xv, const x11_link *link, const x11_read *reads);
+static bool is_group_transient(const x11_link *link, const xwayland_view *xv, const x11_read *read);
 
 void xwayland_view_read_properties(xwayland_view *xv)
 {
-    x11_link *link = &xv->server->xwayland->link;
+    const x11_link *link = &xv->server->xwayland->link;
     window_properties properties = {.window = xv->xsurface->window_id};
     const x11_read *reads = properties.reads;
     prepare_reads(&properties, link);
@@ -61,7 +61,7 @@ void xwayland_view_read_properties(xwayland_view *xv)
 
 void xwayland_view_read_motif(xwayland_view *xv)
 {
-    x11_link *link = &xv->server->xwayland->link;
+    const x11_link *link = &xv->server->xwayland->link;
     uint32_t motif[X11_MOTIF_HINT_WORDS];
     x11_property property =
         property_of(xv->xsurface->window_id, x11_link_atom(link, ATOM_MOTIF_WM_HINTS));
@@ -97,7 +97,7 @@ char *xwayland_view_remote_title(const xwayland_view *xv)
     return text;
 }
 
-static void prepare_reads(window_properties *p, x11_link *link)
+static void prepare_reads(window_properties *p, const x11_link *link)
 {
     xcb_window_t window = p->window;
     x11_read *reads = p->reads;
@@ -155,7 +155,7 @@ static void apply_remote_host(xwayland_view *xv, const char *machine)
     snprintf(xv->remote_host, sizeof(xv->remote_host), "%s", remote ? machine : "");
 }
 
-static void apply_user_time(xwayland_view *xv, x11_link *link, const x11_read *reads)
+static void apply_user_time(xwayland_view *xv, const x11_link *link, const x11_read *reads)
 {
     x11_read time = reads[READ_USER_TIME];
     if (reads[READ_TIME_WINDOW].count == 1) {
@@ -166,9 +166,9 @@ static void apply_user_time(xwayland_view *xv, x11_link *link, const x11_read *r
     xv->user_time = xv->has_user_time ? *(const uint32_t *) time.data : 0;
 }
 
-static bool is_group_transient(x11_link *link, const xwayland_view *xv, const x11_read *read)
+static bool is_group_transient(const x11_link *link, const xwayland_view *xv, const x11_read *read)
 {
-    xcb_connection_t *connection = x11_link_query_connection(link);
+    xcb_connection_t *connection = x11_link_connection(link);
     const xcb_icccm_wm_hints_t *hints = xv->xsurface->hints;
     bool grouped = hints != NULL && (hints->flags & XCB_ICCCM_WM_HINT_WINDOW_GROUP) != 0;
     if (read->count != 1 || !grouped || connection == NULL) {

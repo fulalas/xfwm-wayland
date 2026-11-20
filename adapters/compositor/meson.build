@@ -30,6 +30,7 @@ xcb_dep = dependency('xcb')
 xcb_ewmh_dep = dependency('xcb-ewmh')
 xcb_icccm_dep = dependency('xcb-icccm')
 xcb_shape_dep = dependency('xcb-shape')
+xcb_xfixes_dep = dependency('xcb-xfixes')
 libdrm_dep = dependency('libdrm')
 egl_dep = dependency('egl')
 compositor_m_dep = meson.get_compiler('c').find_library('m', required: false)
@@ -382,6 +383,7 @@ compositor_lib = static_library(
     xcb_ewmh_dep,
     xcb_icccm_dep,
     xcb_shape_dep,
+    xcb_xfixes_dep,
     libdrm_dep,
     egl_dep,
     compositor_m_dep,
@@ -406,6 +408,7 @@ compositor_dep = declare_dependency(
     xcb_ewmh_dep,
     xcb_icccm_dep,
     xcb_shape_dep,
+    xcb_xfixes_dep,
     libdrm_dep,
     egl_dep,
     compositor_m_dep,

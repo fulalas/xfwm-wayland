@@ -63,7 +63,7 @@ static const message_route routes[] = {
 bool xwayland_messages_handle(xwayland_shell *shell, xcb_generic_event_t *event)
 {
     uint8_t type = event->response_type & EVENT_TYPE_MASK;
-    if (!shell->link.ready) {
+    if (shell->link.own == NULL) {
         return false;
     }
     if (type == XCB_PROPERTY_NOTIFY) {
@@ -185,6 +185,7 @@ static void set_fullscreen_monitors(xwayland_shell *shell,
                              XCB_ATOM_CARDINAL};
     x11_values values = {message->data.data32, FULLSCREEN_MONITOR_SIDES};
     x11_link_set_cardinals(&shell->link, &property, values);
+    x11_link_flush(&shell->link);
     wm_window_set_fullscreen_area(shell->server->desktop, window, &area);
 }
 

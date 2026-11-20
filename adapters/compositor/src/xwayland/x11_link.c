@@ -4,11 +4,13 @@
 #include <string.h>
 #include <wlr/xwayland/xwayland.h>
 #include <xcb/shape.h>
+#include <xcb/xfixes.h>
 
 enum {
     BYTE_FORMAT = 8,
     CARDINAL_FORMAT = 32,
     X11_READS_MAX = 8,
+    XFIXES_DISCONNECT_MODE_MAJOR = 6,
 };
 
 typedef struct property_change {
@@ -17,6 +19,9 @@ typedef struct property_change {
     x11_values values;
 } property_change;
 
+static xcb_connection_t *connect_own(const char *display_name);
+static void allow_lazy_exit(xcb_connection_t *connection);
+static void drop_queued_events(xcb_connection_t *connection);
 static x11_values atom_values(const x11_link *link, x11_atom_list list, uint32_t *atoms);
 static void change_property(const x11_link *link, const property_change *change);
 static xcb_get_property_cookie_t request_read(xcb_connection_t *connection,
@@ -24,52 +29,68 @@ static xcb_get_property_cookie_t request_read(xcb_connection_t *connection,
 static void receive_read(xcb_connection_t *connection, xcb_get_property_cookie_t cookie,
                          x11_read *read);
 static void store_read(x11_read *read, xcb_get_property_reply_t *reply);
-static void finish_queries(x11_link *link);
 
-void x11_link_attach(x11_link *link, struct wlr_xwayland *wlr)
+void x11_link_attach(x11_link *link, const struct wlr_xwayland *wlr)
 {
-    x11_link_release_queries(link);
-    link->wlr = wlr;
-    xcb_connection_t *connection = wlr_xwayland_get_xwm_connection(wlr);
-    link->ready = connection != NULL && x11_atoms_intern(&link->atoms, connection);
+    x11_link_detach(link);
+    link->own = connect_own(wlr->display_name);
+    if (link->own == NULL || !x11_atoms_intern(&link->atoms, link->own)) {
+        x11_link_detach(link);
+        return;
+    }
+    allow_lazy_exit(link->own);
 }
 
 void x11_link_detach(x11_link *link)
 {
-    x11_link_release_queries(link);
-    *link = (x11_link){.wlr = NULL, .ready = false};
+    if (link->own != NULL) {
+        xcb_disconnect(link->own);
+    }
+    *link = (x11_link){.own = NULL};
 }
 
 xcb_connection_t *x11_link_connection(const x11_link *link)
 {
-    if (!link->ready || link->wlr == NULL) {
+    if (link->own == NULL || xcb_connection_has_error(link->own)) {
         return NULL;
     }
-    return wlr_xwayland_get_xwm_connection(link->wlr);
+    return link->own;
 }
 
-xcb_connection_t *x11_link_query_connection(x11_link *link)
+static xcb_connection_t *connect_own(const char *display_name)
 {
-    if (!link->ready || link->wlr == NULL) {
+    xcb_connection_t *connection = xcb_connect(display_name, NULL);
+    if (xcb_connection_has_error(connection)) {
+        xcb_disconnect(connection);
         return NULL;
     }
-    if (link->queries == NULL) {
-        link->queries = xcb_connect(link->wlr->display_name, NULL);
-        if (xcb_connection_has_error(link->queries)) {
-            xcb_disconnect(link->queries);
-            link->queries = NULL;
-            return NULL;
-        }
-        xcb_prefetch_extension_data(link->queries, &xcb_shape_id);
-    }
-    return link->queries;
+    xcb_prefetch_extension_data(connection, &xcb_shape_id);
+    xcb_prefetch_extension_data(connection, &xcb_xfixes_id);
+    return connection;
 }
 
-void x11_link_release_queries(x11_link *link)
+static void allow_lazy_exit(xcb_connection_t *connection)
 {
-    if (link->queries != NULL) {
-        xcb_disconnect(link->queries);
-        link->queries = NULL;
+    const xcb_query_extension_reply_t *xfixes = xcb_get_extension_data(connection, &xcb_xfixes_id);
+    if (xfixes == NULL || !xfixes->present) {
+        return;
+    }
+    xcb_xfixes_query_version_cookie_t cookie =
+        xcb_xfixes_query_version(connection, XFIXES_DISCONNECT_MODE_MAJOR, 0);
+    xcb_xfixes_query_version_reply_t *reply =
+        xcb_xfixes_query_version_reply(connection, cookie, NULL);
+    if (reply != NULL && reply->major_version >= XFIXES_DISCONNECT_MODE_MAJOR) {
+        xcb_xfixes_set_client_disconnect_mode(connection,
+                                              XCB_XFIXES_CLIENT_DISCONNECT_FLAGS_TERMINATE);
+    }
+    free(reply);
+}
+
+static void drop_queued_events(xcb_connection_t *connection)
+{
+    xcb_generic_event_t *event;
+    while ((event = xcb_poll_for_queued_event(connection)) != NULL) {
+        free(event);
     }
 }
 
@@ -107,6 +128,7 @@ void x11_link_flush(const x11_link *link)
     xcb_connection_t *connection = x11_link_connection(link);
     if (connection != NULL) {
         xcb_flush(connection);
+        drop_queued_events(connection);
     }
 }
 
@@ -152,9 +174,9 @@ static void change_property(const x11_link *link, const property_change *change)
                         change->values.count, change->values.data);
 }
 
-void x11_link_read(x11_link *link, x11_read *reads, size_t count)
+void x11_link_read(const x11_link *link, x11_read *reads, size_t count)
 {
-    xcb_connection_t *connection = x11_link_query_connection(link);
+    xcb_connection_t *connection = x11_link_connection(link);
     xcb_get_property_cookie_t cookies[X11_READS_MAX];
     count = count < X11_READS_MAX ? count : X11_READS_MAX;
     for (size_t i = 0; i < count; i++) {
@@ -166,7 +188,7 @@ void x11_link_read(x11_link *link, x11_read *reads, size_t count)
     for (size_t i = 0; connection != NULL && i < count; i++) {
         receive_read(connection, cookies[i], &reads[i]);
     }
-    finish_queries(link);
+    x11_link_flush(link);
 }
 
 static xcb_get_property_cookie_t request_read(xcb_connection_t *connection,
@@ -189,32 +211,33 @@ static void receive_read(xcb_connection_t *connection, xcb_get_property_cookie_t
     }
 }
 
-x11_shape_query x11_link_request_shape(x11_link *link, xcb_window_t window)
+x11_shape_query x11_link_request_shape(const x11_link *link, xcb_window_t window)
 {
-    x11_shape_query query = {NULL, {0}};
-    xcb_connection_t *connection = x11_link_query_connection(link);
+    x11_shape_query query = {false, {0}};
+    xcb_connection_t *connection = x11_link_connection(link);
     if (connection == NULL) {
         return query;
     }
     const xcb_query_extension_reply_t *shape = xcb_get_extension_data(connection, &xcb_shape_id);
     if (shape != NULL && shape->present) {
-        query = (x11_shape_query){connection, xcb_shape_query_extents(connection, window)};
+        query = (x11_shape_query){true, xcb_shape_query_extents(connection, window)};
     }
     return query;
 }
 
-bool x11_link_collect_shape(x11_link *link, const x11_shape_query *query)
+bool x11_link_collect_shape(const x11_link *link, const x11_shape_query *query)
 {
-    if (query->connection == NULL || query->connection != link->queries) {
+    xcb_connection_t *connection = x11_link_connection(link);
+    if (!query->sent || connection == NULL) {
         return false;
     }
     xcb_generic_error_t *error = NULL;
     xcb_shape_query_extents_reply_t *reply =
-        xcb_shape_query_extents_reply(query->connection, query->cookie, &error);
+        xcb_shape_query_extents_reply(connection, query->cookie, &error);
     free(error);
     bool shaped = reply != NULL && reply->bounding_shaped;
     free(reply);
-    finish_queries(link);
+    x11_link_flush(link);
     return shaped;
 }
 
@@ -229,20 +252,5 @@ static void store_read(x11_read *read, xcb_get_property_reply_t *reply)
         uint32_t values = length / sizeof(uint32_t);
         read->count = values < read->size ? values : read->size;
         memcpy(read->data, xcb_get_property_value(reply), read->count * sizeof(uint32_t));
-    }
-}
-
-static void finish_queries(x11_link *link)
-{
-    xcb_connection_t *connection = link->queries;
-    if (connection == NULL) {
-        return;
-    }
-    xcb_generic_event_t *event;
-    while ((event = xcb_poll_for_event(connection)) != NULL) {
-        free(event);
-    }
-    if (xcb_connection_has_error(connection)) {
-        x11_link_release_queries(link);
     }
 }

@@ -11,7 +11,6 @@
 #include "xsettings_wire.h"
 
 enum {
-    EVENT_TYPE_MASK = 0x7f,
     RESOURCES_MAX_WORDS = 1 << 16,
 };
 
@@ -25,6 +24,9 @@ struct xwayland_xsettings {
 };
 
 static bool claim_selection(xwayland_xsettings *xsettings, xcb_connection_t *connection);
+static bool still_owner(xwayland_xsettings *xsettings, xcb_connection_t *connection);
+static bool read_selection_owner(const xwayland_xsettings *xsettings,
+                                 xcb_connection_t *connection, xcb_window_t *owner);
 static void announce_manager(const xwayland_xsettings *xsettings, xcb_connection_t *connection);
 static void collect(xwayland_xsettings *xsettings);
 static void add_to_table(void *self, const x11_setting *setting);
@@ -74,38 +76,45 @@ void xwayland_xsettings_reload(xwayland_xsettings *xsettings)
     publish(xsettings);
 }
 
-bool xwayland_xsettings_handle_event(xwayland_xsettings *xsettings, xcb_generic_event_t *event)
-{
-    if ((event->response_type & EVENT_TYPE_MASK) != XCB_SELECTION_CLEAR) {
-        return false;
-    }
-    const xcb_selection_clear_event_t *clear = (const xcb_selection_clear_event_t *) event;
-    xcb_atom_t selection = x11_link_atom(xsettings->link, ATOM_XSETTINGS_SELECTION);
-    if (!xsettings->owner || clear->owner != xsettings->window || clear->selection != selection) {
-        return false;
-    }
-    wlr_log(WLR_INFO, "another XSETTINGS manager took over on XWayland");
-    xsettings->owner = false;
-    return true;
-}
-
 static bool claim_selection(xwayland_xsettings *xsettings, xcb_connection_t *connection)
 {
-    xcb_atom_t selection = x11_link_atom(xsettings->link, ATOM_XSETTINGS_SELECTION);
-    xcb_get_selection_owner_reply_t *reply = xcb_get_selection_owner_reply(
-        connection, xcb_get_selection_owner(connection, selection), NULL);
-    bool taken = reply == NULL || reply->owner != XCB_WINDOW_NONE;
-    free(reply);
-    if (taken) {
+    xcb_window_t owner;
+    if (!read_selection_owner(xsettings, connection, &owner) || owner != XCB_WINDOW_NONE) {
         return false;
     }
     xsettings->window = xcb_generate_id(connection);
     xcb_create_window(connection, XCB_COPY_FROM_PARENT, xsettings->window,
                       x11_link_root(connection), -1, -1, 1, 1, 0, XCB_WINDOW_CLASS_INPUT_ONLY,
                       XCB_COPY_FROM_PARENT, 0, NULL);
+    xcb_atom_t selection = x11_link_atom(xsettings->link, ATOM_XSETTINGS_SELECTION);
     xcb_set_selection_owner(connection, xsettings->window, selection, XCB_CURRENT_TIME);
     announce_manager(xsettings, connection);
     xsettings->owner = true;
+    return true;
+}
+
+static bool still_owner(xwayland_xsettings *xsettings, xcb_connection_t *connection)
+{
+    xcb_window_t owner;
+    if (xsettings->owner && read_selection_owner(xsettings, connection, &owner) &&
+        owner != xsettings->window) {
+        wlr_log(WLR_INFO, "another XSETTINGS manager took over on XWayland");
+        xsettings->owner = false;
+    }
+    return xsettings->owner;
+}
+
+static bool read_selection_owner(const xwayland_xsettings *xsettings,
+                                 xcb_connection_t *connection, xcb_window_t *owner)
+{
+    xcb_atom_t selection = x11_link_atom(xsettings->link, ATOM_XSETTINGS_SELECTION);
+    xcb_get_selection_owner_reply_t *reply = xcb_get_selection_owner_reply(
+        connection, xcb_get_selection_owner(connection, selection), NULL);
+    if (reply == NULL) {
+        return false;
+    }
+    *owner = reply->owner;
+    free(reply);
     return true;
 }
 
@@ -122,7 +131,7 @@ static void announce_manager(const xwayland_xsettings *xsettings, xcb_connection
     };
     xcb_send_event(connection, 0, root, XCB_EVENT_MASK_STRUCTURE_NOTIFY,
                    (const char *) &message);
-    xcb_flush(connection);
+    x11_link_flush(xsettings->link);
 }
 
 static void collect(xwayland_xsettings *xsettings)
@@ -141,7 +150,7 @@ static void add_to_table(void *self, const x11_setting *setting)
 static void publish(xwayland_xsettings *xsettings)
 {
     xcb_connection_t *connection = x11_link_connection(xsettings->link);
-    if (!xsettings->owner || connection == NULL) {
+    if (connection == NULL || !still_owner(xsettings, connection)) {
         return;
     }
     xsettings_bytes bytes = xsettings_wire_encode(xsettings->table, ++xsettings->serial);

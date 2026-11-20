@@ -7,6 +7,7 @@
 static x11_window_props props_of(const x11_window_target *target, const wm_window_view *state);
 static void publish_desktop(const x11_window_target *target, uint32_t desktop);
 static void publish_actions(const x11_window_target *target, uint32_t actions);
+static void set_extents(const x11_window_target *target, const ewmh_frame_extents *extents);
 
 void x11_window_props_publish(x11_window_props *last, const x11_window_target *target,
                               const wm_window_view *state)
@@ -19,7 +20,7 @@ void x11_window_props_publish(x11_window_props *last, const x11_window_target *t
         publish_desktop(target, next.desktop);
     }
     if (!last->published || memcmp(&last->extents, &next.extents, sizeof(next.extents)) != 0) {
-        x11_window_props_publish_extents(target, &next.extents);
+        set_extents(target, &next.extents);
     }
     if (!last->published || last->actions != next.actions) {
         publish_actions(target, next.actions);
@@ -31,11 +32,16 @@ void x11_window_props_publish(x11_window_props *last, const x11_window_target *t
 void x11_window_props_publish_extents(const x11_window_target *target,
                                       const ewmh_frame_extents *extents)
 {
+    set_extents(target, extents);
+    x11_link_flush(target->link);
+}
+
+static void set_extents(const x11_window_target *target, const ewmh_frame_extents *extents)
+{
     xcb_atom_t atom = x11_link_atom(target->link, ATOM_NET_FRAME_EXTENTS);
     x11_property property = {target->window, atom, XCB_ATOM_CARDINAL};
     x11_values values = {extents->values, EWMH_EXTENT_COUNT};
     x11_link_set_cardinals(target->link, &property, values);
-    x11_link_flush(target->link);
 }
 
 ewmh_frame_extents x11_window_props_extents(const x11_window_target *target,

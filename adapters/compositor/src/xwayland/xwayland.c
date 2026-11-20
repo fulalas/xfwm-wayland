@@ -323,9 +323,6 @@ static void handle_new_surface(struct wl_listener *listener, void *data)
 static bool handle_x11_event(struct wlr_xwayland *wlr, xcb_generic_event_t *event)
 {
     xwayland_shell *shell = wlr->data;
-    if (xwayland_xsettings_handle_event(shell->xsettings, event)) {
-        return true;
-    }
     return xwayland_messages_handle(shell, event);
 }
 

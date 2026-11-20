@@ -216,7 +216,7 @@ bool xwayland_view_has_strut(const xwayland_view *xv)
 static cairo_surface_t *old_style_icon(const xwayland_view *xv)
 {
     const xcb_icccm_wm_hints_t *hints = xv->xsurface->hints;
-    xcb_connection_t *connection = x11_link_query_connection(&xv->server->xwayland->link);
+    xcb_connection_t *connection = x11_link_connection(&xv->server->xwayland->link);
     if (connection == NULL || hints == NULL ||
         (hints->flags & XCB_ICCCM_WM_HINT_ICON_PIXMAP) == 0) {
         return NULL;

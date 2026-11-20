@@ -23,7 +23,6 @@ static void map_any(xwayland_view *view);
 static void map_managed(xwayland_view *view);
 static void adopt_children(const xwayland_view *view);
 static void unmap_any(xwayland_view *view);
-static void release_queries_when_idle(const xwayland_view *view);
 static struct wlr_surface *impl_surface(void *self);
 static void impl_configure(void *self, const wm_rect *client);
 static void impl_close(void *self);
@@ -273,22 +272,9 @@ static void unmap_any(xwayland_view *xv)
     xv->view = NULL;
     xv->surface_tree = NULL;
     view_destroy(v);
-    release_queries_when_idle(xv);
     if (xwayland_view_has_strut(xv)) {
         outputs_schedule_arrange(xv->server->outputs);
     }
-}
-
-static void release_queries_when_idle(const xwayland_view *xv)
-{
-    xwayland_shell *shell = xv->server->xwayland;
-    const xwayland_view *other;
-    wl_list_for_each(other, &shell->views, link) {
-        if (other->view != NULL) {
-            return;
-        }
-    }
-    x11_link_release_queries(&shell->link);
 }
 
 static struct wlr_surface *impl_surface(void *self)
