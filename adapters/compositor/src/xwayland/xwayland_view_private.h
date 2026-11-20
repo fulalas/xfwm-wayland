@@ -65,6 +65,8 @@ struct xwayland_view {
     struct wl_listener unmap;
     struct wl_listener commit;
     x11_window_props published;
+    wm_rect known_x;
+    struct wlr_scene_tree *surface_tree;
     uint32_t motif_capabilities;
     bool shaped;
     bool has_user_time;
@@ -99,7 +101,7 @@ strut xwayland_view_strut(const xwayland_view *view);
 void xwayland_view_send_states(void *self, const wm_window_view *state);
 void xwayland_view_settle_if_current(xwayland_view *view);
 int xwayland_view_gravity(const xwayland_view *view);
-wm_rect xwayland_view_requested_rect(const xwayland_view *view, const x11_configure *request);
+wm_rect xwayland_view_take_request(xwayland_view *view, const x11_configure *request);
 wm_point xwayland_view_requested_position(const xwayland_view *view);
 wm_point xwayland_view_gravity_offset(const xwayland_view *view);
 

@@ -91,8 +91,7 @@ static void move_grabbed(tablet_tool *tool)
     struct wlr_cursor *cursor = tool->owner->seat->cursor;
     double sx = 0.0;
     double sy = 0.0;
-    xwayland_node_local(tool->owner->seat->server, tool->grab_node, cursor->x, cursor->y, &sx,
-                        &sy);
+    xwayland_node_local(tool->grab_node, cursor->x, cursor->y, &sx, &sy);
     wlr_tablet_v2_tablet_tool_notify_motion(tool->v2, sx, sy);
 }
 

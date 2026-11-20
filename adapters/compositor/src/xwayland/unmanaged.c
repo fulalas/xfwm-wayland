@@ -6,6 +6,7 @@
 #include "util/node_owner.h"
 #include "output/output.h"
 #include "shell/popup.h"
+#include "render/scaled_surface.h"
 #include "render/scene_layers.h"
 #include "input/seat.h"
 #include "decor/shadow.h"
@@ -85,6 +86,7 @@ void unmanaged_move(unmanaged *u)
 {
     wm_rect geometry = logical_geometry(u);
     wlr_scene_node_set_position(&u->tree->node, geometry.x, geometry.y);
+    scaled_surfaces_refit(u->surface_tree);
     apply_style(u);
 }
 
@@ -158,5 +160,5 @@ static void show_style(unmanaged *u, const shadow_inputs *inputs)
 
 static wm_rect logical_geometry(const unmanaged *u)
 {
-    return xwayland_shell_logical_rect(u->server->xwayland, u->xsurface);
+    return xwayland_shell_drawn_rect(u->server->xwayland, u->xsurface);
 }

@@ -80,7 +80,7 @@ static void handle_configure(struct wl_listener *listener, void *data)
     if (window != NULL) {
         x11_configure request = {{event->x, event->y, event->width, event->height}, event->mask,
                                  xwayland_view_gravity(xv)};
-        wm_rect client = xwayland_view_requested_rect(xv, &request);
+        wm_rect client = xwayland_view_take_request(xv, &request);
         wm_request_configure(xv->server->desktop, window, &client);
         return;
     }

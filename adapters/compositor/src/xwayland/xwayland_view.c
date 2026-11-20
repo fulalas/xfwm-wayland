@@ -95,6 +95,12 @@ wm_rect xwayland_views_apply_struts(const struct wl_list *views, const strut_con
     return usable;
 }
 
+bool xwayland_view_framed(const xwayland_view *xv)
+{
+    wm_window *window = xwayland_view_window(xv);
+    return window != NULL && wm_window_current_view(window).decor != NULL;
+}
+
 wm_window *xwayland_view_window(const xwayland_view *xv)
 {
     return xv->view != NULL ? view_window(xv->view) : NULL;
@@ -218,12 +224,14 @@ static void detach_surface(xwayland_view *xv)
 
 static void map_managed(xwayland_view *xv)
 {
+    struct wlr_xwayland_surface *xs = xv->xsurface;
+    xv->known_x = (wm_rect){xs->x, xs->y, xs->width, xs->height};
     xv->view = view_create(xv->server, &xwayland_view_impl, xv);
     if (xv->view == NULL) {
-        wlr_log(WLR_ERROR, "cannot create a view for X11 window %s", xv->xsurface->class);
+        wlr_log(WLR_ERROR, "cannot create a view for X11 window %s", xs->class);
         return;
     }
-    xwayland_surface_tree(xv->server, view_content_tree(xv->view), xv->xsurface->surface);
+    xv->surface_tree = xwayland_surface_tree(xv->server, view_content_tree(xv->view), xs->surface);
     xwayland_view_read_properties(xv);
     wm_window_desc desc = xwayland_view_describe(xv);
     char *remote_title = xwayland_view_remote_title(xv);
@@ -263,6 +271,7 @@ static void unmap_any(xwayland_view *xv)
     }
     view *v = xv->view;
     xv->view = NULL;
+    xv->surface_tree = NULL;
     view_destroy(v);
     release_queries_when_idle(xv);
     if (xwayland_view_has_strut(xv)) {
@@ -291,9 +300,11 @@ static struct wlr_surface *impl_surface(void *self)
 static void impl_configure(void *self, const wm_rect *client)
 {
     xwayland_view *xv = self;
-    wm_rect x = x11_scale_rect_to_x(xwayland_view_scale(xv), *client);
+    wm_rect x = x11_scale_rect_to_x_near(xwayland_view_scale(xv), *client, xv->known_x);
     wlr_xwayland_surface_configure(xv->xsurface, (int16_t) x.x, (int16_t) x.y, (uint16_t) x.width,
                                    (uint16_t) x.height);
+    xv->known_x = x;
+    scaled_surfaces_refit(xv->surface_tree);
 }
 
 static void impl_close(void *self)

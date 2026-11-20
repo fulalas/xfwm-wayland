@@ -24,18 +24,21 @@ typedef struct scaled_surface {
 
 struct scaled_surfaces {
     double scale;
+    scaled_surface_sizer sizer;
     struct wl_list members;
 };
 
 static void handle_addon_destroy(struct wlr_addon *addon);
 static void handle_commit(struct wl_listener *listener, void *data);
 static bool accepts_input(struct wlr_scene_buffer *buffer, double *sx, double *sy);
+static scaled_surface *member_of(struct wlr_scene_buffer *buffer);
+static void to_local(const scaled_surface *member, double *sx, double *sy);
 static void show_buffer(scaled_surface *member);
 static void set_buffer(scaled_surface *member);
 static void schedule_frame(scaled_surface *member);
 static struct wlr_output *frame_pacing_output(struct wlr_surface *surface);
 static void fit(scaled_surface *member);
-static int scaled_length(int length, double scale);
+static void fit_size(scaled_surface *member);
 static void fit_opaque_region(scaled_surface *member, double scale);
 static void release_client_buffer(struct wlr_scene_buffer *buffer);
 static void forget(scaled_surface *member);
@@ -45,11 +48,12 @@ static const struct wlr_addon_interface scaled_surface_addon = {
     .destroy = handle_addon_destroy,
 };
 
-scaled_surfaces *scaled_surfaces_create(void)
+scaled_surfaces *scaled_surfaces_create(scaled_surface_sizer sizer)
 {
     scaled_surfaces *set = calloc(1, sizeof(*set));
     if (set != NULL) {
         set->scale = 1.0;
+        set->sizer = sizer;
         wl_list_init(&set->members);
     }
     return set;
@@ -101,6 +105,32 @@ void scaled_surfaces_set_scale(scaled_surfaces *set, double scale)
     }
 }
 
+void scaled_surfaces_refit(struct wlr_scene_tree *tree)
+{
+    if (tree == NULL) {
+        return;
+    }
+    struct wlr_scene_node *node;
+    wl_list_for_each(node, &tree->children, link) {
+        scaled_surface *member = node->type == WLR_SCENE_NODE_BUFFER
+                                     ? member_of(wlr_scene_buffer_from_node(node))
+                                     : NULL;
+        if (member != NULL) {
+            fit_size(member);
+        }
+    }
+}
+
+bool scaled_surfaces_to_local(struct wlr_scene_buffer *buffer, double *sx, double *sy)
+{
+    scaled_surface *member = member_of(buffer);
+    if (member == NULL) {
+        return false;
+    }
+    to_local(member, sx, sy);
+    return true;
+}
+
 static void handle_addon_destroy(struct wlr_addon *addon)
 {
     scaled_surface *member = wl_container_of(addon, member, addon);
@@ -118,14 +148,31 @@ static void handle_commit(struct wl_listener *listener, void *data)
 
 static bool accepts_input(struct wlr_scene_buffer *buffer, double *sx, double *sy)
 {
-    struct wlr_addon *addon = wlr_addon_find(&buffer->node.addons, buffer, &scaled_surface_addon);
-    if (addon == NULL) {
+    scaled_surface *member = member_of(buffer);
+    if (member == NULL) {
         return false;
     }
-    scaled_surface *member = wl_container_of(addon, member, addon);
-    *sx *= member->set->scale;
-    *sy *= member->set->scale;
+    to_local(member, sx, sy);
     return wlr_surface_point_accepts_input(member->surface, *sx, *sy);
+}
+
+static void to_local(const scaled_surface *member, double *sx, double *sy)
+{
+    const struct wlr_surface_state *current = &member->surface->current;
+    const struct wlr_scene_buffer *buffer = member->buffer;
+    double scale = member->set->scale;
+    *sx *= buffer->dst_width > 0 ? (double) current->width / buffer->dst_width : scale;
+    *sy *= buffer->dst_height > 0 ? (double) current->height / buffer->dst_height : scale;
+}
+
+static scaled_surface *member_of(struct wlr_scene_buffer *buffer)
+{
+    struct wlr_addon *addon = wlr_addon_find(&buffer->node.addons, buffer, &scaled_surface_addon);
+    if (addon == NULL) {
+        return NULL;
+    }
+    scaled_surface *member = wl_container_of(addon, member, addon);
+    return member;
 }
 
 static void show_buffer(scaled_surface *member)
@@ -202,16 +249,20 @@ static void fit(scaled_surface *member)
     if (current->width <= 0 || current->height <= 0) {
         return;
     }
-    double scale = member->set->scale;
-    wlr_scene_buffer_set_dest_size(member->buffer, scaled_length(current->width, scale),
-                                   scaled_length(current->height, scale));
-    fit_opaque_region(member, scale);
+    fit_size(member);
+    fit_opaque_region(member, member->set->scale);
 }
 
-static int scaled_length(int length, double scale)
+static void fit_size(scaled_surface *member)
 {
-    int scaled = (int) lround(length / scale);
-    return scaled < 1 ? 1 : scaled;
+    const struct wlr_surface_state *current = &member->surface->current;
+    if (current->width <= 0 || current->height <= 0) {
+        return;
+    }
+    const scaled_surface_sizer *sizer = &member->set->sizer;
+    wm_size size = sizer->size(sizer->data, member->surface,
+                               (wm_size){current->width, current->height});
+    wlr_scene_buffer_set_dest_size(member->buffer, size.width, size.height);
 }
 
 static void fit_opaque_region(scaled_surface *member, double scale)

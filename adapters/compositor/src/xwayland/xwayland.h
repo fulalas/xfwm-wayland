@@ -28,11 +28,13 @@ void xwayland_shell_update_scale(xwayland_shell *shell);
 double xwayland_shell_scale(const xwayland_shell *shell);
 wm_rect xwayland_shell_logical_rect(const xwayland_shell *shell,
                                     const struct wlr_xwayland_surface *xsurface);
+wm_rect xwayland_shell_drawn_rect(const xwayland_shell *shell,
+                                  const struct wlr_xwayland_surface *xsurface);
 struct wlr_scene_tree *xwayland_surface_tree(compositor *server, struct wlr_scene_tree *parent,
                                              struct wlr_surface *surface);
 double xwayland_client_scale(const compositor *server, const struct wl_client *client);
 double xwayland_surface_scale(const compositor *server, const struct wlr_surface *surface);
-void xwayland_node_local(const compositor *server, struct wlr_scene_node *node, double lx,
-                         double ly, double *sx, double *sy);
+void xwayland_node_local(struct wlr_scene_node *node, double lx, double ly, double *sx,
+                         double *sy);
 
 #endif

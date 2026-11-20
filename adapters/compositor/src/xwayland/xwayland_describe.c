@@ -260,6 +260,7 @@ void xwayland_view_send_states(void *self, const wm_window_view *state)
         wlr_xwayland_surface_set_shaded(xs, state->shaded);
     }
     set_layer_states(xs, state);
+    scaled_surfaces_refit(xv->surface_tree);
     x11_window_target target = {xwayland_shell_link(xv->server->xwayland), xs->window_id,
                                 xwayland_view_scale(xv)};
     x11_window_props_publish(&xv->published, &target, state);

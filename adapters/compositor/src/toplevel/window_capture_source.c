@@ -14,6 +14,7 @@
 
 #include "util/listener.h"
 #include "output/output.h"
+#include "render/scaled_surface.h"
 #include "render/scene_buffers.h"
 #include "xwayland/xwayland.h"
 
@@ -327,6 +328,7 @@ static void handle_view_changed(struct wl_listener *listener, void *data)
     if (data != s->view) {
         return;
     }
+    scaled_surfaces_refit(s->surface);
     if (!s->constrained) {
         render(s);
         scene_output_send_frame_done_now(s->scene_output);

@@ -6,6 +6,8 @@
 #include "xwayland_view_private.h"
 
 static wm_extents current_extents(const wm_window_view *state);
+static void remember_request(xwayland_view *xv, const x11_configure *request,
+                             const x11_configure *logical, const wm_rect *client);
 
 int xwayland_view_gravity(const xwayland_view *xv)
 {
@@ -16,13 +18,29 @@ int xwayland_view_gravity(const xwayland_view *xv)
     return XCB_GRAVITY_NORTH_WEST;
 }
 
-wm_rect xwayland_view_requested_rect(const xwayland_view *xv, const x11_configure *request)
+wm_rect xwayland_view_take_request(xwayland_view *xv, const x11_configure *request)
 {
     wm_window_view state = wm_window_current_view(xwayland_view_window(xv));
     x11_framed_window framed = {state.client, current_extents(&state)};
     x11_configure logical = *request;
     logical.values = x11_scale_rect_from_x(xwayland_view_scale(xv), request->values);
-    return x11_gravity_configure(&framed, &logical);
+    wm_rect client = x11_gravity_configure(&framed, &logical);
+    remember_request(xv, request, &logical, &client);
+    return client;
+}
+
+static void remember_request(xwayland_view *xv, const x11_configure *request,
+                             const x11_configure *logical, const wm_rect *client)
+{
+    wm_rect *kept = &xv->known_x;
+    const wm_rect *values = &request->values;
+    uint32_t fields = request->fields;
+    bool client_x = (fields & XCB_CONFIG_WINDOW_X) && logical->values.x == client->x;
+    bool client_y = (fields & XCB_CONFIG_WINDOW_Y) && logical->values.y == client->y;
+    kept->x = client_x ? values->x : kept->x;
+    kept->y = client_y ? values->y : kept->y;
+    kept->width = fields & XCB_CONFIG_WINDOW_WIDTH ? values->width : kept->width;
+    kept->height = fields & XCB_CONFIG_WINDOW_HEIGHT ? values->height : kept->height;
 }
 
 wm_point xwayland_view_requested_position(const xwayland_view *xv)

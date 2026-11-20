@@ -128,7 +128,7 @@ static void move_resize(xwayland_shell *shell, const xcb_client_message_event_t 
         .fields = (data[0] >> FIELDS_SHIFT) & FIELDS_MASK,
         .gravity = gravity != 0 ? gravity : xwayland_view_gravity(xv),
     };
-    wm_rect client = xwayland_view_requested_rect(xv, &request);
+    wm_rect client = xwayland_view_take_request(xv, &request);
     wm_request_configure(shell->server->desktop, window, &client);
 }
 

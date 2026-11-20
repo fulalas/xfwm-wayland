@@ -149,8 +149,7 @@ static void handle_motion(struct wl_listener *listener, void *data)
     }
     double sx = 0.0;
     double sy = 0.0;
-    xwayland_node_local(touch->seat->server, point->node, point->position.x, point->position.y,
-                        &sx, &sy);
+    xwayland_node_local(point->node, point->position.x, point->position.y, &sx, &sy);
     wlr_seat_touch_notify_motion(touch->seat->wlr_seat, event->time_msec, event->touch_id, sx,
                                  sy);
 }

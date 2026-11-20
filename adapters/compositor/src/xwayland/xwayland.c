@@ -27,6 +27,7 @@ enum {
 };
 
 static bool create_parts(xwayland_shell *shell);
+static wm_size surface_size(void *data, struct wlr_surface *surface, wm_size buffer);
 static void handle_ready(struct wl_listener *listener, void *data);
 static void handle_new_surface(struct wl_listener *listener, void *data);
 static void handle_startup_done(struct wl_listener *listener, void *data);
@@ -186,6 +187,16 @@ wm_rect xwayland_shell_logical_rect(const xwayland_shell *shell,
     return x11_scale_rect_from_x(xwayland_shell_scale(shell), x);
 }
 
+wm_rect xwayland_shell_drawn_rect(const xwayland_shell *shell,
+                                  const struct wlr_xwayland_surface *xsurface)
+{
+    wm_rect x = {xsurface->x, xsurface->y, xsurface->width, xsurface->height};
+    double scale = xwayland_shell_scale(shell);
+    wm_size size = x11_scale_placed_size_from_x(scale, x);
+    return (wm_rect){x11_scale_from_x(scale, x.x), x11_scale_from_x(scale, x.y), size.width,
+                     size.height};
+}
+
 struct wlr_scene_tree *xwayland_surface_tree(compositor *server, struct wlr_scene_tree *parent,
                                              struct wlr_surface *surface)
 {
@@ -214,21 +225,17 @@ double xwayland_surface_scale(const compositor *server, const struct wlr_surface
     return xwayland_client_scale(server, wl_resource_get_client(surface->resource));
 }
 
-void xwayland_node_local(const compositor *server, struct wlr_scene_node *node, double lx,
-                         double ly, double *sx, double *sy)
+void xwayland_node_local(struct wlr_scene_node *node, double lx, double ly, double *sx,
+                         double *sy)
 {
     int node_x = 0;
     int node_y = 0;
     wlr_scene_node_coords(node, &node_x, &node_y);
-    double scale = 1.0;
+    *sx = lx - node_x;
+    *sy = ly - node_y;
     if (node->type == WLR_SCENE_NODE_BUFFER) {
-        struct wlr_scene_surface *scene_surface =
-            wlr_scene_surface_try_from_buffer(wlr_scene_buffer_from_node(node));
-        scale = scene_surface != NULL ? xwayland_surface_scale(server, scene_surface->surface)
-                                      : 1.0;
+        scaled_surfaces_to_local(wlr_scene_buffer_from_node(node), sx, sy);
     }
-    *sx = (lx - node_x) * scale;
-    *sy = (ly - node_y) * scale;
 }
 
 void compositor_x11_settings_changed(compositor *c)
@@ -243,9 +250,21 @@ static bool create_parts(xwayland_shell *shell)
     shell->ewmh = xwayland_ewmh_create(shell->server, &shell->link);
     shell->xsettings = xwayland_xsettings_create(shell->server, &shell->link);
     shell->grabs = keyboard_grabs_create(shell->server->display, shell);
-    shell->scaled = scaled_surfaces_create();
+    shell->scaled = scaled_surfaces_create((scaled_surface_sizer){surface_size, shell});
     return shell->ewmh != NULL && shell->xsettings != NULL && shell->grabs != NULL &&
            shell->scaled != NULL && shell->restart.timer != NULL;
+}
+
+static wm_size surface_size(void *data, struct wlr_surface *surface, wm_size buffer)
+{
+    const xwayland_shell *shell = data;
+    double scale = xwayland_shell_scale(shell);
+    struct wlr_xwayland_surface *xsurface = wlr_xwayland_surface_try_from_wlr_surface(surface);
+    if (xsurface == NULL || (xsurface->data != NULL && xwayland_view_framed(xsurface->data))) {
+        return x11_scale_size_from_x(scale, buffer);
+    }
+    wm_rect placed = {xsurface->x, xsurface->y, buffer.width, buffer.height};
+    return x11_scale_placed_size_from_x(scale, placed);
 }
 
 static void handle_ready(struct wl_listener *listener, void *data)

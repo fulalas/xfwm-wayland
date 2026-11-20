@@ -327,7 +327,7 @@ static void deliver_grab_motion(pointer_input *p, uint32_t time_ms)
     struct wlr_cursor *cursor = p->seat->cursor;
     double sx = 0.0;
     double sy = 0.0;
-    xwayland_node_local(p->seat->server, p->grab_node, cursor->x, cursor->y, &sx, &sy);
+    xwayland_node_local(p->grab_node, cursor->x, cursor->y, &sx, &sy);
     wlr_seat_pointer_notify_motion(p->seat->wlr_seat, time_ms, sx, sy);
 }
 
