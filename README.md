@@ -34,7 +34,7 @@ than `xfwl4`, while delivering more features in a more reliable way:
 |                                      |  xfwl4             |  xfwm-wayland            |
 |--------------------------------------|--------------------|--------------------------|
 | Language                             | Rust, on `Smithay` | C, on `wlroots`          |
-| Dependencies built                   | 246                | 23                       |
+| Dependencies                         | 273                | 24                       |
 | Build time (release)                 | 70 s               | 5 s                      |
 | Program size                         | 26.4 MB            | 0.7 MB                   |
 | Memory consumption                   | 196.2 MB           | 33.4 MB                  |
