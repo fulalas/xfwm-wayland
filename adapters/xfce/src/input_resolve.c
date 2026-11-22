@@ -16,6 +16,7 @@ static bool lookup_bool(const setting_source *source, const char *key, bool fall
 static int lookup_int(const setting_source *source, const char *key, int fallback);
 static void copy_text(const setting_source *source, const char *key, char *target);
 static void copy_options(const setting_source *layout, char *target);
+static void copy_system(const system_keymap *system, system_keymap_field field, char *target);
 
 keyboard_prefs input_keyboard_prefs_from(const keyboard_sources *sources)
 {
@@ -28,6 +29,10 @@ keyboard_prefs input_keyboard_prefs_from(const keyboard_sources *sources)
         prefs.repeat_rate = 0;
     }
     if (lookup_bool(&sources->layout, "XkbDisable", true)) {
+        copy_system(sources->system, SYSTEM_KEYMAP_LAYOUT, prefs.layout);
+        copy_system(sources->system, SYSTEM_KEYMAP_VARIANT, prefs.variant);
+        copy_system(sources->system, SYSTEM_KEYMAP_MODEL, prefs.model);
+        copy_system(sources->system, SYSTEM_KEYMAP_OPTIONS, prefs.options);
         return prefs;
     }
     copy_text(&sources->layout, "XkbLayout", prefs.layout);
@@ -84,4 +89,11 @@ static void copy_options(const setting_source *layout, char *target)
     const char *parts[] = { group ? group : "", compose ? compose : "", NULL };
 
     input_join_options(parts, target, PREFS_TEXT_MAX);
+}
+
+static void copy_system(const system_keymap *system, system_keymap_field field, char *target)
+{
+    const char *text = system != NULL ? system->fields[field] : NULL;
+
+    g_strlcpy(target, text ? text : "", PREFS_TEXT_MAX);
 }

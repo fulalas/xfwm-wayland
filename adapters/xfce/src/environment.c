@@ -36,6 +36,7 @@ struct xfce_environment {
     char *theme_name;
     char *title_font;
     char **startup_environment;
+    system_keymap system_keymap;
 };
 
 typedef struct change_notice {
@@ -82,6 +83,7 @@ xfce_environment *xfce_environment_create(const xfce_listener *listener)
 
     environment->listener = *listener;
     environment->startup_environment = g_get_environ();
+    environment->system_keymap = input_prefs_system_keymap(environment->startup_environment);
     environment->channels = channels_create(&watch);
     environment->dispatcher = dispatcher_create(&target);
     environment->bridge = gtk_bridge_create(&bridge_listener);
@@ -107,6 +109,7 @@ void xfce_environment_destroy(xfce_environment *environment)
     g_free(environment->theme_name);
     g_free(environment->title_font);
     g_strfreev(environment->startup_environment);
+    system_keymap_clear(&environment->system_keymap);
     g_free(environment);
 }
 
@@ -384,7 +387,7 @@ static keyboard_prefs keyboard_prefs_of(void *self)
 {
     xfce_environment *environment = self;
 
-    return input_prefs_keyboard(environment->channels);
+    return input_prefs_keyboard(environment->channels, &environment->system_keymap);
 }
 
 static pointer_prefs pointer_prefs_of(void *self, const char *device_name)

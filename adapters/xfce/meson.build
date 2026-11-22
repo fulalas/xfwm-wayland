@@ -39,6 +39,7 @@ xfce_logic = static_library(
     'src/shortcut_defaults.c',
     'src/shortcut_property.c',
     'src/style_state.c',
+    'src/system_keymap.c',
     'src/value_text.c',
     'src/window_rules.c',
     'src/workspace_rows.c',

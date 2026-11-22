@@ -5,6 +5,7 @@
 #include "fake_source.h"
 #include "input_resolve.h"
 #include "input_text.h"
+#include "system_keymap.h"
 
 static const fake_entry no_entries[] = { { NULL, NULL } };
 
@@ -67,6 +68,131 @@ static void test_keyboard_system_defaults(void)
     CHECK_INT_EQ(500, prefs.repeat_delay_ms);
     CHECK_INT_EQ(20, prefs.repeat_rate);
     CHECK(!prefs.numlock);
+}
+
+static void test_system_keymap_vconsole(void)
+{
+    system_keymap keymap = { 0 };
+    system_keymap_read_vconsole(&keymap, "# XKBMODEL=pc105\nKEYMAP=dvorak\nXKBLAYOUT=us\n"
+                                         " XKBVARIANT = \"dvorak\"\nXKBOPTIONS='compose:ralt'\n");
+
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_LAYOUT], "us") == 0);
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_VARIANT], "dvorak") == 0);
+    CHECK(keymap.fields[SYSTEM_KEYMAP_MODEL] == NULL);
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_OPTIONS], "compose:ralt") == 0);
+    system_keymap_clear(&keymap);
+}
+
+static const char xorg_keyboard[] =
+    "# keyboard\n"
+    "Section \"InputClass\"\n"
+    "    Identifier \"system-keyboard\"\n"
+    "    MatchIsKeyboard \"on\"\n"
+    "    Option \"XkbLayout\" \"us\" # main\n"
+    "    Option \"Xkb_Variant\" \"alt-intl\"\n"
+    "    Option \"XkbOptions\" \"terminate:ctrl_alt_bksp\"\n"
+    "EndSection\n"
+    "Section \"InputClass\"\n"
+    "    MatchIsKeyboard \"on\"\n"
+    "    MatchProduct \"Logitech\"\n"
+    "    Option \"XkbLayout\" \"de\"\n"
+    "EndSection\n"
+    "Section \"InputDevice\"\n"
+    "    Option \"XkbModel\" \"pc105\"\n"
+    "EndSection\n";
+
+static void test_system_keymap_xorg(void)
+{
+    system_keymap keymap = { 0 };
+    system_keymap_read_xorg(&keymap, xorg_keyboard);
+
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_LAYOUT], "us") == 0);
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_VARIANT], "alt-intl") == 0);
+    CHECK(keymap.fields[SYSTEM_KEYMAP_MODEL] == NULL);
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_OPTIONS], "terminate:ctrl_alt_bksp") == 0);
+    system_keymap_read_xorg(&keymap, "Section \"InputClass\"\nOption \"XkbLayout\" \"fr\"\n"
+                                     "EndSection\n");
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_LAYOUT], "fr") == 0);
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_VARIANT], "alt-intl") == 0);
+    system_keymap_clear(&keymap);
+}
+
+static void test_system_keymap_xorg_matches(void)
+{
+    system_keymap keymap = { 0 };
+    system_keymap_read_xorg(&keymap, "Section \"InputClass\"\n"
+                                     "    MatchIsKeyboard \"on\"\n"
+                                     "    MatchDevicePath \"/dev/input/event*\"\n"
+                                     "    MatchDriver \"evdev\"\n"
+                                     "    MatchIsPointer \"off\"\n"
+                                     "    Option \"XkbLayout\" \"fr\"\n"
+                                     "EndSection\n"
+                                     "Section \"InputClass\"\n"
+                                     "    MatchIsPointer \"on\"\n"
+                                     "    Option \"XkbLayout\" \"de\"\n"
+                                     "EndSection\n"
+                                     "Section \"InputClass\"\n"
+                                     "    MatchIsKeyboard \"off\"\n"
+                                     "    Option \"XkbLayout\" \"it\"\n"
+                                     "EndSection\n");
+
+    CHECK(g_strcmp0(keymap.fields[SYSTEM_KEYMAP_LAYOUT], "fr") == 0);
+    system_keymap_clear(&keymap);
+}
+
+static void test_system_keymap_choose(void)
+{
+    char *clean[] = { "HOME=/home/user", NULL };
+    char *overridden[] = { "XKB_DEFAULT_VARIANT=intl", NULL };
+    system_keymap vconsole = { 0 };
+    system_keymap xorg = { 0 };
+
+    system_keymap_read_vconsole(&vconsole, "XKBOPTIONS=compose:ralt\n");
+    system_keymap_read_xorg(&xorg, xorg_keyboard);
+    system_keymap chosen = system_keymap_choose(&vconsole, &xorg, clean);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_LAYOUT], "us") == 0);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_OPTIONS], "terminate:ctrl_alt_bksp") == 0);
+    CHECK(vconsole.fields[SYSTEM_KEYMAP_OPTIONS] == NULL);
+    CHECK(xorg.fields[SYSTEM_KEYMAP_LAYOUT] == NULL);
+    system_keymap_clear(&chosen);
+
+    system_keymap_read_vconsole(&vconsole, "XKBLAYOUT=de\n");
+    system_keymap_read_xorg(&xorg, xorg_keyboard);
+    chosen = system_keymap_choose(&vconsole, &xorg, clean);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_LAYOUT], "de") == 0);
+    CHECK(chosen.fields[SYSTEM_KEYMAP_VARIANT] == NULL);
+    system_keymap_clear(&chosen);
+
+    system_keymap_read_vconsole(&vconsole, "XKBLAYOUT=de\n");
+    chosen = system_keymap_choose(&vconsole, &xorg, overridden);
+    CHECK(chosen.fields[SYSTEM_KEYMAP_LAYOUT] == NULL);
+    CHECK(vconsole.fields[SYSTEM_KEYMAP_LAYOUT] == NULL);
+}
+
+static void test_keyboard_system_keymap(void)
+{
+    static const fake_entry defaults[] = { { "XkbLayout", "fr" }, { NULL, NULL } };
+    static const fake_entry custom[] = {
+        { "XkbDisable", "false" }, { "XkbLayout", "fr" }, { NULL, NULL },
+    };
+    system_keymap system = { 0 };
+    system_keymap_read_vconsole(&system, "XKBLAYOUT=us\nXKBVARIANT=dvorak\nXKBOPTIONS=caps:none\n");
+    keyboard_sources sources = {
+        .layout = fake_source(defaults),
+        .keyboards = fake_source(no_entries),
+        .system = &system,
+    };
+    keyboard_prefs prefs = input_keyboard_prefs_from(&sources);
+
+    CHECK(strcmp(prefs.layout, "us") == 0);
+    CHECK(strcmp(prefs.variant, "dvorak") == 0);
+    CHECK(strcmp(prefs.options, "caps:none") == 0);
+    sources.layout = fake_source(custom);
+    prefs = input_keyboard_prefs_from(&sources);
+    CHECK(strcmp(prefs.layout, "fr") == 0);
+    CHECK(strcmp(prefs.variant, "") == 0);
+    CHECK(strcmp(prefs.options, "") == 0);
+    system_keymap_clear(&system);
 }
 
 static const fake_entry custom_layout[] = {
@@ -194,6 +320,11 @@ int main(void)
         { "bool_from_text", test_bool_from_text },
         { "double_from_text", test_double_from_text },
         { "keyboard_system_defaults", test_keyboard_system_defaults },
+        { "system_keymap_vconsole", test_system_keymap_vconsole },
+        { "system_keymap_xorg", test_system_keymap_xorg },
+        { "system_keymap_xorg_matches", test_system_keymap_xorg_matches },
+        { "system_keymap_choose", test_system_keymap_choose },
+        { "keyboard_system_keymap", test_keyboard_system_keymap },
         { "keyboard_custom_layout", test_keyboard_custom_layout },
         { "keyboard_repeat_disabled", test_keyboard_repeat_disabled },
         { "pointer_libinput_properties", test_pointer_libinput_properties },

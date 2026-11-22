@@ -3,10 +3,12 @@
 
 #include "compositor/services.h"
 #include "setting_source.h"
+#include "system_keymap.h"
 
 typedef struct keyboard_sources {
     setting_source layout;
     setting_source keyboards;
+    const system_keymap *system;
 } keyboard_sources;
 
 typedef struct cursor_sources {
