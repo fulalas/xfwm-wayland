@@ -1,6 +1,8 @@
 #ifndef XFCE_SYSTEM_KEYMAP_H
 #define XFCE_SYSTEM_KEYMAP_H
 
+#include <stddef.h>
+
 typedef enum system_keymap_field {
     SYSTEM_KEYMAP_LAYOUT,
     SYSTEM_KEYMAP_VARIANT,
@@ -15,8 +17,7 @@ typedef struct system_keymap {
 
 void system_keymap_read_vconsole(system_keymap *keymap, const char *text);
 void system_keymap_read_xorg(system_keymap *keymap, const char *text);
-system_keymap system_keymap_choose(system_keymap *vconsole, system_keymap *xorg,
-                                    char **environment);
+system_keymap system_keymap_choose(system_keymap *sources, size_t count, char **environment);
 void system_keymap_clear(system_keymap *keymap);
 
 #endif

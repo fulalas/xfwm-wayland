@@ -8,6 +8,7 @@
 
 static const char default_prefix[] = "/Default/";
 static const char vconsole_file[] = "/etc/vconsole.conf";
+static const char debian_keyboard_file[] = "/etc/default/keyboard";
 static const char xorg_file[] = "/etc/X11/xorg.conf";
 static const char xorg_system_dir[] = "/usr/share/X11/xorg.conf.d";
 static const char xorg_admin_dir[] = "/etc/X11/xorg.conf.d";
@@ -22,14 +23,15 @@ static gint compare_names(gconstpointer a, gconstpointer b);
 
 system_keymap input_prefs_system_keymap(char **environment)
 {
-    system_keymap vconsole = { 0 };
-    system_keymap xorg = { 0 };
+    system_keymap sources[3] = { 0 };
+    system_keymap *xorg = &sources[2];
 
-    read_keymap_file(vconsole_file, &vconsole, system_keymap_read_vconsole);
-    read_keymap_file(xorg_file, &xorg, system_keymap_read_xorg);
-    read_xorg_dir(xorg_system_dir, xorg_admin_dir, &xorg);
-    read_xorg_dir(xorg_admin_dir, NULL, &xorg);
-    return system_keymap_choose(&vconsole, &xorg, environment);
+    read_keymap_file(vconsole_file, &sources[0], system_keymap_read_vconsole);
+    read_keymap_file(debian_keyboard_file, &sources[1], system_keymap_read_vconsole);
+    read_keymap_file(xorg_file, xorg, system_keymap_read_xorg);
+    read_xorg_dir(xorg_system_dir, xorg_admin_dir, xorg);
+    read_xorg_dir(xorg_admin_dir, NULL, xorg);
+    return system_keymap_choose(sources, G_N_ELEMENTS(sources), environment);
 }
 
 keyboard_prefs input_prefs_keyboard(const channels *channels, const system_keymap *system)

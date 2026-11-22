@@ -140,33 +140,62 @@ static void test_system_keymap_xorg_matches(void)
     system_keymap_clear(&keymap);
 }
 
+static system_keymap choose_keymap(const char *vconsole, const char *debian, const char *xorg,
+                                   char **environment)
+{
+    system_keymap sources[3] = { 0 };
+    system_keymap_read_vconsole(&sources[0], vconsole);
+    system_keymap_read_vconsole(&sources[1], debian);
+    system_keymap_read_xorg(&sources[2], xorg);
+    system_keymap chosen = system_keymap_choose(sources, G_N_ELEMENTS(sources), environment);
+    for (size_t i = 0; i < G_N_ELEMENTS(sources); i++) {
+        for (int f = 0; f < SYSTEM_KEYMAP_FIELDS; f++) {
+            CHECK(sources[i].fields[f] == NULL);
+        }
+    }
+    return chosen;
+}
+
 static void test_system_keymap_choose(void)
 {
     char *clean[] = { "HOME=/home/user", NULL };
-    char *overridden[] = { "XKB_DEFAULT_VARIANT=intl", NULL };
-    system_keymap vconsole = { 0 };
-    system_keymap xorg = { 0 };
-
-    system_keymap_read_vconsole(&vconsole, "XKBOPTIONS=compose:ralt\n");
-    system_keymap_read_xorg(&xorg, xorg_keyboard);
-    system_keymap chosen = system_keymap_choose(&vconsole, &xorg, clean);
+    system_keymap chosen = choose_keymap("XKBOPTIONS=compose:ralt\n", "", xorg_keyboard, clean);
     CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_LAYOUT], "us") == 0);
-    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_OPTIONS], "terminate:ctrl_alt_bksp") == 0);
-    CHECK(vconsole.fields[SYSTEM_KEYMAP_OPTIONS] == NULL);
-    CHECK(xorg.fields[SYSTEM_KEYMAP_LAYOUT] == NULL);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_VARIANT], "alt-intl") == 0);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_OPTIONS], "compose:ralt") == 0);
     system_keymap_clear(&chosen);
 
-    system_keymap_read_vconsole(&vconsole, "XKBLAYOUT=de\n");
-    system_keymap_read_xorg(&xorg, xorg_keyboard);
-    chosen = system_keymap_choose(&vconsole, &xorg, clean);
+    chosen = choose_keymap("XKBLAYOUT=de\n", "XKBLAYOUT=br\n", xorg_keyboard, clean);
     CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_LAYOUT], "de") == 0);
     CHECK(chosen.fields[SYSTEM_KEYMAP_VARIANT] == NULL);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_OPTIONS], "terminate:ctrl_alt_bksp") == 0);
     system_keymap_clear(&chosen);
 
-    system_keymap_read_vconsole(&vconsole, "XKBLAYOUT=de\n");
-    chosen = system_keymap_choose(&vconsole, &xorg, overridden);
+    chosen = choose_keymap("KEYMAP=br-abnt2\n", "XKBLAYOUT=br\nXKBMODEL=abnt2\n", "", clean);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_LAYOUT], "br") == 0);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_MODEL], "abnt2") == 0);
+    system_keymap_clear(&chosen);
+}
+
+static void test_system_keymap_environment(void)
+{
+    char *options[] = { "XKB_DEFAULT_OPTIONS=caps:escape", "XKB_DEFAULT_VARIANT=intl", NULL };
+    char *layout[] = { "XKB_DEFAULT_LAYOUT=fr", "XKB_DEFAULT_MODEL=", NULL };
+    const char *vconsole = "XKBLAYOUT=de\nXKBVARIANT=nodeadkeys\nXKBMODEL=pc105\n"
+                           "XKBOPTIONS=compose:ralt\n";
+
+    system_keymap chosen = choose_keymap(vconsole, "", "", options);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_LAYOUT], "de") == 0);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_VARIANT], "nodeadkeys") == 0);
+    CHECK(chosen.fields[SYSTEM_KEYMAP_OPTIONS] == NULL);
+    system_keymap_clear(&chosen);
+
+    chosen = choose_keymap(vconsole, "", "", layout);
     CHECK(chosen.fields[SYSTEM_KEYMAP_LAYOUT] == NULL);
-    CHECK(vconsole.fields[SYSTEM_KEYMAP_LAYOUT] == NULL);
+    CHECK(chosen.fields[SYSTEM_KEYMAP_VARIANT] == NULL);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_MODEL], "pc105") == 0);
+    CHECK(g_strcmp0(chosen.fields[SYSTEM_KEYMAP_OPTIONS], "compose:ralt") == 0);
+    system_keymap_clear(&chosen);
 }
 
 static void test_keyboard_system_keymap(void)
@@ -324,6 +353,7 @@ int main(void)
         { "system_keymap_xorg", test_system_keymap_xorg },
         { "system_keymap_xorg_matches", test_system_keymap_xorg_matches },
         { "system_keymap_choose", test_system_keymap_choose },
+        { "system_keymap_environment", test_system_keymap_environment },
         { "keyboard_system_keymap", test_keyboard_system_keymap },
         { "keyboard_custom_layout", test_keyboard_custom_layout },
         { "keyboard_repeat_disabled", test_keyboard_repeat_disabled },

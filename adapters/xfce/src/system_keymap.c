@@ -22,9 +22,17 @@ static const field_names names[SYSTEM_KEYMAP_FIELDS] = {
     [SYSTEM_KEYMAP_OPTIONS] = { "XKBOPTIONS", "xkboptions" },
 };
 
-static const char *const xkb_environment[] = {
-    "XKB_DEFAULT_RULES", "XKB_DEFAULT_MODEL", "XKB_DEFAULT_LAYOUT", "XKB_DEFAULT_VARIANT",
-    "XKB_DEFAULT_OPTIONS",
+static const char *const overriding_variables[SYSTEM_KEYMAP_FIELDS] = {
+    [SYSTEM_KEYMAP_LAYOUT] = "XKB_DEFAULT_LAYOUT",
+    [SYSTEM_KEYMAP_VARIANT] = "XKB_DEFAULT_LAYOUT",
+    [SYSTEM_KEYMAP_MODEL] = "XKB_DEFAULT_MODEL",
+    [SYSTEM_KEYMAP_OPTIONS] = "XKB_DEFAULT_OPTIONS",
+};
+static const system_keymap_field deciding_fields[SYSTEM_KEYMAP_FIELDS] = {
+    [SYSTEM_KEYMAP_LAYOUT] = SYSTEM_KEYMAP_LAYOUT,
+    [SYSTEM_KEYMAP_VARIANT] = SYSTEM_KEYMAP_LAYOUT,
+    [SYSTEM_KEYMAP_MODEL] = SYSTEM_KEYMAP_MODEL,
+    [SYSTEM_KEYMAP_OPTIONS] = SYSTEM_KEYMAP_OPTIONS,
 };
 static const char *const all_keyboards_matches[] = { "MatchDriver", "MatchOS" };
 static const char any_event_device[] = "/dev/input/event*";
@@ -34,8 +42,9 @@ static void read_xorg_line(system_keymap *keymap, xorg_section *section, const c
 static void read_xorg_entry(xorg_section *section, char **words);
 static void end_section(system_keymap *keymap, xorg_section *section);
 static bool matches_all_keyboards(char **words);
-static bool has_layout(const system_keymap *keymap);
-static bool has_xkb_environment(char **environment);
+static system_keymap *first_setting(system_keymap *sources, size_t count,
+                                    system_keymap_field field);
+static bool is_set(const char *text);
 static int vconsole_field(const char *key);
 static int xorg_field(const char *option);
 static bool is_true(const char *text);
@@ -63,19 +72,22 @@ void system_keymap_read_xorg(system_keymap *keymap, const char *text)
     }
 }
 
-system_keymap system_keymap_choose(system_keymap *vconsole, system_keymap *xorg,
-                                    char **environment)
+system_keymap system_keymap_choose(system_keymap *sources, size_t count, char **environment)
 {
+    system_keymap *owners[SYSTEM_KEYMAP_FIELDS];
+    for (int i = 0; i < SYSTEM_KEYMAP_FIELDS; i++) {
+        bool overridden = is_set(g_environ_getenv(environment, overriding_variables[i]));
+        owners[i] = overridden ? NULL : first_setting(sources, count, deciding_fields[i]);
+    }
     system_keymap chosen = { 0 };
-    if (!has_xkb_environment(environment)) {
-        system_keymap *source = has_layout(vconsole) ? vconsole : has_layout(xorg) ? xorg : NULL;
-        if (source != NULL) {
-            chosen = *source;
-            *source = (system_keymap) { 0 };
+    for (int i = 0; i < SYSTEM_KEYMAP_FIELDS; i++) {
+        if (owners[i] != NULL) {
+            chosen.fields[i] = g_steal_pointer(&owners[i]->fields[i]);
         }
     }
-    system_keymap_clear(vconsole);
-    system_keymap_clear(xorg);
+    for (size_t i = 0; i < count; i++) {
+        system_keymap_clear(&sources[i]);
+    }
     return chosen;
 }
 
@@ -161,20 +173,20 @@ static bool matches_all_keyboards(char **words)
     return false;
 }
 
-static bool has_layout(const system_keymap *keymap)
+static system_keymap *first_setting(system_keymap *sources, size_t count,
+                                    system_keymap_field field)
 {
-    const char *layout = keymap->fields[SYSTEM_KEYMAP_LAYOUT];
-    return layout != NULL && layout[0] != '\0';
-}
-
-static bool has_xkb_environment(char **environment)
-{
-    for (size_t i = 0; i < G_N_ELEMENTS(xkb_environment); i++) {
-        if (g_environ_getenv(environment, xkb_environment[i]) != NULL) {
-            return true;
+    for (size_t i = 0; i < count; i++) {
+        if (is_set(sources[i].fields[field])) {
+            return &sources[i];
         }
     }
-    return false;
+    return NULL;
+}
+
+static bool is_set(const char *text)
+{
+    return text != NULL && text[0] != '\0';
 }
 
 static int vconsole_field(const char *key)
