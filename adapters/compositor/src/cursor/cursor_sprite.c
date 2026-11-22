@@ -20,6 +20,7 @@ struct cursor_sprite {
     size_t frame;
     float scale;
     float load_scale;
+    uint32_t nominal;
     int size;
     struct wlr_buffer **resized;
     size_t resized_count;
@@ -124,6 +125,7 @@ static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, 
     sprite->xcursor = source.xcursor;
     sprite->scale = scale;
     sprite->load_scale = source.load_scale;
+    sprite->nominal = source.nominal;
     sprite->size = theme->size;
     show_frame(sprite, 0);
     return true;
@@ -132,7 +134,7 @@ static bool show_xcursor(cursor_sprite *sprite, const cursor_theme_view *theme, 
 static xcursor_fit load_source(const cursor_theme_view *theme, const char *name, float scale)
 {
     if (theme->xcursors == NULL) {
-        return (xcursor_fit) {NULL, scale};
+        return (xcursor_fit) {NULL, scale, 0};
     }
     return xcursor_cache_fit(theme->xcursors, name, scale, SOURCE_OVERSAMPLE);
 }
@@ -174,10 +176,10 @@ static void show_xcursor_frame(cursor_sprite *sprite, size_t frame)
 static bool show_fitted_frame(cursor_sprite *sprite, size_t frame)
 {
     struct wlr_xcursor_image *image = sprite->xcursor->images[frame];
-    if (image->width == 0 || image->height == 0) {
+    if (image->width == 0 || image->height == 0 || sprite->nominal == 0) {
         return false;
     }
-    scalable_request request = {image->width, image->width, sprite->size, sprite->scale};
+    scalable_request request = {image->width, sprite->nominal, sprite->size, sprite->scale};
     scalable_layout layout = scalable_layout_for(&request);
     struct wlr_buffer *buffer = layout.pixels == (int) image->width
                                     ? xcursor_cache_image_buffer(image)

@@ -13,6 +13,7 @@ typedef struct xcursor_cache xcursor_cache;
 typedef struct xcursor_fit {
     struct wlr_xcursor *xcursor;
     float load_scale;
+    uint32_t nominal;
 } xcursor_fit;
 
 xcursor_cache *xcursor_cache_create(const char *theme, uint32_t size);

@@ -28,6 +28,7 @@ typedef struct fallback_slot {
 
 typedef struct cached_cursor {
     struct wlr_xcursor xcursor;
+    uint32_t nominal;
     bool larger;
 } cached_cursor;
 
@@ -101,9 +102,10 @@ xcursor_fit xcursor_cache_fit(xcursor_cache *cache, const char *name, float scal
     };
     cached_cursor *cursor = lookup(cache, name, &request);
     if (cursor->xcursor.image_count == 0) {
-        return (xcursor_fit) {NULL, scale};
+        return (xcursor_fit) {NULL, scale, 0};
     }
-    return (xcursor_fit) {&cursor->xcursor, cursor->larger ? load_scale : scale};
+    return (xcursor_fit) {&cursor->xcursor, cursor->larger ? load_scale : scale,
+                          cursor->nominal};
 }
 
 struct wlr_buffer *xcursor_cache_image_buffer(struct wlr_xcursor_image *image)
@@ -147,6 +149,7 @@ static cached_cursor *load_cursor(xcursor_cache *cache, const char *name,
 static void fill_from_frames(cached_cursor *cursor, const xcursor_frames *frames)
 {
     cursor->larger = frames->larger;
+    cursor->nominal = frames->nominal;
     cursor->xcursor.images = g_new0(struct wlr_xcursor_image *, frames->count);
     for (size_t i = 0; i < frames->count; i++) {
         const xcursor_frame *frame = &frames->frames[i];
@@ -178,6 +181,7 @@ static void fill_from_fallback(xcursor_cache *cache, cached_cursor *cursor, cons
             cursor->larger = true;
         }
     }
+    cursor->nominal = MAX(xcursor->images[0]->width, xcursor->images[0]->height);
     cursor->xcursor.images = g_new0(struct wlr_xcursor_image *, xcursor->image_count);
     for (unsigned int i = 0; i < xcursor->image_count; i++) {
         if (!add_image(cursor, xcursor->images[i])) {

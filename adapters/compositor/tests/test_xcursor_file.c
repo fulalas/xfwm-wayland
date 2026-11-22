@@ -95,6 +95,7 @@ static void test_picks_nearest_size_with_all_frames(void)
     xcursor_frames frames;
     CHECK(load_bytes(data, length, 27, &frames));
     CHECK_INT_EQ(2, (int) frames.count);
+    CHECK_INT_EQ(24, (int) frames.nominal);
     CHECK_INT_EQ(2, (int) frames.frames[0].width);
     CHECK_INT_EQ(10, (int) frames.frames[0].delay);
     CHECK_INT_EQ(20, (int) frames.frames[1].delay);
@@ -109,6 +110,7 @@ static void test_larger_size_wins_when_closer(void)
     xcursor_frames frames;
     CHECK(load_bytes(data, length, 30, &frames));
     CHECK_INT_EQ(1, (int) frames.count);
+    CHECK_INT_EQ(32, (int) frames.nominal);
     CHECK_INT_EQ(3, (int) frames.frames[0].width);
     CHECK(frames.frames[0].pixels[8] == 0xff000002);
     xcursor_frames_clear(&frames);

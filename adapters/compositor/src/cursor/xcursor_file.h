@@ -18,6 +18,7 @@ typedef struct xcursor_frame {
 typedef struct xcursor_frames {
     xcursor_frame *frames;
     size_t count;
+    uint32_t nominal;
     bool larger;
 } xcursor_frames;
 

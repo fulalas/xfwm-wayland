@@ -196,7 +196,7 @@ static void load_larger(FILE *file, const toc_table *toc, uint32_t loaded, int s
 static bool read_frames(FILE *file, const toc_table *toc, uint32_t size, size_t count,
                         xcursor_frames *frames)
 {
-    *frames = (xcursor_frames) {calloc(count, sizeof(*frames->frames)), 0, false};
+    *frames = (xcursor_frames) {calloc(count, sizeof(*frames->frames)), 0, size, false};
     if (frames->frames == NULL) {
         return false;
     }
