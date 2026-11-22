@@ -18,6 +18,9 @@ if wlroots_name == ''
   error('wlroots 0.20 or newer not found')
 endif
 wlroots_dep = dependency(wlroots_name)
+if wlroots_dep.get_variable(pkgconfig: 'have_xwayland', default_value: 'false') != 'true'
+  error(wlroots_name + ' was built without Xwayland support')
+endif
 wayland_server_dep = dependency('wayland-server')
 xkbcommon_dep = dependency('xkbcommon')
 libinput_dep = dependency('libinput')
