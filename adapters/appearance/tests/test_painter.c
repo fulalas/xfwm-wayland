@@ -74,14 +74,6 @@ static cairo_surface_t *paint_one_op(const one_op_frame *frame)
     return surface;
 }
 
-static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
-{
-    const unsigned char *data = cairo_image_surface_get_data(surface);
-    int stride = cairo_image_surface_get_stride(surface);
-
-    return ((const uint32_t *) (const void *) (data + y * stride))[x];
-}
-
 static const char half_corner_xpm[] = "/* XPM */\nstatic char *c[] = {\n"
                                       "\"4 4 2 1\",\n\". c #FF0000\",\n\"  c None\",\n"
                                       "\"..  \",\"..  \",\"..  \",\"..  \"};\n";
@@ -124,8 +116,8 @@ static void check_right_corner(wm_point origin, int last_column)
     cairo_surface_t *surface = paint_one_op(&frame);
 
     CHECK_INT_EQ(last_column + 1, cairo_image_surface_get_width(surface));
-    CHECK_INT_EQ(0xff0000ff, pixel_at(surface, last_column, 1));
-    CHECK(pixel_at(surface, last_column - 1, 1) != 0xff0000ff);
+    CHECK_INT_EQ(0xff0000ff, fixture_pixel_at(surface, last_column, 1));
+    CHECK(fixture_pixel_at(surface, last_column - 1, 1) != 0xff0000ff);
     cairo_surface_destroy(surface);
 }
 
@@ -159,9 +151,9 @@ static int svg_corner_blue_columns(wm_point origin)
     int width = cairo_image_surface_get_width(surface);
     int blue = 0;
 
-    CHECK_INT_EQ(0xff0000ff, pixel_at(surface, width - 1, 1));
+    CHECK_INT_EQ(0xff0000ff, fixture_pixel_at(surface, width - 1, 1));
     for (int x = 0; x < width; x++) {
-        blue += pixel_at(surface, x, 1) == 0xff0000ff;
+        blue += fixture_pixel_at(surface, x, 1) == 0xff0000ff;
     }
     cairo_surface_destroy(surface);
     return blue;
@@ -192,7 +184,7 @@ static void test_tiled_edge_does_not_wrap(void)
     };
     cairo_surface_t *surface = paint_one_op(&frame);
 
-    CHECK_INT_EQ(OPAQUE_WHITE, pixel_at(surface, 2, 2));
+    CHECK_INT_EQ(OPAQUE_WHITE, fixture_pixel_at(surface, 2, 2));
     cairo_surface_destroy(surface);
 }
 
@@ -216,9 +208,9 @@ static void test_side_fills_band_at_any_alignment(void)
     cairo_surface_t *surface = paint_one_op(&frame);
 
     CHECK_INT_EQ(7, cairo_image_surface_get_width(surface));
-    CHECK_INT_EQ(RED, pixel_at(surface, 0, 1));
-    CHECK_INT_EQ(RED, pixel_at(surface, 5, 1));
-    CHECK_INT_EQ(BLUE, pixel_at(surface, 6, 1));
+    CHECK_INT_EQ(RED, fixture_pixel_at(surface, 0, 1));
+    CHECK_INT_EQ(RED, fixture_pixel_at(surface, 5, 1));
+    CHECK_INT_EQ(BLUE, fixture_pixel_at(surface, 6, 1));
     cairo_surface_destroy(surface);
 }
 
@@ -248,11 +240,11 @@ static void test_tile_starts_at_its_origin(void)
     cairo_surface_t *whole = paint_tile(three_color_side_xpm, (wm_rect) { 0, 0, 6, 1 });
     cairo_surface_t *part = paint_tile(three_color_side_xpm, (wm_rect) { 2, 0, 4, 1 });
 
-    CHECK_INT_EQ(GREEN, pixel_at(whole, 0, 0));
-    CHECK_INT_EQ(BLACK, pixel_at(whole, 1, 0));
-    CHECK_INT_EQ(RED, pixel_at(whole, 2, 0));
-    CHECK_INT_EQ(RED, pixel_at(part, 0, 0));
-    CHECK_INT_EQ(GREEN, pixel_at(part, 1, 0));
+    CHECK_INT_EQ(GREEN, fixture_pixel_at(whole, 0, 0));
+    CHECK_INT_EQ(BLACK, fixture_pixel_at(whole, 1, 0));
+    CHECK_INT_EQ(RED, fixture_pixel_at(whole, 2, 0));
+    CHECK_INT_EQ(RED, fixture_pixel_at(part, 0, 0));
+    CHECK_INT_EQ(GREEN, fixture_pixel_at(part, 1, 0));
     cairo_surface_destroy(whole);
     cairo_surface_destroy(part);
 }
@@ -328,11 +320,11 @@ static void test_selected_cell_is_painted_on_its_rect(void)
     cairo_surface_t *surface = painter.paint_cycle(painter.self, &request);
     wm_rect cell = layout.items[1];
     int x = cell.x + cell.width / 2;
-    uint32_t selected = pixel_at(surface, x, cell.y);
+    uint32_t selected = fixture_pixel_at(surface, x, cell.y);
 
-    CHECK(pixel_at(surface, x, cell.y - 1) != selected);
-    CHECK_INT_EQ(selected, pixel_at(surface, x, wm_rect_bottom(&cell) - 1));
-    CHECK(pixel_at(surface, x - cell.x + layout.items[0].x, cell.y) != selected);
+    CHECK(fixture_pixel_at(surface, x, cell.y - 1) != selected);
+    CHECK_INT_EQ(selected, fixture_pixel_at(surface, x, wm_rect_bottom(&cell) - 1));
+    CHECK(fixture_pixel_at(surface, x - cell.x + layout.items[0].x, cell.y) != selected);
     cairo_surface_destroy(surface);
     appearance_destroy(appearance);
 }

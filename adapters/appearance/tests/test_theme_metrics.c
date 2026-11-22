@@ -304,14 +304,6 @@ static const char colored_line_svg[] =
     " shape-rendering=\"crispEdges\"/>"
     "<rect width=\"1\" height=\"2\" fill=\"#000000\" shape-rendering=\"crispEdges\"/></svg>\n";
 
-static uint32_t image_pixel(cairo_surface_t *image, int x, int y)
-{
-    const unsigned char *data = cairo_image_surface_get_data(image);
-    int stride = cairo_image_surface_get_stride(image);
-
-    return ((const uint32_t *) (const void *) (data + y * stride))[x];
-}
-
 static void test_svg_uses_theme_colors_and_one_pixel_lines(void)
 {
     enum { BLACK = 0xff000000u, RED = 0xffff0000u };
@@ -324,17 +316,19 @@ static void test_svg_uses_theme_colors_and_one_pixel_lines(void)
 
     CHECK(image != NULL);
     CHECK_INT_EQ(6, cairo_image_surface_get_width(image));
-    CHECK_INT_EQ(BLACK, image_pixel(image, 0, 1));
-    CHECK_INT_EQ(RED, image_pixel(image, 1, 1));
-    CHECK_INT_EQ(RED, image_pixel(image, 5, 1));
+    CHECK_INT_EQ(BLACK, fixture_pixel_at(image, 0, 1));
+    CHECK_INT_EQ(RED, fixture_pixel_at(image, 1, 1));
+    CHECK_INT_EQ(RED, fixture_pixel_at(image, 5, 1));
     cairo_surface_destroy(image);
     fixture_dir_remove(dir);
 }
 
 static const char half_clear_svg[] =
-    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 2 1\">"
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 3 1\">"
     "<rect width=\"1\" height=\"1\" fill=\"#000000\" shape-rendering=\"crispEdges\"/>"
     "<rect x=\"1\" width=\"1\" height=\"1\" style=\"fill:#000000;fill-opacity:0.5\""
+    " shape-rendering=\"crispEdges\"/>"
+    "<rect x=\"2\" width=\"1\" height=\"1\" style=\"fill:#ffffff;fill-opacity:0.95\""
     " shape-rendering=\"crispEdges\"/></svg>\n";
 
 static void test_svg_cuts_out_partly_clear_pixels(void)
@@ -347,6 +341,7 @@ static void test_svg_cuts_out_partly_clear_pixels(void)
     CHECK(image != NULL);
     CHECK_INT_EQ(0xff, fixture_alpha_at(image, 0, 0));
     CHECK_INT_EQ(0, fixture_alpha_at(image, 1, 0));
+    CHECK_INT_EQ(0xffffffffu, fixture_pixel_at(image, 2, 0));
     cairo_surface_destroy(image);
     fixture_dir_remove(dir);
 }

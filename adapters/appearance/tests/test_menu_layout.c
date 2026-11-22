@@ -2,6 +2,7 @@
 
 #include "appearance/appearance.h"
 #include "check.h"
+#include "fixture.h"
 
 typedef struct menu_fixture {
     appearance *appearance;
@@ -30,14 +31,6 @@ static cairo_surface_t *paint(const menu_fixture *fixture)
     return fixture->painter.paint_menu(fixture->painter.self, &request);
 }
 
-static uint32_t pixel_at(cairo_surface_t *surface, int x, int y)
-{
-    const unsigned char *data = cairo_image_surface_get_data(surface);
-    int stride = cairo_image_surface_get_stride(surface);
-
-    return ((const uint32_t *) (const void *) (data + y * stride))[x];
-}
-
 static void test_rows_stack_inside_panel(void)
 {
     menu_fixture fixture = fixture_create();
@@ -59,12 +52,12 @@ static void test_selected_row_is_painted_on_its_rect(void)
     wm_rect row = fixture.layout.items[2];
     cairo_surface_t *surface = paint(&fixture);
     int x = row.x + 1;
-    uint32_t selected = pixel_at(surface, x, row.y);
+    uint32_t selected = fixture_pixel_at(surface, x, row.y);
 
-    CHECK_INT_EQ(selected, pixel_at(surface, x, wm_rect_bottom(&row) - 1));
-    CHECK(pixel_at(surface, x, row.y - 1) != selected);
-    CHECK(pixel_at(surface, x, wm_rect_bottom(&row)) != selected);
-    CHECK(pixel_at(surface, x, fixture.layout.items[0].y) != selected);
+    CHECK_INT_EQ(selected, fixture_pixel_at(surface, x, wm_rect_bottom(&row) - 1));
+    CHECK(fixture_pixel_at(surface, x, row.y - 1) != selected);
+    CHECK(fixture_pixel_at(surface, x, wm_rect_bottom(&row)) != selected);
+    CHECK(fixture_pixel_at(surface, x, fixture.layout.items[0].y) != selected);
     cairo_surface_destroy(surface);
     appearance_destroy(fixture.appearance);
 }
@@ -76,7 +69,7 @@ static void test_separator_is_painted_inside_its_rect(void)
     cairo_surface_t *surface = paint(&fixture);
     int x = row.x + 1;
 
-    CHECK(pixel_at(surface, x, row.y + row.height / 2) != pixel_at(surface, x, row.y));
+    CHECK(fixture_pixel_at(surface, x, row.y + row.height / 2) != fixture_pixel_at(surface, x, row.y));
     cairo_surface_destroy(surface);
     appearance_destroy(fixture.appearance);
 }

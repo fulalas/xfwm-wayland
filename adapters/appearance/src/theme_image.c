@@ -13,6 +13,7 @@ static const char svg_extension[] = "svg";
 
 enum {
     OPAQUE = 0xFF,
+    SVG_KEEP_ALPHA = 0xE0,
     RED_SHIFT = 16,
     GREEN_SHIFT = 8,
     ALPHA_SHIFT = 24,
@@ -27,6 +28,8 @@ static cairo_surface_t *load_bitmap(const theme_image_source *source, const char
 static cairo_surface_t *load_svg(const theme_image_source *source, const char *name);
 static xfwmColorSymbol *svg_colors(const xpm_symbols *symbols);
 static void cut_out_surface(cairo_surface_t *surface);
+static uint32_t cut_out_svg_pixel(uint32_t pixel);
+static uint32_t unpremultiply(uint32_t pixel, uint32_t alpha, int shift);
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf);
 static GdkPixbuf *load_xpm(const theme_image_source *source, const char *name);
 static GdkPixbuf *load_overlay(const char *dir, const char *name);
@@ -110,12 +113,28 @@ static void cut_out_surface(cairo_surface_t *surface)
     for (int y = 0; y < height; y++) {
         uint32_t *row = (uint32_t *) (void *) (data + (size_t) y * (size_t) stride);
         for (int x = 0; x < width; x++) {
-            if ((row[x] >> ALPHA_SHIFT) != OPAQUE) {
-                row[x] = 0;
-            }
+            row[x] = cut_out_svg_pixel(row[x]);
         }
     }
     cairo_surface_mark_dirty(surface);
+}
+
+static uint32_t cut_out_svg_pixel(uint32_t pixel)
+{
+    uint32_t alpha = pixel >> ALPHA_SHIFT;
+
+    if (alpha < SVG_KEEP_ALPHA) {
+        return 0;
+    }
+    return ((uint32_t) OPAQUE << ALPHA_SHIFT) | unpremultiply(pixel, alpha, RED_SHIFT)
+           | unpremultiply(pixel, alpha, GREEN_SHIFT) | unpremultiply(pixel, alpha, 0);
+}
+
+static uint32_t unpremultiply(uint32_t pixel, uint32_t alpha, int shift)
+{
+    uint32_t channel = (pixel >> shift) & OPAQUE;
+
+    return MIN((channel * OPAQUE + alpha / 2) / alpha, (uint32_t) OPAQUE) << shift;
 }
 
 static cairo_surface_t *surface_from_pixbuf(const GdkPixbuf *pixbuf)

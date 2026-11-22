@@ -70,12 +70,17 @@ void fixture_write_png(const char *dir, const char *name, wm_size size)
     g_free(path);
 }
 
+uint32_t fixture_pixel_at(cairo_surface_t *surface, int x, int y)
+{
+    const unsigned char *data = cairo_image_surface_get_data(surface);
+    int stride = cairo_image_surface_get_stride(surface);
+
+    return ((const uint32_t *) (const void *) (data + y * stride))[x];
+}
+
 unsigned fixture_alpha_at(cairo_surface_t *surface, int x, int y)
 {
     enum { ALPHA_SHIFT = 24 };
-    const unsigned char *data = cairo_image_surface_get_data(surface);
-    int stride = cairo_image_surface_get_stride(surface);
-    const uint32_t *row = (const uint32_t *) (const void *) (data + y * stride);
 
-    return row[x] >> ALPHA_SHIFT;
+    return fixture_pixel_at(surface, x, y) >> ALPHA_SHIFT;
 }
