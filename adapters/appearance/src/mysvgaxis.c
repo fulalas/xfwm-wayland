@@ -44,6 +44,7 @@ static GArray *select_lines (GArray *, gint, SpanFilter);
 static gboolean is_leading_line (const SvgSpan *, gint);
 static gboolean is_trailing_line (const SvgSpan *, gint);
 static gdouble axis_snap (const SvgAxisScale *, gdouble);
+static gdouble device_line_width (const SvgAxisScale *, const SvgSpan *, gdouble);
 static gdouble interpolate (const Knot *, const Knot *, gdouble);
 static gint knot_find (GArray *, gdouble);
 static gdouble knot_get (GArray *, gdouble, gdouble);
@@ -71,7 +72,7 @@ pin_leading_lines (SvgAxis *axis, GArray *spans, const SvgAxisScale *scale)
 {
     GArray *lines;
     SvgSpan *span;
-    gdouble a;
+    gdouble a, end;
     guint i;
 
     lines = select_lines (spans, scale->size, is_leading_line);
@@ -80,8 +81,9 @@ pin_leading_lines (SvgAxis *axis, GArray *spans, const SvgAxisScale *scale)
     {
         span = &g_array_index (lines, SvgSpan, i);
         a = knot_get (axis->knots, span->pos, axis_snap (scale, span->pos));
+        end = axis_snap (scale, span->pos + span->len);
         knot_set (axis->knots, span->pos, a);
-        knot_set (axis->knots, span->pos + span->len, a + LINE_WIDTH);
+        knot_set (axis->knots, span->pos + span->len, a + device_line_width (scale, span, end - a));
     }
     g_array_free (lines, TRUE);
 }
@@ -91,7 +93,7 @@ pin_trailing_lines (SvgAxis *axis, GArray *spans, const SvgAxisScale *scale)
 {
     GArray *lines;
     SvgSpan *span;
-    gdouble b;
+    gdouble b, start;
     guint i;
 
     lines = select_lines (spans, scale->size, is_trailing_line);
@@ -100,8 +102,9 @@ pin_trailing_lines (SvgAxis *axis, GArray *spans, const SvgAxisScale *scale)
     {
         span = &g_array_index (lines, SvgSpan, i);
         b = knot_get (axis->knots, span->pos + span->len, axis_snap (scale, span->pos + span->len));
+        start = axis_snap (scale, span->pos);
         knot_set (axis->knots, span->pos + span->len, b);
-        knot_set (axis->knots, span->pos, b - LINE_WIDTH);
+        knot_set (axis->knots, span->pos, b - device_line_width (scale, span, b - start));
     }
     g_array_free (lines, TRUE);
 }
@@ -163,6 +166,12 @@ static gboolean
 is_trailing_line (const SvgSpan *span, gint size)
 {
     return span->len <= LINE_WIDTH && span->pos * 2 + span->len >= size;
+}
+
+static gdouble
+device_line_width (const SvgAxisScale *scale, const SvgSpan *span, gdouble room)
+{
+    return MAX (1, MIN (lround (span->len * scale->scale), room));
 }
 
 static gdouble

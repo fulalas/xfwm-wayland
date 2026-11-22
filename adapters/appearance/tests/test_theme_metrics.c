@@ -298,29 +298,64 @@ static void test_svg_theme_keeps_the_title_font_size(void)
     CHECK_INT_EQ(scaled_title_height(make_theme()), scaled_title_height(make_svg_theme()));
 }
 
+static cairo_surface_t *load_svg_image(const char *name, const char *svg,
+                                       const xpm_symbols *symbols, double scale)
+{
+    char *dir = fixture_dir_create();
+    char *file = g_strconcat(name, ".svg", NULL);
+    g_free(fixture_write(dir, file, svg));
+    theme_image_source source = { dir, symbols, scale };
+    cairo_surface_t *image = appearance_theme_image_load(&source, name);
+
+    g_free(file);
+    fixture_dir_remove(dir);
+    return image;
+}
+
 static const char colored_line_svg[] =
     "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 2\">"
     "<rect width=\"4\" height=\"2\" style=\"fill:var(--active_color_1, #00ff00)\""
     " shape-rendering=\"crispEdges\"/>"
     "<rect width=\"1\" height=\"2\" fill=\"#000000\" shape-rendering=\"crispEdges\"/></svg>\n";
 
-static void test_svg_uses_theme_colors_and_one_pixel_lines(void)
+static void test_svg_uses_theme_colors_and_scaled_lines(void)
 {
     enum { BLACK = 0xff000000u, RED = 0xffff0000u };
     static const xpm_symbol items[] = { { "active_color_1", "#ff0000" } };
     xpm_symbols symbols = { items, G_N_ELEMENTS(items) };
-    char *dir = fixture_dir_create();
-    g_free(fixture_write(dir, "left-active.svg", colored_line_svg));
-    theme_image_source source = { dir, &symbols, 1.5 };
-    cairo_surface_t *image = appearance_theme_image_load(&source, "left-active");
+    cairo_surface_t *image = load_svg_image("left-active", colored_line_svg, &symbols, 1.5);
 
     CHECK(image != NULL);
     CHECK_INT_EQ(6, cairo_image_surface_get_width(image));
     CHECK_INT_EQ(BLACK, fixture_pixel_at(image, 0, 1));
-    CHECK_INT_EQ(RED, fixture_pixel_at(image, 1, 1));
+    CHECK_INT_EQ(BLACK, fixture_pixel_at(image, 1, 1));
+    CHECK_INT_EQ(RED, fixture_pixel_at(image, 2, 1));
     CHECK_INT_EQ(RED, fixture_pixel_at(image, 5, 1));
     cairo_surface_destroy(image);
-    fixture_dir_remove(dir);
+}
+
+static const char stacked_lines_svg[] =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 4\">"
+    "<rect width=\"1\" height=\"1\" fill=\"#000000\" shape-rendering=\"crispEdges\"/>"
+    "<rect y=\"1\" width=\"1\" height=\"1\" fill=\"#ff0000\" shape-rendering=\"crispEdges\"/>"
+    "<rect y=\"2\" width=\"1\" height=\"1\" fill=\"#00ff00\" shape-rendering=\"crispEdges\"/>"
+    "<rect y=\"3\" width=\"1\" height=\"1\" fill=\"#0000ff\" shape-rendering=\"crispEdges\"/>"
+    "</svg>\n";
+
+static void test_svg_stacked_lines_keep_every_line(void)
+{
+    enum { BLACK = 0xff000000u, RED = 0xffff0000u, GREEN = 0xff00ff00u, BLUE = 0xff0000ffu };
+    cairo_surface_t *image = load_svg_image("top-active", stacked_lines_svg, NULL, 1.5);
+
+    CHECK(image != NULL);
+    CHECK_INT_EQ(6, cairo_image_surface_get_height(image));
+    CHECK_INT_EQ(BLACK, fixture_pixel_at(image, 0, 0));
+    CHECK_INT_EQ(BLACK, fixture_pixel_at(image, 0, 1));
+    CHECK_INT_EQ(RED, fixture_pixel_at(image, 0, 2));
+    CHECK_INT_EQ(GREEN, fixture_pixel_at(image, 0, 3));
+    CHECK_INT_EQ(BLUE, fixture_pixel_at(image, 0, 4));
+    CHECK_INT_EQ(BLUE, fixture_pixel_at(image, 0, 5));
+    cairo_surface_destroy(image);
 }
 
 static const char half_clear_svg[] =
@@ -333,17 +368,13 @@ static const char half_clear_svg[] =
 
 static void test_svg_cuts_out_partly_clear_pixels(void)
 {
-    char *dir = fixture_dir_create();
-    g_free(fixture_write(dir, "top-left-active.svg", half_clear_svg));
-    theme_image_source source = { dir, NULL, 1.0 };
-    cairo_surface_t *image = appearance_theme_image_load(&source, "top-left-active");
+    cairo_surface_t *image = load_svg_image("top-left-active", half_clear_svg, NULL, 1.0);
 
     CHECK(image != NULL);
     CHECK_INT_EQ(0xff, fixture_alpha_at(image, 0, 0));
     CHECK_INT_EQ(0, fixture_alpha_at(image, 1, 0));
     CHECK_INT_EQ(0xffffffffu, fixture_pixel_at(image, 2, 0));
     cairo_surface_destroy(image);
-    fixture_dir_remove(dir);
 }
 
 static void test_thin_pixmaps_keep_one_pixel(void)
@@ -371,8 +402,9 @@ static const check_case cases[] = {
     { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
     { "svg_wins_over_bitmaps", test_svg_wins_over_bitmaps },
     { "svg_cuts_out_partly_clear_pixels", test_svg_cuts_out_partly_clear_pixels },
-    { "svg_uses_theme_colors_and_one_pixel_lines",
-      test_svg_uses_theme_colors_and_one_pixel_lines },
+    { "svg_stacked_lines_keep_every_line", test_svg_stacked_lines_keep_every_line },
+    { "svg_uses_theme_colors_and_scaled_lines",
+      test_svg_uses_theme_colors_and_scaled_lines },
     { "svg_theme_keeps_the_title_font_size", test_svg_theme_keeps_the_title_font_size },
 };
 
