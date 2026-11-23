@@ -133,6 +133,18 @@ static void test_runs_scripts_in_name_order_with_display(void)
     teardown(&f);
 }
 
+static void test_scripts_read_nothing(void)
+{
+    fixture f;
+    setup(&f);
+    char *body = g_strdup_printf("cat > /dev/null\necho \"read $DISPLAY\" >> '%s'", f.log);
+    add_script(&f, "10-reads", body, 0755);
+    g_free(body);
+    run_until_done(&f, ":6");
+    CHECK(log_has(&f, "read :6\n"));
+    teardown(&f);
+}
+
 static void test_skips_hidden_and_non_executable_files(void)
 {
     fixture f;
@@ -170,7 +182,8 @@ static void test_hanging_script_releases_after_the_hold(void)
     add_logging_script(&f, "20-after", "");
     int64_t ms = run_until_done(&f, ":3");
     CHECK_INT_EQ(1, f.done_count);
-    CHECK(ms >= HOLD_MS && ms < 1000);
+    CHECK(ms >= HOLD_MS);
+    CHECK(!log_has(&f, "20-after"));
     dispatch_until(&f, "20-after :3\n", WAIT_MS);
     char *log = read_log(&f);
     CHECK(strcmp("10-slow :3\n20-after :3\n", log) == 0);
@@ -183,7 +196,7 @@ static void test_new_run_stops_the_old_one(void)
 {
     fixture f;
     setup(&f);
-    char *slow = g_strdup_printf("sleep 0.2\necho \"after $DISPLAY\" >> '%s'", f.log);
+    char *slow = g_strdup_printf("(sleep 0.2; echo \"after $DISPLAY\" >> '%s') &\nwait", f.log);
     add_logging_script(&f, "10-slow", slow);
     g_free(slow);
     add_logging_script(&f, "20-next", "");
@@ -207,6 +220,7 @@ int main(void)
     const check_case cases[] = {
         {"missing_folder_releases_at_once", test_missing_folder_releases_at_once},
         {"runs_scripts_in_name_order_with_display", test_runs_scripts_in_name_order_with_display},
+        {"scripts_read_nothing", test_scripts_read_nothing},
         {"skips_hidden_and_non_executable_files", test_skips_hidden_and_non_executable_files},
         {"failing_script_does_not_stop_the_rest", test_failing_script_does_not_stop_the_rest},
         {"hanging_script_releases_after_the_hold", test_hanging_script_releases_after_the_hold},

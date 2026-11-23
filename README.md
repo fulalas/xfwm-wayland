@@ -144,7 +144,9 @@ Input
 * `Xwayland` starts when an X11 program needs it and exits when idle. Each
   start lets root X11 programs in and runs the executable files in
   `/etc/xdg/xfwm-wayland/xwayland-startup.d/` with `DISPLAY` set (for
-  `xrdb`, `xset`, etc.). If wlroots has the PorteuX patch that adds
+  `xrdb`, `xset`, etc.). With a prefix other than `/usr`, the folder is
+  `<sysconfdir>/xdg/xfwm-wayland/xwayland-startup.d/`. Scripts get no input
+  (`/dev/null`). If wlroots has the PorteuX patch that adds
   `wlr_xwayland_hold_clients`, X11 programs wait up to 2 seconds for them to
   finish. Without it, the program that starts `Xwayland` may connect before
   that, so a root X11 program can fail on its first try.

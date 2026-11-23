@@ -1,6 +1,7 @@
 #include "xwayland_startup.h"
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <glib.h>
 #include <limits.h>
 #include <signal.h>
@@ -105,7 +106,8 @@ void xwayland_startup_cancel(xwayland_startup *startup)
     startup_child *child;
     wl_list_for_each(child, &startup->children, link) {
         if (child->run == startup->run) {
-            kill(child->pid, SIGTERM);
+            kill(-child->pid, SIGTERM);
+            kill(-child->pid, SIGCONT);
         }
     }
     startup->run++;
@@ -132,9 +134,13 @@ static bool spawn_script(xwayland_startup *startup, const char *path)
 {
     posix_spawnattr_t attr;
     init_spawn_attr(&attr);
+    posix_spawn_file_actions_t files;
+    posix_spawn_file_actions_init(&files);
+    posix_spawn_file_actions_addopen(&files, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
     pid_t pid = 0;
     char *argv[] = {(char *) path, NULL};
-    int failed = posix_spawn(&pid, path, NULL, &attr, argv, startup->env);
+    int failed = posix_spawn(&pid, path, &files, &attr, argv, startup->env);
+    posix_spawn_file_actions_destroy(&files);
     posix_spawnattr_destroy(&attr);
     if (failed != 0) {
         wlr_log(WLR_ERROR, "cannot run X11 startup script %s: %s", path, strerror(failed));
@@ -152,7 +158,9 @@ static void init_spawn_attr(posix_spawnattr_t *attr)
     sigaddset(&signals, SIGPIPE);
     sigaddset(&signals, SIGCHLD);
     posix_spawnattr_setsigdefault(attr, &signals);
-    posix_spawnattr_setflags(attr, POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF);
+    posix_spawnattr_setpgroup(attr, 0);
+    posix_spawnattr_setflags(attr, POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF |
+                                       POSIX_SPAWN_SETPGROUP);
 }
 
 static bool is_runnable(const char *path)
