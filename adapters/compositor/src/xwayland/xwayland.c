@@ -16,18 +16,26 @@
 #include "util/listener.h"
 #include "input/seat.h"
 #include "output/xdg_output.h"
+#include "x11_access.h"
 #include "x11_scale.h"
 #include "xwayland_ewmh.h"
 #include "xwayland_shell_private.h"
+#include "xwayland_startup.h"
 #include "xwayland_view.h"
 #include "xwayland_xsettings.h"
 
 enum {
     BYTES_PER_PIXEL = 4,
+    STARTUP_HOLD_MS = 2000,
 };
 
 static bool create_parts(xwayland_shell *shell);
 static wm_size surface_size(void *data, struct wlr_surface *surface, wm_size buffer);
+static void hold_clients(xwayland_shell *shell);
+#if HAVE_WLR_XWAYLAND_HOLD
+static void handle_server_ready(struct wl_listener *listener, void *data);
+static void release_clients(void *data);
+#endif
 static void handle_ready(struct wl_listener *listener, void *data);
 static void handle_new_surface(struct wl_listener *listener, void *data);
 static void handle_startup_done(struct wl_listener *listener, void *data);
@@ -43,6 +51,7 @@ xwayland_shell *xwayland_shell_create(compositor *server)
     shell->server = server;
     shell->scale = 1.0;
     wl_list_init(&shell->views);
+    wl_list_init(&shell->server_ready.link);
     wl_list_init(&shell->ready.link);
     wl_list_init(&shell->new_surface.link);
     wl_list_init(&shell->startup_done.link);
@@ -63,6 +72,7 @@ void xwayland_shell_destroy(xwayland_shell *shell)
     if (shell->grabs != NULL) {
         keyboard_grabs_destroy(shell->grabs);
     }
+    xwayland_startup_destroy(shell->startup);
     if (shell->xsettings != NULL) {
         xwayland_xsettings_destroy(shell->xsettings);
     }
@@ -86,6 +96,7 @@ bool xwayland_shell_start(xwayland_shell *shell)
     shell->wlr->data = shell;
     shell->wlr->user_event_handler = handle_x11_event;
     snprintf(shell->display_name, sizeof(shell->display_name), "%s", shell->wlr->display_name);
+    hold_clients(shell);
     listener_connect(&shell->ready, &shell->wlr->events.ready, handle_ready);
     listener_connect(&shell->new_surface, &shell->wlr->events.new_surface, handle_new_surface);
     listener_connect(&shell->startup_done, &shell->wlr->events.remove_startup_info,
@@ -98,6 +109,10 @@ void xwayland_shell_stop(xwayland_shell *shell)
 {
     memset(shell->startup_ids, 0, sizeof(shell->startup_ids));
     xwayland_restart_unwatch(shell);
+    if (shell->startup != NULL) {
+        xwayland_startup_cancel(shell->startup);
+    }
+    listener_disconnect(&shell->server_ready);
     listener_disconnect(&shell->ready);
     listener_disconnect(&shell->new_surface);
     listener_disconnect(&shell->startup_done);
@@ -251,8 +266,10 @@ static bool create_parts(xwayland_shell *shell)
     shell->xsettings = xwayland_xsettings_create(shell->server, &shell->link);
     shell->grabs = keyboard_grabs_create(shell->server->display, shell);
     shell->scaled = scaled_surfaces_create((scaled_surface_sizer){surface_size, shell});
+    shell->startup =
+        xwayland_startup_create(shell->server->loop, XWAYLAND_STARTUP_DIR, STARTUP_HOLD_MS);
     return shell->ewmh != NULL && shell->xsettings != NULL && shell->grabs != NULL &&
-           shell->scaled != NULL && shell->restart.timer != NULL;
+           shell->scaled != NULL && shell->startup != NULL && shell->restart.timer != NULL;
 }
 
 static wm_size surface_size(void *data, struct wlr_surface *surface, wm_size buffer)
@@ -267,10 +284,51 @@ static wm_size surface_size(void *data, struct wlr_surface *surface, wm_size buf
     return x11_scale_placed_size_from_x(scale, placed);
 }
 
+#if HAVE_WLR_XWAYLAND_HOLD
+static void hold_clients(xwayland_shell *shell)
+{
+    shell->holds_clients = wlr_xwayland_hold_clients(shell->wlr);
+    if (shell->holds_clients) {
+        listener_connect(&shell->server_ready, &shell->wlr->server->events.ready,
+                         handle_server_ready);
+    }
+}
+
+static void handle_server_ready(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    xwayland_shell *shell = wl_container_of(listener, shell, server_ready);
+    const char *init_display = wlr_xwayland_server_get_init_display_name(shell->wlr->server);
+    if (init_display == NULL) {
+        release_clients(shell);
+        return;
+    }
+    if (!x11_access_allow_root_on(init_display)) {
+        wlr_log(WLR_ERROR, "cannot let root X11 applications in");
+    }
+    xwayland_startup_run(shell->startup, init_display, release_clients, shell);
+}
+
+static void release_clients(void *data)
+{
+    xwayland_shell *shell = data;
+    wlr_xwayland_release_clients(shell->wlr);
+}
+#else
+static void hold_clients(xwayland_shell *shell)
+{
+    shell->holds_clients = false;
+}
+#endif
+
 static void handle_ready(struct wl_listener *listener, void *data)
 {
     (void) data;
     xwayland_shell *shell = wl_container_of(listener, shell, ready);
+    if (!shell->holds_clients) {
+        x11_access_allow_root(wlr_xwayland_get_xwm_connection(shell->wlr));
+        xwayland_startup_run(shell->startup, shell->display_name, NULL, NULL);
+    }
     wlr_xwayland_set_seat(shell->wlr, seat_wlr(shell->server->seat));
     set_default_cursor(shell);
     x11_link_attach(&shell->link, shell->wlr);

@@ -17,6 +17,7 @@ enum {
 typedef struct xwayland_ewmh xwayland_ewmh;
 typedef struct xwayland_xsettings xwayland_xsettings;
 typedef struct keyboard_grabs keyboard_grabs;
+typedef struct xwayland_startup xwayland_startup;
 
 typedef enum restart_phase {
     RESTART_IDLE,
@@ -49,10 +50,13 @@ struct xwayland_shell {
     xwayland_ewmh *ewmh;
     xwayland_xsettings *xsettings;
     keyboard_grabs *grabs;
+    xwayland_startup *startup;
+    bool holds_clients;
     scaled_surfaces *scaled;
     double scale;
     restart_state restart;
     char display_name[DISPLAY_NAME_MAX];
+    struct wl_listener server_ready;
     struct wl_listener ready;
     struct wl_listener new_surface;
     struct wl_listener startup_done;

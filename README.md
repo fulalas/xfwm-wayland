@@ -141,6 +141,13 @@ Input
   does). X11's own screensaver calls don't work through `Xwayland`.
 * X11 programs with global hotkeys (e.g. Audacious) still get those keys when
   a Wayland window has focus. Typed text isn't shared.
+* `Xwayland` starts when an X11 program needs it and exits when idle. Each
+  start lets root X11 programs in and runs the executable files in
+  `/etc/xdg/xfwm-wayland/xwayland-startup.d/` with `DISPLAY` set (for
+  `xrdb`, `xset`, etc.). If wlroots has the PorteuX patch that adds
+  `wlr_xwayland_hold_clients`, X11 programs wait up to 2 seconds for them to
+  finish. Without it, the program that starts `Xwayland` may connect before
+  that, so a root X11 program can fail on its first try.
 
 Windows
 

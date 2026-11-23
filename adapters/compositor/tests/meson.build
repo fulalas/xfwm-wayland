@@ -118,6 +118,16 @@ test(
   ),
 )
 
+test(
+  'compositor_xwayland_startup',
+  executable(
+    'test_compositor_xwayland_startup',
+    ['test_xwayland_startup.c', '../src/xwayland/xwayland_startup.c', '../src/util/clock.c'],
+    include_directories: compositor_test_inc,
+    dependencies: [check_dep, wlroots_dep, wayland_server_dep, glib_dep],
+  ),
+)
+
 compositor_x11_tests = {
   'x11_gravity': ['../src/xwayland/x11_gravity.c'],
   'x11_motif': ['../src/xwayland/x11_motif.c'],

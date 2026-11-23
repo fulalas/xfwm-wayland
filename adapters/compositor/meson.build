@@ -156,6 +156,16 @@ foreach kind : [['server-header', '-protocol.h'], ['private-code', '-protocol.c'
 endforeach
 
 compositor_c_args = ['-DWLR_USE_UNSTABLE']
+compositor_sysconfdir = get_option('prefix') / get_option('sysconfdir')
+if get_option('prefix') == '/usr' and not get_option('sysconfdir').startswith('/')
+  compositor_sysconfdir = '/' / get_option('sysconfdir')
+endif
+xwayland_startup_dir = compositor_sysconfdir / 'xdg' / 'xfwm-wayland' / 'xwayland-startup.d'
+compositor_c_args += '-DXWAYLAND_STARTUP_DIR="' + xwayland_startup_dir + '"'
+wlroots_has_hold = meson.get_compiler('c').has_function('wlr_xwayland_hold_clients',
+  prefix: '#define WLR_USE_UNSTABLE\n#include <wlr/xwayland/xwayland.h>',
+  dependencies: wlroots_dep)
+compositor_c_args += '-DHAVE_WLR_XWAYLAND_HOLD=' + (wlroots_has_hold ? '1' : '0')
 
 compositor_sources = files(
   'src/input/absolute_input.c',
@@ -309,6 +319,7 @@ compositor_sources = files(
   'src/input/virtual_input.c',
   'src/toplevel/window_capture_source.c',
   'src/workspace/workspace_protocol.c',
+  'src/xwayland/x11_access.c',
   'src/xwayland/x11_atoms.c',
   'src/xwayland/x11_gravity.c',
   'src/xwayland/x11_link.c',
@@ -348,6 +359,7 @@ compositor_sources = files(
   'src/xwayland/xwayland_props.c',
   'src/xwayland/xwayland_requests.c',
   'src/xwayland/xwayland_restart.c',
+  'src/xwayland/xwayland_startup.c',
   'src/xwayland/xwayland_view.c',
   'src/xwayland/xwayland_window_props.c',
   'src/xwayland/xwayland_xsettings.c',
