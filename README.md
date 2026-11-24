@@ -42,7 +42,7 @@ than `xfwl4`, while delivering more features in a more reliable way:
 | Power with a fullscreen window       | 9.0 W              | 6.6 W                    |
 | Compositor CPU time                  | 11.0 s             | 6.1 s                    |
 | Frame to screen delay                | 19.5 ms            | 16.8 ms                  |
-| Unit tests                           | 49                 | 832                      |
+| Unit tests                           | 49                 | 882                      |
 | HDR                                  | no                 | yes                      |
 | Variable refresh rate                | no                 | yes                      |
 | Tearing (optional)                   | no                 | yes                      |
