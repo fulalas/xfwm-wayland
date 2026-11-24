@@ -93,7 +93,8 @@ static wm_window_rule copy_rule(const wm_window_rule *rule)
     copy.app_id = rule->app_id != NULL ? strdup(rule->app_id) : NULL;
     copy.output = rule->output != NULL ? strdup(rule->output) : NULL;
     bool lost_text = (rule->title != NULL && copy.title == NULL)
-                     || (rule->app_id != NULL && copy.app_id == NULL);
+                     || (rule->app_id != NULL && copy.app_id == NULL)
+                     || (rule->output != NULL && copy.output == NULL);
     if (lost_text) {
         free_rule(&copy);
     }

@@ -51,6 +51,21 @@ Shape;
 
 typedef struct
 {
+    const gchar *name;
+    const gchar *tag;
+    const gchar *end;
+}
+TagScan;
+
+typedef struct
+{
+    TagScan rect;
+    TagScan path;
+}
+ShapeScan;
+
+typedef struct
+{
     const Layout *layout;
     const gchar *pattern;
     const gchar *arg;
@@ -64,7 +79,9 @@ static void collect_spans (const gchar *, GArray **);
 static void add_box_spans (GArray **, const Box *);
 static void layout_free (Layout *);
 static gchar *layout_apply (const Layout *, const gchar *);
-static gboolean next_shape (const gchar *, Shape *);
+static void tag_scan_start (TagScan *, const gchar *, const gchar *);
+static void tag_scan_update (TagScan *, const gchar *);
+static gboolean next_shape (ShapeScan *, const gchar *, Shape *);
 static void rewrite_shape (GString *, const Layout *, const Shape *);
 static gboolean rewrite_rect (GString *, const Layout *, GArray *);
 static gboolean rewrite_path (GString *, const Layout *, GArray *);
@@ -178,11 +195,14 @@ layout_apply (const Layout *layout, const gchar *data)
 {
     GString *out;
     const gchar *p;
+    ShapeScan scan;
     Shape shape;
 
     out = g_string_new (NULL);
     p = data;
-    while (next_shape (p, &shape))
+    tag_scan_start (&scan.rect, "<rect", p);
+    tag_scan_start (&scan.path, "<path", p);
+    while (next_shape (&scan, p, &shape))
     {
         g_string_append_len (out, p, shape.start - p);
         rewrite_shape (out, layout, &shape);
@@ -193,20 +213,38 @@ layout_apply (const Layout *layout, const gchar *data)
     return g_string_free (out, FALSE);
 }
 
-static gboolean
-next_shape (const gchar *p, Shape *shape)
+static void
+tag_scan_start (TagScan *scan, const gchar *name, const gchar *p)
 {
-    const gchar *rect, *path, *rect_end, *path_end;
+    scan->name = name;
+    scan->tag = svgNextTag (p, name, &scan->end);
+}
 
-    rect = svgNextTag (p, "<rect", &rect_end);
-    path = svgNextTag (p, "<path", &path_end);
-    if (!rect && !path)
+static void
+tag_scan_update (TagScan *scan, const gchar *p)
+{
+    if (scan->tag && scan->tag < p)
+    {
+        scan->tag = svgNextTag (p, scan->name, &scan->end);
+    }
+}
+
+static gboolean
+next_shape (ShapeScan *scan, const gchar *p, Shape *shape)
+{
+    const TagScan *rect, *path;
+
+    tag_scan_update (&scan->rect, p);
+    tag_scan_update (&scan->path, p);
+    rect = &scan->rect;
+    path = &scan->path;
+    if (!rect->tag && !path->tag)
     {
         return FALSE;
     }
-    shape->is_rect = rect && (!path || rect < path);
-    shape->start = shape->is_rect ? rect : path;
-    shape->end = shape->is_rect ? rect_end : path_end;
+    shape->is_rect = rect->tag && (!path->tag || rect->tag < path->tag);
+    shape->start = shape->is_rect ? rect->tag : path->tag;
+    shape->end = shape->is_rect ? rect->end : path->end;
     return TRUE;
 }
 

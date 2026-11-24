@@ -36,6 +36,7 @@ xcb_shape_dep = dependency('xcb-shape')
 xcb_xfixes_dep = dependency('xcb-xfixes')
 libdrm_dep = dependency('libdrm')
 egl_dep = dependency('egl')
+wayland_protocols_dep = dependency('wayland-protocols', version: '>= 1.48')
 compositor_m_dep = meson.get_compiler('c').find_library('m', required: false)
 compositor_dl_dep = meson.get_compiler('c').find_library('dl', required: false)
 
@@ -97,7 +98,7 @@ foreach protocol : [
   endforeach
 endforeach
 
-present_protocol_dir = dependency('wayland-protocols').get_variable('pkgdatadir') / 'staging'
+present_protocol_dir = wayland_protocols_dep.get_variable('pkgdatadir') / 'staging'
 present_protocol_files = []
 foreach protocol : [
   ['fifo', 'fifo-v1'],
@@ -114,7 +115,7 @@ foreach protocol : [
   endforeach
 endforeach
 
-session_protocol_dir = dependency('wayland-protocols').get_variable('pkgdatadir')
+session_protocol_dir = wayland_protocols_dep.get_variable('pkgdatadir')
 session_protocol_files = []
 foreach protocol : [
   ['staging/xdg-session-management', 'xdg-session-management-v1', ['server-header', 'private-code']],
@@ -144,7 +145,7 @@ foreach protocol : ['xfce-output-private-v1', 'xfce-output-management-private-v1
   endforeach
 endforeach
 
-xwayland_protocol_dir = dependency('wayland-protocols').get_variable('pkgdatadir') / 'unstable'
+xwayland_protocol_dir = wayland_protocols_dep.get_variable('pkgdatadir') / 'unstable'
 xwayland_grab_files = []
 foreach kind : [['server-header', '-protocol.h'], ['private-code', '-protocol.c']]
   xwayland_grab_files += custom_target(
@@ -166,6 +167,15 @@ wlroots_has_hold = meson.get_compiler('c').has_function('wlr_xwayland_hold_clien
   prefix: '#define WLR_USE_UNSTABLE\n#include <wlr/xwayland/xwayland.h>',
   dependencies: wlroots_dep)
 compositor_c_args += '-DHAVE_WLR_XWAYLAND_HOLD=' + (wlroots_has_hold ? '1' : '0')
+wlroots_has_workspace_from_resource = meson.get_compiler('c').has_function(
+  'wlr_ext_workspace_handle_v1_from_resource',
+  prefix: '#define WLR_USE_UNSTABLE\n#include <wlr/types/wlr_ext_workspace_v1.h>',
+  dependencies: wlroots_dep)
+compositor_c_args += '-DHAVE_WLR_EXT_WORKSPACE_FROM_RESOURCE=' + (wlroots_has_workspace_from_resource ? '1' : '0')
+wlroots_has_color_destroy = meson.get_compiler('c').has_function('wlr_color_manager_v1_destroy',
+  prefix: '#define WLR_USE_UNSTABLE\n#include <wlr/types/wlr_color_management_v1.h>',
+  dependencies: wlroots_dep)
+compositor_c_args += '-DHAVE_WLR_COLOR_MANAGER_DESTROY=' + (wlroots_has_color_destroy ? '1' : '0')
 
 compositor_sources = files(
   'src/input/absolute_input.c',
@@ -177,12 +187,12 @@ compositor_sources = files(
   'src/input/click_focus.c',
   'src/render/client_surfaces.c',
   'src/render/client_textures.c',
-'src/util/clock.c',
+  'src/util/clock.c',
+  'src/output/color_plan.c',
+  'src/output/color_preference.c',
   'src/ports/commands.c',
   'src/render/commit_timing.c',
   'src/input/constraints.c',
-  'src/output/color_plan.c',
-  'src/output/color_preference.c',
   'src/input/cursor_image.c',
   'src/cursor/cursor_names.c',
   'src/cursor/cursor_owner.c',
@@ -197,10 +207,11 @@ compositor_sources = files(
   'src/input/device_settings_touchpad.c',
   'src/output/display_batch.c',
   'src/output/display_policy.c',
-  'src/input/drag_actions.c',
   'src/output/displays.c',
+  'src/input/drag_actions.c',
   'src/output/drm_lease.c',
   'src/output/edid.c',
+  'src/server/egl_current.c',
   'src/ports/environment.c',
   'src/xwayland/ewmh_payload.c',
   'src/workspace/ext_workspace_resource.c',
@@ -243,9 +254,8 @@ compositor_sources = files(
   'src/osd/osd_geometry.c',
   'src/osd/osd_menu.c',
   'src/osd/osd_outline.c',
-  'src/osd/osd_size.c',
-  'src/render/surface_opacity.c',
   'src/osd/osd_preview.c',
+  'src/osd/osd_size.c',
   'src/output/output.c',
   'src/output/output_arrange.c',
   'src/output/output_brightness.c',
@@ -260,6 +270,8 @@ compositor_sources = files(
   'src/output/output_record.c',
   'src/output/output_repaint.c',
   'src/output/output_setting.c',
+  'src/output/primary_rule.c',
+  'src/server/page_runs.c',
   'src/render/paint_stats.c',
   'src/input/pointer.c',
   'src/input/pointer_prefs_compare.c',
@@ -268,23 +280,22 @@ compositor_sources = files(
   'src/render/present_rules.c',
   'src/render/present_sync.c',
   'src/render/presenter.c',
-  'src/server/page_runs.c',
   'src/server/protocols.c',
   'src/server/protocols_desktop.c',
   'src/server/protocols_input.c',
   'src/server/protocols_security.c',
   'src/render/render_sync.c',
-  'src/server/egl_current.c',
   'src/server/renderer_switch.c',
   'src/render/repaint_timing.c',
   'src/util/resource.c',
-'src/server/restart_policy.c',
+  'src/server/restart_policy.c',
   'src/cursor/scalable_cursor.c',
   'src/cursor/scalable_layout.c',
   'src/output/scale_guess.c',
+  'src/render/scaled_surface.c',
   'src/render/scene_buffers.c',
-'src/util/sealed_memfd.c',
   'src/render/scene_layers.c',
+  'src/util/sealed_memfd.c',
   'src/input/seat.c',
   'src/input/seat_resource.c',
   'src/input/selection.c',
@@ -298,6 +309,7 @@ compositor_sources = files(
   'src/decor/shadow_cache.c',
   'src/decor/shadow_layout.c',
   'src/input/shortcuts.c',
+  'src/render/surface_opacity.c',
   'src/input/surface_watch.c',
   'src/input/tablet.c',
   'src/input/tablet_axes.c',
@@ -308,10 +320,10 @@ compositor_sources = files(
   'src/toplevel/toplevel_capture.c',
   'src/toplevel/toplevel_icons.c',
   'src/input/touch.c',
+  'src/server/trim_rule.c',
   'src/xwayland/unmanaged.c',
   'src/output/usable_area.c',
-  'src/server/trim_rule.c',
-'src/util/utf8_copy.c',
+  'src/util/utf8_copy.c',
   'src/shell/view.c',
   'src/shell/view_commands.c',
   'src/shell/view_present.c',
@@ -326,12 +338,11 @@ compositor_sources = files(
   'src/xwayland/x11_motif.c',
   'src/xwayland/x11_pixmap_icon.c',
   'src/xwayland/x11_scale.c',
-  'src/render/scaled_surface.c',
-  'src/output/xdg_output.c',
   'src/cursor/xcursor_cache.c',
   'src/cursor/xcursor_file.c',
   'src/cursor/xcursor_resize.c',
   'src/shell/xdg_decorations.c',
+  'src/output/xdg_output.c',
   'src/session/xdg_session.c',
   'src/session/xdg_session_restore.c',
   'src/session/xdg_session_toplevel.c',

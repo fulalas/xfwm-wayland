@@ -4,6 +4,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_seat.h>
+#include <wlr/util/region.h>
 
 #include "util/listener.h"
 #include "xwayland/xwayland.h"
@@ -28,7 +29,7 @@ static struct wlr_pointer_constraint_v1 *focused_constraint(const constraints *c
 static void activate(constraints *constraints, struct wlr_pointer_constraint_v1 *constraint);
 static void deactivate(constraints *constraints);
 static void warp_to_hint(constraints *constraints);
-static bool region_allows(const constraints *constraints, double dx, double dy);
+static bool pointer_in_region(const constraints *constraints);
 
 constraints *constraints_create(seat *s)
 {
@@ -62,23 +63,23 @@ void constraints_destroy(constraints *c)
 
 motion_delta constraints_filter_motion(const constraints *c, motion_delta delta)
 {
-    if (c->active == NULL || !region_allows(c, 0, 0)) {
+    if (c->active == NULL || !pointer_in_region(c)) {
         return delta;
     }
     motion_delta still = {0, 0};
     if (c->active->type == WLR_POINTER_CONSTRAINT_V1_LOCKED) {
         return still;
     }
-    if (region_allows(c, delta.dx, delta.dy)) {
-        return delta;
+    const struct wlr_seat_pointer_state *pointer = &c->seat->wlr_seat->pointer_state;
+    double scale = xwayland_surface_scale(c->seat->server, c->active->surface);
+    double x = 0.0;
+    double y = 0.0;
+    if (!wlr_region_confine(&c->active->region, pointer->sx, pointer->sy,
+                            pointer->sx + delta.dx * scale, pointer->sy + delta.dy * scale, &x,
+                            &y)) {
+        return still;
     }
-    if (region_allows(c, delta.dx, 0)) {
-        return (motion_delta){delta.dx, 0};
-    }
-    if (region_allows(c, 0, delta.dy)) {
-        return (motion_delta){0, delta.dy};
-    }
-    return still;
+    return (motion_delta){(x - pointer->sx) / scale, (y - pointer->sy) / scale};
 }
 
 static void handle_new_constraint(struct wl_listener *listener, void *data)
@@ -170,11 +171,10 @@ static void warp_to_hint(constraints *c)
                     origin_y + active->current.cursor_hint.y / scale);
 }
 
-static bool region_allows(const constraints *c, double dx, double dy)
+static bool pointer_in_region(const constraints *c)
 {
     const struct wlr_seat_pointer_state *pointer = &c->seat->wlr_seat->pointer_state;
-    double scale = xwayland_surface_scale(c->seat->server, c->active->surface);
-    int x = (int) floor(pointer->sx + dx * scale);
-    int y = (int) floor(pointer->sy + dy * scale);
+    int x = (int) floor(pointer->sx);
+    int y = (int) floor(pointer->sy);
     return pixman_region32_contains_point(&c->active->region, x, y, NULL);
 }

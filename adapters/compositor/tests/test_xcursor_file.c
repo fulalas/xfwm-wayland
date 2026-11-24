@@ -24,9 +24,19 @@ typedef struct image_spec {
     uint32_t color;
 } image_spec;
 
+static size_t reserve(writer *w, size_t words)
+{
+    if (words > MAX_WORDS - w->count) {
+        abort();
+    }
+    size_t start = w->count;
+    w->count += words;
+    return start;
+}
+
 static void put(writer *w, uint32_t value)
 {
-    w->words[w->count++] = value;
+    w->words[reserve(w, 1)] = value;
 }
 
 static size_t build_file(const image_spec *images, size_t count, unsigned char *out)
@@ -36,8 +46,7 @@ static size_t build_file(const image_spec *images, size_t count, unsigned char *
     put(&w, 16);
     put(&w, 0x10000);
     put(&w, (uint32_t) count + 1);
-    size_t toc = w.count;
-    w.count += (count + 1) * 3;
+    size_t toc = reserve(&w, (count + 1) * 3);
     w.words[toc] = COMMENT_TYPE;
     w.words[toc + 1] = 1;
     w.words[toc + 2] = 0;
@@ -167,8 +176,13 @@ static int remove_entry(const char *path, const struct stat *st, int flag, struc
 
 static void test_theme_follows_inherits(void)
 {
-    char *root = g_mkdtemp(g_build_filename(g_get_tmp_dir(), "xcursor-test-XXXXXX", NULL));
+    char *template = g_build_filename(g_get_tmp_dir(), "xcursor-test-XXXXXX", NULL);
+    char *root = g_mkdtemp(template);
     CHECK(root != NULL);
+    if (root == NULL) {
+        g_free(template);
+        return;
+    }
     make_theme(root, "first", "missing; second");
     make_theme(root, "second", "first");
     unsigned char data[MAX_WORDS * 4];

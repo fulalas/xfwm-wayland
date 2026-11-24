@@ -128,6 +128,9 @@ static void handle_client_commit(struct wl_listener *listener, void *data)
     fs->wait_barrier = false;
     if (!present_surface_on_screen(fs->sync, fs->surface)) {
         fs->counters.barrier = false;
+        if (!wl_list_empty(&fs->waiters)) {
+            fifo_schedule_release(fs->sync);
+        }
     } else if (wait && !is_synchronized(fs->surface) && fifo_must_wait(&fs->counters)) {
         queue_waiter(fs);
     }

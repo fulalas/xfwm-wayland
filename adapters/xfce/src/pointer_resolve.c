@@ -71,11 +71,11 @@ static absolute_prefs absolute_prefs_from(const setting_source *device)
 
 static int rotation_degrees(const setting_source *device)
 {
-    optional_double degrees = input_double_from_text(setting_source_lookup(device, "Rotation"));
+    optional_int degrees = input_int_from_text(setting_source_lookup(device, "Rotation"));
     optional_int wacom = device_int(device, "Wacom_Rotation");
 
     if (degrees.is_set) {
-        return (int) degrees.value;
+        return degrees.value;
     }
     return wacom.is_set ? pointer_rotation_from_wacom(wacom.value) : 0;
 }
@@ -133,9 +133,7 @@ static optional_bool device_bool(const setting_source *device, const char *key)
 
 static optional_int device_int(const setting_source *device, const char *key)
 {
-    optional_double value = input_double_from_text(device_property(device, key));
-
-    return (optional_int) { .is_set = value.is_set, .value = (int) value.value };
+    return input_int_from_text(device_property(device, key));
 }
 
 static const char *device_property(const setting_source *device, const char *key)

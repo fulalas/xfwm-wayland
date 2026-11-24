@@ -50,7 +50,7 @@ wm_dispatch click_button(wm_desktop *desktop, const wm_button_event *event)
 {
     click_state *click = &desktop->click;
     bool expired = timed_out(desktop, event->pointer.time_ms);
-    if (event->button == click->button) {
+    if (event->button == click->button && !(expired && event->pressed)) {
         click->clicks++;
     }
     if (expired || is_terminal(click)) {

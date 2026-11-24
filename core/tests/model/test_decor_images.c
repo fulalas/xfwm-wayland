@@ -119,7 +119,7 @@ static void test_toggled_press_without_toggled_pressed_uses_pressed(void)
     CHECK_INT_EQ(WM_IMAGE_PRESSED, fixture_button_image(&fixture, WM_BUTTON_MAXIMIZE));
 }
 
-static void test_missing_image_paints_nothing_but_keeps_hit_area(void)
+static void test_missing_image_paints_nothing(void)
 {
     decor_fixture fixture = fixture_create();
     fixture.theme.button[WM_BUTTON_CLOSE][WM_IMAGE_ACTIVE] = (wm_size) {0, 0};
@@ -142,7 +142,7 @@ static const check_case CASES[] = {
      test_toggled_hover_falls_back_to_plain_prelight},
     {"toggled_press_without_toggled_pressed_uses_pressed",
      test_toggled_press_without_toggled_pressed_uses_pressed},
-    {"missing_image_paints_nothing", test_missing_image_paints_nothing_but_keeps_hit_area},
+    {"missing_image_paints_nothing", test_missing_image_paints_nothing},
 };
 
 int main(void)

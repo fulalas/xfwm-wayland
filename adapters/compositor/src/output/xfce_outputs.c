@@ -13,7 +13,7 @@
 #include "xfce-output-private-v1-protocol.h"
 
 enum {
-    MANAGER_VERSION = 1,
+    MANAGER_VERSION = 2,
 };
 
 struct xfce_outputs {

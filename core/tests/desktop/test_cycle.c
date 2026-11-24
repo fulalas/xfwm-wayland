@@ -55,6 +55,20 @@ static void test_reverse_cycle_selects_last(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_reverse_cycle_without_focus(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = create_with_three(&world, &config);
+    fake_click click = {WM_TARGET_DESKTOP, NULL, {800, 500}, WM_MOUSE_LEFT, 0, -1};
+    fake_press(&world, desktop, &click);
+    CHECK(world.focused == NULL);
+    fake_key(desktop, WM_KEYSYM_TAB, WM_MOD_ALT | WM_MOD_SHIFT);
+    CHECK(world.cycle_visible);
+    CHECK_INT_EQ(2, world.cycle.selected);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_held_tab_keeps_cycling(void)
 {
     fake_world world;
@@ -168,6 +182,7 @@ static void test_switcher_uses_primary_monitor(void)
     wm_rect second = {1920, 0, 1280, 1024};
     fake_world_add_output(&world, second, second);
     world.outputs[world.output_count - 1].primary = true;
+    wm_desktop_outputs_changed(desktop);
     fake_key(desktop, WM_KEYSYM_TAB, WM_MOD_ALT);
     CHECK_RECT_EQ(second, world.cycle.monitor);
     CHECK(!world.cycle.show_workspace);
@@ -181,6 +196,7 @@ static const check_case CASES[] = {
     {"cycle_lists_windows_in_focus_order", test_cycle_lists_windows_in_focus_order},
     {"releasing_modifier_activates_selection", test_releasing_modifier_activates_selection},
     {"reverse_cycle_selects_last", test_reverse_cycle_selects_last},
+    {"reverse_cycle_without_focus", test_reverse_cycle_without_focus},
     {"cancel_keeps_focus", test_cancel_keeps_focus},
     {"mouse_selects_and_activates", test_mouse_selects_and_activates},
     {"minimized_windows_come_last", test_minimized_windows_come_last},

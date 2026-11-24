@@ -29,7 +29,7 @@ msgid "Monitor Up"
 msgstr "മുകളിലെ മോണിറ്റർ"
 
 msgid "Monitor Down"
-msgstr "തഴുത്തെ മോണിറ്റർ"
+msgstr "താഴത്തെ മോണിറ്റർ"
 
 msgid "Xfce Session (xfwm-wayland)"
 msgstr "Xfce സെഷൻ (xfwm-wayland)"

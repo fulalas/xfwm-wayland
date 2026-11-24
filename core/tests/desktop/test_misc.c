@@ -115,6 +115,25 @@ static void test_urgent_blink_stops_looking_active(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_urgent_window_without_blink_stops_timer(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_map(desktop, 2, small);
+    wm_window_demand_attention(desktop, window);
+    fake_advance(&world, desktop, 1000);
+    CHECK(!world.timer_pending);
+    CHECK_INT_EQ(WM_FRAME_INACTIVE, title_state(window));
+    config.focus.urgent_blink = true;
+    wm_theme_metrics theme = fake_theme();
+    wm_desktop_set_appearance(desktop, &theme, &config);
+    fake_advance(&world, desktop, 500);
+    CHECK_INT_EQ(WM_FRAME_ACTIVE, title_state(window));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_focus_clears_urgency(void)
 {
     fake_world world;
@@ -341,6 +360,7 @@ static const check_case CASES[] = {
     {"zoom_consumes_partial_scroll", test_zoom_consumes_partial_scroll},
     {"zoom_follows_tracked_pointer", test_zoom_follows_tracked_pointer},
     {"urgent_blink_stops_looking_active", test_urgent_blink_stops_looking_active},
+    {"urgent_window_without_blink_stops_timer", test_urgent_window_without_blink_stops_timer},
     {"focus_clears_urgency", test_focus_clears_urgency},
     {"same_width_title_change_redraws_frame", test_same_width_title_change_redraws_frame},
     {"not_responding_after_close_asks_terminate",

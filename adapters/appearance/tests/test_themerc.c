@@ -56,6 +56,7 @@ static void test_lines_without_value_are_ignored(void)
 {
     themerc *rc = parse("# comment\nempty=\nkept=1\n");
 
+    CHECK(appearance_themerc_get(rc, "# comment") == NULL);
     CHECK(appearance_themerc_get(rc, "# comment\n") == NULL);
     CHECK(appearance_themerc_get(rc, "empty") == NULL);
     CHECK(value_is(rc, "kept", "1"));

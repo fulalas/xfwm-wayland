@@ -7,18 +7,26 @@
 
 #include "session_export.h"
 
+enum {
+    ACTIVATION_TIMEOUT_S = 10,
+};
+
 struct session_launch {
     session_launch_listener listener;
     char *command;
     GSource *watch;
+    GSource *timeout;
     int exit_code;
 };
 
 static void start_watch(session_launch *launch, GSource *source, GSourceFunc callback);
 static void forget_watch(session_launch *launch);
+static void stop_timeout(session_launch *launch);
 static gboolean on_start(gpointer data);
 static void run_activation_update(session_launch *launch);
 static void on_activation_updated(GPid pid, gint status, gpointer data);
+static gboolean on_activation_timeout(gpointer data);
+static void reap_child(GPid pid, gint status, gpointer data);
 static void run_session(session_launch *launch);
 static bool spawn_watched(session_launch *launch, char **argv, GChildWatchFunc on_exit);
 static void on_session_exited(GPid pid, gint status, gpointer data);
@@ -45,6 +53,7 @@ void session_launch_destroy(session_launch *launch)
         g_source_destroy(launch->watch);
         forget_watch(launch);
     }
+    stop_timeout(launch);
     g_free(launch->command);
     g_free(launch);
 }
@@ -59,6 +68,14 @@ static void start_watch(session_launch *launch, GSource *source, GSourceFunc cal
 static void forget_watch(session_launch *launch)
 {
     g_clear_pointer(&launch->watch, g_source_unref);
+}
+
+static void stop_timeout(session_launch *launch)
+{
+    if (launch->timeout) {
+        g_source_destroy(launch->timeout);
+        g_clear_pointer(&launch->timeout, g_source_unref);
+    }
 }
 
 static gboolean on_start(gpointer data)
@@ -78,7 +95,11 @@ static void run_activation_update(session_launch *launch)
     g_strfreev(argv);
     if (!started) {
         run_session(launch);
+        return;
     }
+    launch->timeout = g_timeout_source_new_seconds(ACTIVATION_TIMEOUT_S);
+    g_source_set_callback(launch->timeout, on_activation_timeout, launch, NULL);
+    g_source_attach(launch->timeout, g_main_context_get_thread_default());
 }
 
 static void on_activation_updated(GPid pid, gint status, gpointer data)
@@ -88,7 +109,27 @@ static void on_activation_updated(GPid pid, gint status, gpointer data)
     (void) status;
     g_spawn_close_pid(pid);
     forget_watch(launch);
+    stop_timeout(launch);
     run_session(launch);
+}
+
+static gboolean on_activation_timeout(gpointer data)
+{
+    session_launch *launch = data;
+
+    g_warning("Updating the D-Bus environment takes too long, starting the session anyway");
+    g_clear_pointer(&launch->timeout, g_source_unref);
+    g_source_set_callback(launch->watch, G_SOURCE_FUNC(reap_child), NULL, NULL);
+    forget_watch(launch);
+    run_session(launch);
+    return G_SOURCE_REMOVE;
+}
+
+static void reap_child(GPid pid, gint status, gpointer data)
+{
+    (void) status;
+    (void) data;
+    g_spawn_close_pid(pid);
 }
 
 static void run_session(session_launch *launch)

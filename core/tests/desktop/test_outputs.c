@@ -38,6 +38,16 @@ static void test_windows_stay_while_no_output(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_pointer_off_screen_places_on_closest_output(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    world.pointer = (wm_point) {1950, 1070};
+    wm_window *window = fake_map(desktop, 1, (wm_rect) {0, 0, 400, 300});
+    CHECK_RECT_EQ(((wm_rect) {760, 398, 400, 300}), fake_client_of(window));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_window_returns_to_readded_output(void)
 {
     fake_world world;
@@ -145,6 +155,8 @@ static void test_tile_while_evacuated_stays(void)
 static const check_case CASES[] = {
     {"windows_stay_while_no_output", test_windows_stay_while_no_output},
     {"window_returns_to_readded_output", test_window_returns_to_readded_output},
+    {"pointer_off_screen_places_on_closest_output",
+     test_pointer_off_screen_places_on_closest_output},
     {"client_resize_keeps_return", test_client_resize_keeps_return},
     {"moved_window_stays_after_output_returns", test_moved_window_stays_after_output_returns},
     {"maximized_window_returns_with_saved_geometry",

@@ -262,7 +262,7 @@ static void run_focused(wm_desktop *desktop, wm_window *window, wm_action action
 
 static void run_unfocused(wm_desktop *desktop, wm_action action)
 {
-    if (action == WM_ACTION_CYCLE_WINDOWS) {
+    if (action == WM_ACTION_CYCLE_WINDOWS || action == WM_ACTION_CYCLE_REVERSE_WINDOWS) {
         cycle_start(desktop, action);
     } else if (action == WM_ACTION_CLOSE_WINDOW) {
         desktop->ports.commands.logout(desktop->ports.commands.self);

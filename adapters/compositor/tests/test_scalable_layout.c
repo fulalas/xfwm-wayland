@@ -26,6 +26,21 @@ static void test_tiny_size_keeps_one_pixel(void)
     CHECK_INT_EQ(1, layout(1, 0.3).pixels);
 }
 
+static void test_clamped_size_scales_the_hotspot(void)
+{
+    scalable_request request = {64.0, 24.0, 512, 1.0};
+    scalable_layout result = scalable_layout_for(&request);
+    CHECK_INT_EQ(1024, result.pixels);
+    CHECK_DOUBLE_NEAR(16.0, result.hotspot_factor, 0.001);
+}
+
+static void test_tiny_nominal_size_keeps_a_sane_size(void)
+{
+    scalable_request request = {24.0, 1e-300, 24, 2.0};
+    scalable_layout result = scalable_layout_for(&request);
+    CHECK(result.pixels > 0 && result.pixels <= 1024);
+}
+
 static int drawn_pixels(const scalable_layout *result, float output_scale)
 {
     int logical = (int) ((float) result->pixels / result->buffer_scale);
@@ -49,6 +64,8 @@ int main(void)
         {"canvas_matches_size_at_scale_one", test_canvas_matches_size_at_scale_one},
         {"fractional_scale_renders_exact_pixels", test_fractional_scale_renders_exact_pixels},
         {"tiny_size_keeps_one_pixel", test_tiny_size_keeps_one_pixel},
+        {"tiny_nominal_size_keeps_a_sane_size", test_tiny_nominal_size_keeps_a_sane_size},
+        {"clamped_size_scales_the_hotspot", test_clamped_size_scales_the_hotspot},
         {"drawn_one_to_one_at_every_size", test_drawn_one_to_one_at_every_size},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));

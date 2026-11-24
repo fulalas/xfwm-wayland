@@ -139,7 +139,7 @@ static void request_extents(xwayland_shell *shell, const xcb_client_message_even
     wm_extents estimate = wm_desktop_frame_extents(shell->server->desktop, capabilities);
     x11_window_target target = {&shell->link, message->window, xwayland_shell_scale(shell)};
     ewmh_frame_extents extents = x11_window_props_extents(&target, &estimate);
-    x11_window_props_publish_extents(&target, &extents);
+    x11_window_props_publish_extents(xv != NULL ? &xv->published : NULL, &target, &extents);
 }
 
 static void show_window_menu(xwayland_shell *shell, const xcb_client_message_event_t *message)

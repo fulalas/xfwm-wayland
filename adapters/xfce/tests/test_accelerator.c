@@ -77,9 +77,9 @@ static void test_modifier_aliases(void)
     CHECK_INT_EQ(WM_MOD_MOD5, parse_ok("<Mod5>a").modifiers);
 }
 
-static void test_unknown_modifier_is_skipped(void)
+static void test_ignored_modifiers_are_skipped(void)
 {
-    wm_key key = parse_ok("<Release><Alt>a");
+    wm_key key = parse_ok("<Release><Mod2><Alt>a");
 
     CHECK_INT_EQ(WM_MOD_ALT, key.modifiers);
     CHECK_INT_EQ(XKB_KEY_a, key.keysym);
@@ -92,6 +92,8 @@ static void test_rejects_invalid(void)
     CHECK(!accelerator_parse("<Control>", &key));
     CHECK(!accelerator_parse("<Alt>NoSuchKeyName", &key));
     CHECK(!accelerator_parse("<Alt", &key));
+    CHECK(!accelerator_parse("<Contrl>t", &key));
+    CHECK(!accelerator_parse("<ThisModifierNameIsFarTooLongToBeReal>t", &key));
     CHECK(!accelerator_parse("none", &key));
     CHECK(!accelerator_parse("", &key));
     CHECK(!accelerator_parse(NULL, &key));
@@ -116,7 +118,7 @@ int main(void)
         { "key_name_case_insensitive", test_key_name_case_insensitive },
         { "modifier_names_case_insensitive", test_modifier_names_case_insensitive },
         { "modifier_aliases", test_modifier_aliases },
-        { "unknown_modifier_is_skipped", test_unknown_modifier_is_skipped },
+        { "ignored_modifiers_are_skipped", test_ignored_modifiers_are_skipped },
         { "rejects_invalid", test_rejects_invalid },
         { "modifier_from_name", test_modifier_from_name },
     };

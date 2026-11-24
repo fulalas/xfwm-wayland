@@ -3,9 +3,15 @@
 #include "check.h"
 #include "window_rules.h"
 
+static void value_free(gpointer data)
+{
+    g_value_unset(data);
+    g_free(data);
+}
+
 static GHashTable *properties_new(void)
 {
-    return g_hash_table_new_full(g_str_hash, g_str_equal, NULL, (GDestroyNotify) g_free);
+    return g_hash_table_new_full(g_str_hash, g_str_equal, NULL, value_free);
 }
 
 static void add_text(GHashTable *properties, const char *key, const char *text)

@@ -65,12 +65,12 @@ bool wm_window_launched(wm_desktop *desktop, wm_window *window, const char *id)
     return moved;
 }
 
-void launches_workspace_removed(wm_desktop *desktop, int position)
+void launches_shift_workspaces(wm_desktop *desktop, int from, int delta)
 {
     launch_set *launches = &desktop->launches;
     for (size_t i = 0; i < launches->count; i++) {
-        if (launches->entries[i].workspace > position) {
-            launches->entries[i].workspace--;
+        if (launches->entries[i].workspace >= from) {
+            launches->entries[i].workspace += delta;
         }
     }
 }

@@ -177,6 +177,7 @@ static void refit(wm_desktop *desktop, wm_window *window)
         states_update_fullscreen_size(desktop, window);
     } else if (window_has_state(window, WM_STATE_MAXIMIZED)) {
         maximize_update_size(desktop, window);
+    } else {
+        tile_update_size(desktop, window);
     }
-    tile_update_size(desktop, window);
 }

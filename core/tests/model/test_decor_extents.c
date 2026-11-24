@@ -24,6 +24,12 @@ static void test_normal_window_has_theme_borders(void)
 static void test_title_height_comes_from_middle_title_part(void)
 {
     decor_fixture fixture = fixture_create();
+    for (int part = 0; part < WM_TITLE_PART_COUNT; part++) {
+        if (part != WM_TITLE_PART_COUNT / 2) {
+            fixture_set_all_states(fixture.theme.title[part],
+                                   (wm_size) {4, FIXTURE_TITLE_HEIGHT + 5});
+        }
+    }
     CHECK_INT_EQ(FIXTURE_TITLE_HEIGHT, wm_decor_title_height(&fixture.theme));
 }
 
@@ -54,6 +60,14 @@ static void test_maximized_borderless_title_loses_border_top(void)
     fixture_maximize(&fixture);
     fixture.config.border_top = 3;
     CHECK_INT_EQ(17, extents_of(&fixture).top);
+}
+
+static void test_large_border_top_keeps_top_at_zero(void)
+{
+    decor_fixture fixture = fixture_create();
+    fixture_maximize(&fixture);
+    fixture.config.border_top = 30;
+    CHECK_INT_EQ(0, extents_of(&fixture).top);
 }
 
 static void test_half_maximized_keeps_borders(void)
@@ -148,6 +162,7 @@ static const check_case CASES[] = {
     {"maximized_borderless_keeps_only_title", test_maximized_borderless_keeps_only_title},
     {"maximized_borderless_title_loses_border_top",
      test_maximized_borderless_title_loses_border_top},
+    {"large_border_top_keeps_top_at_zero", test_large_border_top_keeps_top_at_zero},
     {"half_maximized_keeps_borders", test_half_maximized_keeps_borders},
     {"maximized_without_borderless_keeps_borders",
      test_maximized_without_borderless_keeps_borders},

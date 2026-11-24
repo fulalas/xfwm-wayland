@@ -171,6 +171,9 @@ static void update_resources(const xwayland_xsettings *xsettings, xcb_connection
 {
     xcb_window_t root = x11_link_root(connection);
     char *existing = read_resources(connection, root);
+    if (existing == NULL) {
+        return;
+    }
     char *merged = xresources_merge(existing, xsettings->table);
     free(existing);
     if (merged == NULL) {
@@ -186,7 +189,8 @@ static char *read_resources(xcb_connection_t *connection, xcb_window_t root)
     xcb_get_property_cookie_t cookie = xcb_get_property(
         connection, 0, root, XCB_ATOM_RESOURCE_MANAGER, XCB_ATOM_STRING, 0, RESOURCES_MAX_WORDS);
     xcb_get_property_reply_t *reply = xcb_get_property_reply(connection, cookie, NULL);
-    if (reply == NULL) {
+    if (reply == NULL || reply->bytes_after != 0) {
+        free(reply);
         return NULL;
     }
     char *text = strndup(xcb_get_property_value(reply),

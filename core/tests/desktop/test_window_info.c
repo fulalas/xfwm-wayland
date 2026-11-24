@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "check.h"
 #include "fake_ports.h"
 
@@ -91,6 +93,26 @@ static void test_utility_skips_pager(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_type_change_drops_type_states(void)
+{
+    fake_world world;
+    wm_desktop *desktop = start(&world);
+    wm_window *utility = map_typed(desktop, 1, WM_TYPE_UTILITY);
+    wm_window_set_type(desktop, utility, WM_TYPE_NORMAL);
+    CHECK(!view_of(utility).skip_taskbar);
+    CHECK(!view_of(utility).skip_pager);
+    wm_window *dock = map_typed(desktop, 2, WM_TYPE_DOCK);
+    wm_window_set_type(desktop, dock, WM_TYPE_NORMAL);
+    CHECK(!view_of(dock).sticky);
+    wm_window *window = fake_map(desktop, 3, small);
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_SKIP_TASKBAR, 0});
+    wm_window_set_type(desktop, window, WM_TYPE_UTILITY);
+    wm_window_set_type(desktop, window, WM_TYPE_NORMAL);
+    CHECK(view_of(window).skip_taskbar);
+    CHECK(!view_of(window).skip_pager);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_explicit_skip_taskbar_is_published(void)
 {
     fake_world world;
@@ -150,7 +172,7 @@ static void test_app_id_change_is_published(void)
     int calls = world.window_changed_calls;
     wm_window_set_app_id(desktop, window, "other");
     CHECK_INT_EQ(calls + 1, world.window_changed_calls);
-    CHECK(view_of(window).app_id != NULL && view_of(window).app_id[0] == 'o');
+    CHECK(view_of(window).app_id != NULL && strcmp("other", view_of(window).app_id) == 0);
     wm_desktop_destroy(desktop);
 }
 
@@ -212,6 +234,7 @@ static const check_case CASES[] = {
     {"dialog_without_parent_is_in_taskbar", test_dialog_without_parent_is_in_taskbar},
     {"helper_types_skip_taskbar", test_helper_types_skip_taskbar},
     {"utility_skips_pager", test_utility_skips_pager},
+    {"type_change_drops_type_states", test_type_change_drops_type_states},
     {"explicit_skip_taskbar_is_published", test_explicit_skip_taskbar_is_published},
     {"untyped_child_becomes_dialog", test_untyped_child_becomes_dialog},
     {"typed_normal_child_stays_in_taskbar", test_typed_normal_child_stays_in_taskbar},

@@ -56,7 +56,7 @@ static const char *find_symbol(const xpm_symbols *symbols, const char *name);
 
 char *appearance_xpm_entry_color(const char *entry, const xpm_symbols *symbols)
 {
-    entry_state state = { .symbols = symbols, .key = KEY_NONE, .current_key = KEY_MONO };
+    entry_state state = { .symbols = symbols, .key = KEY_NONE, .current_key = KEY_NONE };
     const char *cursor = entry;
     step_result result = STEP_CONTINUE;
 
@@ -65,7 +65,7 @@ char *appearance_xpm_entry_color(const char *entry, const xpm_symbols *symbols)
         cursor = next_word(cursor, word);
         result = step(&state, word, *cursor == '\0');
     }
-    if (result == STEP_FAIL || state.current_key <= KEY_MONO) {
+    if (result == STEP_FAIL || state.current_key == KEY_NONE) {
         return NULL;
     }
     return g_strdup(state.current);

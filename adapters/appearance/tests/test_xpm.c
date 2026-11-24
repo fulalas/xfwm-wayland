@@ -49,6 +49,12 @@ static void test_entry_prefers_color_key(void)
     CHECK(entry_is(" c red m white", "red"));
 }
 
+static void test_entry_mono_is_the_last_fallback(void)
+{
+    CHECK(entry_is(" m black", "black"));
+    CHECK(entry_is(" m black s unknown_symbol", "black"));
+}
+
 static void test_entry_incomplete_is_rejected(void)
 {
     CHECK(entry_is(" c", NULL));
@@ -63,6 +69,7 @@ static const char tiny_xpm[] = "/* XPM */\n"
                                "\"# c None\",\n"
                                "\"r c red\",\n"
                                "\".#r\",\n"
+                               "/* row \"2\" */\n"
                                "\"r.?\"};\n";
 
 static void check_pixel(const GdkPixbuf *pixbuf, int index, const guchar expected[4])
@@ -127,6 +134,7 @@ int main(void)
         { "entry_symbol_overrides_color", test_entry_symbol_overrides_color },
         { "entry_unknown_symbol_keeps_color", test_entry_unknown_symbol_keeps_color },
         { "entry_prefers_color_key", test_entry_prefers_color_key },
+        { "entry_mono_is_the_last_fallback", test_entry_mono_is_the_last_fallback },
         { "entry_incomplete_is_rejected", test_entry_incomplete_is_rejected },
         { "load_substitutes_symbols", test_load_substitutes_symbols },
         { "load_rejects_bad_header", test_load_rejects_bad_header },

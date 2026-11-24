@@ -5,6 +5,7 @@
 #include <wlr/util/log.h>
 
 #include "util/listener.h"
+#include "util/output_commit.h"
 #include "lock.h"
 #include "util/node_owner.h"
 #include "output/output.h"
@@ -12,6 +13,10 @@
 #include "input/seat.h"
 
 static const float BACKGROUND_COLOR[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+
+enum {
+    LOCKED_WAIT_MS = 1000,
+};
 
 typedef struct lock_surface {
     session_lock *lock;
@@ -23,6 +28,13 @@ typedef struct lock_surface {
     struct wl_listener destroy;
 } lock_surface;
 
+typedef struct lock_watch {
+    session_lock *lock;
+    struct wl_list link;
+    struct wl_listener commit;
+    struct wl_listener destroy;
+} lock_watch;
+
 struct session_lock {
     compositor *server;
     struct wlr_session_lock_manager_v1 *manager;
@@ -31,6 +43,8 @@ struct session_lock {
     struct wlr_scene_tree *tree;
     struct wlr_scene_tree *backgrounds;
     struct wl_list surfaces;
+    struct wl_list watches;
+    struct wl_event_source *locked_timer;
     struct wl_listener new_lock;
     struct wl_listener new_surface;
     struct wl_listener unlock;
@@ -47,6 +61,15 @@ static void forget_active(session_lock *lock);
 static void rebuild_backgrounds(session_lock *lock);
 static void place_surface(lock_surface *surface);
 static void lock_changed(session_lock *lock);
+static void watch_outputs(session_lock *lock);
+static void watch_output(session_lock *lock, struct wlr_output *output);
+static void handle_watch_commit(struct wl_listener *listener, void *data);
+static void handle_watch_destroy(struct wl_listener *listener, void *data);
+static void watch_done(lock_watch *watch);
+static void watch_free(lock_watch *watch);
+static void drop_watches(session_lock *lock);
+static int handle_locked_timer(void *data);
+static void send_locked(session_lock *lock);
 
 session_lock *session_lock_create(compositor *server)
 {
@@ -56,14 +79,22 @@ session_lock *session_lock_create(compositor *server)
     }
     lock->server = server;
     wl_list_init(&lock->surfaces);
+    wl_list_init(&lock->watches);
     wl_list_init(&lock->new_surface.link);
     wl_list_init(&lock->unlock.link);
     wl_list_init(&lock->lock_destroy.link);
     lock->manager = wlr_session_lock_manager_v1_create(server->display);
     lock->tree = wlr_scene_tree_create(scene_layers_tree(server->layers, SCENE_LAYER_LOCK));
     lock->backgrounds = lock->tree != NULL ? wlr_scene_tree_create(lock->tree) : NULL;
-    if (lock->manager == NULL || lock->backgrounds == NULL) {
+    lock->locked_timer = wl_event_loop_add_timer(server->loop, handle_locked_timer, lock);
+    if (lock->manager == NULL || lock->backgrounds == NULL || lock->locked_timer == NULL) {
         wlr_log(WLR_ERROR, "cannot create the session lock");
+        if (lock->locked_timer != NULL) {
+            wl_event_source_remove(lock->locked_timer);
+        }
+        if (lock->tree != NULL) {
+            wlr_scene_node_destroy(&lock->tree->node);
+        }
         free(lock);
         return NULL;
     }
@@ -76,6 +107,7 @@ void session_lock_destroy(session_lock *lock)
 {
     forget_active(lock);
     listener_disconnect(&lock->new_lock);
+    wl_event_source_remove(lock->locked_timer);
     free(lock);
 }
 
@@ -125,8 +157,8 @@ static void handle_new_lock(struct wl_listener *listener, void *data)
     listener_connect(&lock->unlock, &wlr_lock->events.unlock, handle_unlock);
     listener_connect(&lock->lock_destroy, &wlr_lock->events.destroy, handle_lock_destroy);
     session_lock_arrange(lock);
-    wlr_session_lock_v1_send_locked(wlr_lock);
     lock_changed(lock);
+    watch_outputs(lock);
 }
 
 static void handle_new_surface(struct wl_listener *listener, void *data)
@@ -192,6 +224,7 @@ static void handle_surface_destroy(struct wl_listener *listener, void *data)
 
 static void forget_active(session_lock *lock)
 {
+    drop_watches(lock);
     listener_disconnect(&lock->new_surface);
     listener_disconnect(&lock->unlock);
     listener_disconnect(&lock->lock_destroy);
@@ -237,4 +270,88 @@ static void lock_changed(session_lock *lock)
         seat_release_touch_and_pen(s);
     }
     seat_focus_refresh(s);
+}
+
+static void watch_outputs(session_lock *lock)
+{
+    outputs *outs = lock->server->outputs;
+    for (output *o = outputs_next_active(outs, NULL); o != NULL; o = outputs_next_active(outs, o)) {
+        if (output_wlr(o)->enabled) {
+            watch_output(lock, output_wlr(o));
+        }
+    }
+    if (wl_list_empty(&lock->watches)) {
+        send_locked(lock);
+        return;
+    }
+    wl_event_source_timer_update(lock->locked_timer, LOCKED_WAIT_MS);
+}
+
+static void watch_output(session_lock *lock, struct wlr_output *output)
+{
+    lock_watch *watch = calloc(1, sizeof(*watch));
+    if (watch == NULL) {
+        return;
+    }
+    watch->lock = lock;
+    listener_connect(&watch->commit, &output->events.commit, handle_watch_commit);
+    listener_connect(&watch->destroy, &output->events.destroy, handle_watch_destroy);
+    wl_list_insert(&lock->watches, &watch->link);
+}
+
+static void handle_watch_commit(struct wl_listener *listener, void *data)
+{
+    lock_watch *watch = wl_container_of(listener, watch, commit);
+    if (output_commit_latched(data)) {
+        watch_done(watch);
+    }
+}
+
+static void handle_watch_destroy(struct wl_listener *listener, void *data)
+{
+    (void) data;
+    lock_watch *watch = wl_container_of(listener, watch, destroy);
+    watch_done(watch);
+}
+
+static void watch_done(lock_watch *watch)
+{
+    session_lock *lock = watch->lock;
+    watch_free(watch);
+    if (wl_list_empty(&lock->watches)) {
+        send_locked(lock);
+    }
+}
+
+static void drop_watches(session_lock *lock)
+{
+    lock_watch *watch;
+    lock_watch *tmp;
+    wl_list_for_each_safe(watch, tmp, &lock->watches, link) {
+        watch_free(watch);
+    }
+    wl_event_source_timer_update(lock->locked_timer, 0);
+}
+
+static void watch_free(lock_watch *watch)
+{
+    listener_disconnect(&watch->commit);
+    listener_disconnect(&watch->destroy);
+    wl_list_remove(&watch->link);
+    free(watch);
+}
+
+static int handle_locked_timer(void *data)
+{
+    session_lock *lock = data;
+    send_locked(lock);
+    return 0;
+}
+
+static void send_locked(session_lock *lock)
+{
+    drop_watches(lock);
+    if (lock->active != NULL) {
+        wlr_session_lock_v1_send_locked(lock->active);
+    }
 }

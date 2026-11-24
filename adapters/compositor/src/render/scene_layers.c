@@ -18,6 +18,9 @@ scene_layers *scene_layers_create(struct wlr_scene *scene)
         layers->trees[i] = wlr_scene_tree_create(&scene->tree);
         if (layers->trees[i] == NULL) {
             wlr_log(WLR_ERROR, "cannot create scene layer %d", i);
+            for (int j = 0; j < i; j++) {
+                wlr_scene_node_destroy(&layers->trees[j]->node);
+            }
             free(layers);
             return NULL;
         }

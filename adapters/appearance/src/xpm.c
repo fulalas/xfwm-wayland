@@ -121,7 +121,7 @@ static bool read_palette(xpm_decoder *decoder)
 
     palette->colors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
     for (int i = 0; i < decoder->header.color_count; i++) {
-        const char *entry = appearance_xpm_reader_colormap(decoder->reader);
+        const char *entry = appearance_xpm_reader_next(decoder->reader);
         if (entry == NULL) {
             g_warning("Cannot read XPM colormap entry %d", i);
             g_hash_table_destroy(palette->colors);
@@ -162,7 +162,7 @@ static void read_rows(const xpm_decoder *decoder, GdkPixbuf *pixbuf)
     size_t row_chars = (size_t) header->width * (size_t) header->chars_per_pixel;
 
     for (int y = 0; y < header->height; y++) {
-        const char *row = appearance_xpm_reader_row(decoder->reader);
+        const char *row = appearance_xpm_reader_next(decoder->reader);
         guchar *line = pixels + (size_t) y * (size_t) stride;
         if (row == NULL || strlen(row) < row_chars) {
             memset(line, 0, (size_t) header->width * PIXEL_BYTES);

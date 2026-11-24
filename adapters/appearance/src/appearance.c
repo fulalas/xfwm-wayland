@@ -161,7 +161,8 @@ static bool load_theme(appearance *appearance, const theme_request *request,
 static void keep_previous_theme(appearance *appearance, const theme_request *request)
 {
     appearance_request_memo_clear(&appearance->loaded);
-    apply_title_font(appearance, NULL, request->title_font);
+    apply_title_font(appearance, appearance_theme_option(appearance, title_font_option),
+                     request->title_font);
     appearance_color_symbols_resolve(&appearance->symbols, &appearance->style, appearance->rc);
     update_title_colors(appearance);
 }

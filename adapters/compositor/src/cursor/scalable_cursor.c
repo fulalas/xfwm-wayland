@@ -195,6 +195,9 @@ static bool render_frame(cursor_animation *animation, size_t index)
     scalable_layout layout = scalable_layout_for(&request);
     cairo_surface_t *surface = render_svg(svg, layout.pixels);
     g_object_unref(svg);
+    if (surface == NULL) {
+        return false;
+    }
     frame->buffer = cairo_buffer_create(surface);
     cairo_surface_destroy(surface);
     frame->scale = layout.buffer_scale;
@@ -209,10 +212,13 @@ static cairo_surface_t *render_svg(RsvgHandle *svg, int pixels)
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, pixels, pixels);
     cairo_t *cr = cairo_create(surface);
     RsvgRectangle viewport = {0.0, 0.0, pixels, pixels};
-    if (!rsvg_handle_render_document(svg, cr, &viewport, NULL)) {
-        wlr_log(WLR_ERROR, "cannot render a scalable cursor");
-    }
+    bool rendered = rsvg_handle_render_document(svg, cr, &viewport, NULL);
     cairo_destroy(cr);
+    if (!rendered) {
+        wlr_log(WLR_ERROR, "cannot render a scalable cursor");
+        cairo_surface_destroy(surface);
+        return NULL;
+    }
     cairo_surface_flush(surface);
     return surface;
 }

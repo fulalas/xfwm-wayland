@@ -146,6 +146,25 @@ static void test_unmap_passes_focus_to_top_most(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_unmap_passes_focus_to_window_under_pointer(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    config.focus.click_to_focus = false;
+    config.focus.focus_delay_ms = 0;
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    fake_map_at(desktop, 1, (wm_rect) {100, 100, 1000, 800});
+    wm_window *above = fake_map_at(desktop, 2, (wm_rect) {300, 300, 400, 300});
+    wm_window *third = fake_map(desktop, 3, small);
+    wm_rect frame = wm_window_current_view(above).frame;
+    fake_click edge = {WM_TARGET_DESKTOP, NULL, {wm_rect_right(&frame), frame.y + 50}, 0, 0, -1};
+    fake_motion(&world, desktop, &edge);
+    CHECK(world.focused == fake_handle(3));
+    wm_window_unmap(desktop, third);
+    CHECK(world.focused == fake_handle(1));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_focus_follows_mouse_after_delay(void)
 {
     fake_world world;
@@ -265,6 +284,7 @@ static void test_modal_dialog_mapped_before_parent_takes_focus(void)
     CHECK(world.focused == fake_handle(1));
     wm_window_set_parent(desktop, dialog, parent);
     CHECK(world.focused == fake_handle(2));
+    CHECK(fake_stack_index(&world, fake_handle(2)) < FAKE_WINDOW_MAX);
     CHECK(fake_stack_index(&world, fake_handle(2)) > fake_stack_index(&world, fake_handle(1)));
     wm_desktop_destroy(desktop);
 }
@@ -345,6 +365,7 @@ static void test_activating_parent_keeps_dialog_focused(void)
     fake_map_dialog(desktop, 2, parent);
     wm_request_activate(desktop, parent, WM_ACTIVATION_APPLICATION);
     CHECK(world.focused == fake_handle(2));
+    CHECK(fake_stack_index(&world, fake_handle(2)) < FAKE_WINDOW_MAX);
     CHECK(fake_stack_index(&world, fake_handle(2)) > fake_stack_index(&world, fake_handle(1)));
     wm_desktop_destroy(desktop);
 }
@@ -377,6 +398,8 @@ static const check_case CASES[] = {
      test_window_without_focus_capability_is_skipped},
     {"pager_activation_switches_workspace", test_pager_activation_switches_workspace},
     {"untrusted_activation_is_refused", test_untrusted_activation_is_refused},
+    {"unmap_passes_focus_to_window_under_pointer",
+     test_unmap_passes_focus_to_window_under_pointer},
     {"bring_activation_moves_window", test_bring_activation_moves_window},
 };
 

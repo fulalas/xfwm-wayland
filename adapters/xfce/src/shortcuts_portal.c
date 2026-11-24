@@ -178,10 +178,15 @@ static void on_bus_acquired(GDBusConnection *connection, const char *name, gpoin
     shortcuts_portal *portal = data;
     GDBusInterfaceInfo *info = g_dbus_node_info_lookup_interface(portal->node,
                                                                  shortcuts_interface);
+    GError *error = NULL;
 
     portal->connection = g_object_ref(connection);
     portal->registration = g_dbus_connection_register_object(connection, object_path, info,
-                                                             &portal_vtable, portal, NULL, NULL);
+                                                             &portal_vtable, portal, NULL, &error);
+    if (portal->registration == 0) {
+        g_warning("Cannot register the global shortcuts portal: %s", error->message);
+        g_error_free(error);
+    }
 }
 
 static void on_method(GDBusConnection *connection, const char *sender, const char *path,

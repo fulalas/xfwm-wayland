@@ -29,11 +29,14 @@ void x11_window_props_publish(x11_window_props *last, const x11_window_target *t
     *last = next;
 }
 
-void x11_window_props_publish_extents(const x11_window_target *target,
+void x11_window_props_publish_extents(x11_window_props *last, const x11_window_target *target,
                                       const ewmh_frame_extents *extents)
 {
     set_extents(target, extents);
     x11_link_flush(target->link);
+    if (last != NULL) {
+        last->extents = *extents;
+    }
 }
 
 static void set_extents(const x11_window_target *target, const ewmh_frame_extents *extents)

@@ -3,6 +3,7 @@
 #include "present.h"
 #include "size_hints.h"
 #include "stack.h"
+#include "states.h"
 #include "transients.h"
 #include "urgency.h"
 #include "window_ops.h"
@@ -142,7 +143,11 @@ void wm_window_icon_changed(wm_desktop *desktop, wm_window *window)
 
 static void refresh_type(wm_desktop *desktop, wm_window *window)
 {
+    bool was_sticky = window_is_sticky(window);
     window_apply_type(window);
+    if (was_sticky && !window_is_sticky(window)) {
+        states_unstick(desktop, window);
+    }
     window_update_flags(window);
     stack_update_layers(desktop);
 }

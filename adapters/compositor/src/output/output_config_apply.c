@@ -37,6 +37,8 @@ static bool render_state(struct wlr_backend_output_state *state,
                          struct wlr_swapchain **swapchain, color_step color);
 static bool will_be_enabled(const struct wlr_backend_output_state *state);
 static void place_outputs(const struct wlr_output_configuration_v1 *config);
+static void preview_positions(const struct wlr_output_configuration_v1 *config);
+static void restore_positions(const struct wlr_output_configuration_v1 *config);
 static void finish(pending_states *pending);
 
 bool output_config_test(compositor *server, const struct wlr_output_configuration_v1 *config)
@@ -48,8 +50,10 @@ bool output_config_test(compositor *server, const struct wlr_output_configuratio
 bool output_config_commit(compositor *server, const struct wlr_output_configuration_v1 *config)
 {
     config_request request = {server, config, commit_step};
+    preview_positions(config);
     if (!run_with_fallback(&request)) {
         wlr_log(WLR_ERROR, "cannot apply the requested output configuration");
+        restore_positions(config);
         return false;
     }
     place_outputs(config);
@@ -146,6 +150,35 @@ static void place_outputs(const struct wlr_output_configuration_v1 *config)
             output_place(o, (wm_point){head->state.x, head->state.y});
         } else {
             output_remove_from_layout(o);
+        }
+    }
+}
+
+static void preview_positions(const struct wlr_output_configuration_v1 *config)
+{
+    struct wlr_output_configuration_head_v1 *head;
+    wl_list_for_each(head, &config->heads, link) {
+        output *o = output_from_wlr(head->state.output);
+        if (o == NULL || !head->state.enabled) {
+            continue;
+        }
+        struct wlr_scene_output *scene_output = output_scene(o);
+        if (scene_output != NULL) {
+            wlr_scene_output_set_position(scene_output, head->state.x, head->state.y);
+        }
+    }
+}
+
+static void restore_positions(const struct wlr_output_configuration_v1 *config)
+{
+    struct wlr_output_configuration_head_v1 *head;
+    wl_list_for_each(head, &config->heads, link) {
+        output *o = output_from_wlr(head->state.output);
+        struct wlr_scene_output *scene_output =
+            o != NULL && output_is_active(o) ? output_scene(o) : NULL;
+        if (scene_output != NULL) {
+            wm_rect full = output_full(o);
+            wlr_scene_output_set_position(scene_output, full.x, full.y);
         }
     }
 }

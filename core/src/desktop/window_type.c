@@ -6,7 +6,11 @@ static uint32_t type_states(const wm_window *window);
 void window_apply_type(wm_window *window)
 {
     window->type = resolved_type(window);
-    window->states |= type_states(window);
+    uint32_t wanted = type_states(window);
+    uint32_t dropped = window->type_states & ~wanted;
+    uint32_t added = wanted & ~window->states;
+    window->states = (window->states & ~dropped) | wanted;
+    window->type_states = (window->type_states & wanted) | added;
     if (window->type == WM_TYPE_NOTIFICATION) {
         window->states &= ~(uint32_t) (WM_STATE_ABOVE | WM_STATE_BELOW);
     }

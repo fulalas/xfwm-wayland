@@ -2,6 +2,7 @@
 #include <wlr/types/wlr_security_context_v1.h>
 
 #include "protocols.h"
+#include "xwayland/xwayland.h"
 
 static const char *const privileged_interfaces[] = {
     "zwlr_screencopy_manager_v1",
@@ -29,6 +30,7 @@ static const char *const privileged_interfaces[] = {
     "xfce_input_device_list_private_v1",
     "xfce_output_manager_private_v1",
     "xfce_output_management_manager_private_v1",
+    "wp_drm_lease_device_v1",
 };
 
 static bool filter_global(const struct wl_client *client, const struct wl_global *global,
@@ -44,6 +46,10 @@ static bool filter_global(const struct wl_client *client, const struct wl_global
                           void *data)
 {
     compositor *server = data;
+    if (strcmp(wl_global_get_interface(global)->name, "zwp_xwayland_keyboard_grab_manager_v1") ==
+        0) {
+        return server->xwayland != NULL && client == xwayland_shell_client(server->xwayland);
+    }
     if (server->globals.security_context == NULL) {
         return true;
     }

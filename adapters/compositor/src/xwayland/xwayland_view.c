@@ -53,6 +53,10 @@ xwayland_view *xwayland_view_create(compositor *server, struct wlr_xwayland_surf
     xv->xsurface = xsurface;
     xv->motif_capabilities = WM_CAP_ALL;
     xv->icon = icon_slot_create(server, &(icon_listener){xv, handle_icon_changed});
+    if (xv->icon == NULL) {
+        free(xv);
+        return NULL;
+    }
     xsurface->data = xv;
     wl_list_init(&xv->map.link);
     wl_list_init(&xv->unmap.link);

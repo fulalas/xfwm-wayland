@@ -283,6 +283,11 @@ static void handle_rename(struct wl_client *client, struct wl_resource *resource
         return;
     }
     session_data *session = tracked->session;
+    if (!g_utf8_validate(name, -1, NULL)) {
+        wl_resource_post_error(session->resource, XDG_SESSION_V1_ERROR_INVALID_NAME,
+                               "toplevel name is not UTF-8");
+        return;
+    }
     if (name_is_live(session, name) || session_book_find(&session->book, name) != NULL) {
         wl_resource_post_error(session->resource, XDG_SESSION_V1_ERROR_NAME_IN_USE,
                                "toplevel name is already in use");

@@ -9,7 +9,7 @@ enum {
 };
 
 static void toggle_look(wm_desktop *desktop, wm_window *window);
-static void keep_inactive_look(wm_desktop *desktop, wm_window *window);
+static void keep_inactive_look(wm_window *window);
 static void restart(wm_desktop *desktop, wm_window *window);
 
 void urgency_set(wm_desktop *desktop, wm_window *window)
@@ -56,7 +56,7 @@ void urgency_on_blink(wm_desktop *desktop, wm_window *window)
         return;
     }
     if (!desktop->config.focus.urgent_blink) {
-        keep_inactive_look(desktop, window);
+        keep_inactive_look(window);
         return;
     }
     if (window->blink_iterations < BLINK_TOGGLES) {
@@ -80,14 +80,13 @@ static void toggle_look(wm_desktop *desktop, wm_window *window)
     restart(desktop, window);
 }
 
-static void keep_inactive_look(wm_desktop *desktop, wm_window *window)
+static void keep_inactive_look(wm_window *window)
 {
     if (window->seen_active) {
         window->seen_active = false;
         window_mark_dirty(window);
     }
     window->blink_iterations = 0;
-    restart(desktop, window);
 }
 
 static void restart(wm_desktop *desktop, wm_window *window)

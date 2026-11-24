@@ -37,6 +37,7 @@ struct wm_window {
     wm_window_type type;
     uint32_t capabilities;
     uint32_t states;
+    uint32_t type_states;
     uint32_t flags;
     uint32_t mapped_ms;
     wm_rect client;

@@ -33,6 +33,7 @@ static const modifier_name modifier_names[] = {
 
 static const char *skip_modifiers(const char *text, uint32_t *modifiers);
 static const char *skip_one_modifier(const char *text, uint32_t *modifiers);
+static bool is_ignored_modifier(const char *name);
 static uint32_t keysym_from_name(const char *name);
 static bool make_key(const char *name, uint32_t modifiers, wm_key *key);
 static bool is_disabled(const char *text);
@@ -93,17 +94,28 @@ static const char *skip_one_modifier(const char *text, uint32_t *modifiers)
     const char *end = strchr(text, '>');
     char name[MODIFIER_NAME_MAX];
     size_t length;
+    uint32_t modifier;
 
     if (!end) {
         return NULL;
     }
     length = (size_t) (end - text - 1);
-    if (length < sizeof(name)) {
-        memcpy(name, text + 1, length);
-        name[length] = '\0';
-        *modifiers |= accelerator_modifier_from_name(name);
+    if (length >= sizeof(name)) {
+        return NULL;
     }
+    memcpy(name, text + 1, length);
+    name[length] = '\0';
+    modifier = accelerator_modifier_from_name(name);
+    if (modifier == 0 && !is_ignored_modifier(name)) {
+        return NULL;
+    }
+    *modifiers |= modifier;
     return end + 1;
+}
+
+static bool is_ignored_modifier(const char *name)
+{
+    return g_ascii_strcasecmp(name, "Release") == 0 || g_ascii_strcasecmp(name, "Mod2") == 0;
 }
 
 static uint32_t keysym_from_name(const char *name)

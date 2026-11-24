@@ -33,6 +33,7 @@ typedef struct keyboard {
     bool follows_prefs;
     key_list consumed;
     key_list shared;
+    key_list vt_keys;
     uint32_t pressed_keysyms[KEY_CNT];
     bool x11_modifiers_shared;
     struct wl_list link;
@@ -382,14 +383,16 @@ static uint32_t combined_modifiers(const keyboards *kbs)
 static bool switch_vt(keyboard *kb, const struct wlr_keyboard_key_event *event,
                       const key_chord *chord)
 {
+    if (event->state != WL_KEYBOARD_KEY_STATE_PRESSED) {
+        return key_list_take(&kb->vt_keys, event->keycode);
+    }
     unsigned vt = input_mapping_vt(chord);
     struct wlr_session *session = kb->owner->seat->server->session;
     if (vt == 0 || session == NULL) {
         return false;
     }
-    if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-        wlr_session_change_vt(session, vt);
-    }
+    key_list_add(&kb->vt_keys, event->keycode);
+    wlr_session_change_vt(session, vt);
     return true;
 }
 

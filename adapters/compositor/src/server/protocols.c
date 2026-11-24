@@ -54,6 +54,8 @@ static void create_capture(compositor *server);
 static void create_clipboard(compositor *server);
 static void create_shell_extras(compositor *server);
 static void create_foreign(compositor *server);
+static void create_color_manager(compositor *server);
+static void drop_color_manager(compositor *server);
 static struct wlr_color_manager_v1_options color_manager_options(void);
 
 bool protocols_create(compositor *server)
@@ -67,16 +69,24 @@ bool protocols_create(compositor *server)
     create_clipboard(server);
     create_shell_extras(server);
     create_foreign(server);
-    protocols_create_color(server);
+    protocols_update_color(server);
     return true;
 }
 
-void protocols_create_color(compositor *server)
+void protocols_update_color(compositor *server)
+{
+    bool supported = server->renderer->features.input_color_transform;
+    if (server->globals.color_manager != NULL && !supported) {
+        drop_color_manager(server);
+    }
+    if (server->globals.color_manager == NULL && supported) {
+        create_color_manager(server);
+    }
+}
+
+static void create_color_manager(compositor *server)
 {
     struct wlr_renderer *renderer = server->renderer;
-    if (server->globals.color_manager != NULL || !renderer->features.input_color_transform) {
-        return;
-    }
     struct wlr_color_manager_v1_options options = color_manager_options();
     enum wp_color_manager_v1_transfer_function *transfer_functions =
         wlr_color_manager_v1_transfer_function_list_from_renderer(
@@ -92,6 +102,16 @@ void protocols_create_color(compositor *server)
     if (server->globals.color_manager != NULL) {
         wlr_scene_set_color_manager_v1(server->scene, server->globals.color_manager);
     }
+}
+
+static void drop_color_manager(compositor *server)
+{
+#if HAVE_WLR_COLOR_MANAGER_DESTROY
+    wlr_color_manager_v1_destroy(server->globals.color_manager);
+    server->globals.color_manager = NULL;
+#else
+    (void) server;
+#endif
 }
 
 static bool create_core(compositor *server)

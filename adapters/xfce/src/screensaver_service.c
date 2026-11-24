@@ -54,7 +54,7 @@ static void on_method(GDBusConnection *connection, const char *sender, const cha
 static guint cookie_of(GVariant *parameters);
 static void notify_activity(screensaver_service *service);
 static guint inhibit(screensaver_service *service, const char *sender);
-static void uninhibit(screensaver_service *service, guint cookie);
+static void uninhibit(screensaver_service *service, const char *sender, guint cookie);
 static void on_sender_vanished(GDBusConnection *connection, const char *name, gpointer data);
 static void unregister_objects(screensaver_service *service);
 static void set_cookies_cleared(screensaver_service *service);
@@ -138,7 +138,7 @@ static void on_method(GDBusConnection *connection, const char *sender, const cha
         g_dbus_method_invocation_return_value(invocation,
                                               g_variant_new("(u)", inhibit(service, sender)));
     } else if (g_strcmp0(method, "UnInhibit") == 0) {
-        uninhibit(service, cookie_of(parameters));
+        uninhibit(service, sender, cookie_of(parameters));
         g_dbus_method_invocation_return_value(invocation, NULL);
     } else if (g_strcmp0(method, "SimulateUserActivity") == 0) {
         notify_activity(service);
@@ -175,11 +175,12 @@ static guint inhibit(screensaver_service *service, const char *sender)
     return cookie;
 }
 
-static void uninhibit(screensaver_service *service, guint cookie)
+static void uninhibit(screensaver_service *service, const char *sender, guint cookie)
 {
     bool was_inhibited = screensaver_service_inhibited(service);
-
-    g_hash_table_remove(service->cookies, GUINT_TO_POINTER(cookie));
+    if (g_strcmp0(g_hash_table_lookup(service->cookies, GUINT_TO_POINTER(cookie)), sender) == 0) {
+        g_hash_table_remove(service->cookies, GUINT_TO_POINTER(cookie));
+    }
     notify_if_changed(service, was_inhibited);
 }
 

@@ -10,6 +10,7 @@ static bool use_existing_bus(void);
 static bool use_runtime_bus(void);
 static GPid spawn_private_bus(void);
 static bool export_address(int output_fd);
+static void reap_bus(GPid pid, gint status, gpointer data);
 
 GPid app_session_bus_start(void)
 {
@@ -65,7 +66,8 @@ static GPid spawn_private_bus(void)
     }
     if (!export_address(output_fd)) {
         g_warning("The D-Bus session bus did not report its address");
-        app_session_bus_stop(pid);
+        kill(pid, SIGTERM);
+        g_child_watch_add(pid, reap_bus, NULL);
         return 0;
     }
     return pid;
@@ -86,4 +88,11 @@ static bool export_address(int output_fd)
     }
     g_setenv("DBUS_SESSION_BUS_ADDRESS", line, TRUE);
     return true;
+}
+
+static void reap_bus(GPid pid, gint status, gpointer data)
+{
+    (void) status;
+    (void) data;
+    g_spawn_close_pid(pid);
 }

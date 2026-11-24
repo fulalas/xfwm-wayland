@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+#include "check.h"
+
 static fake_world *world_of(void *self);
 static void window_changed(void *self, void *window, const wm_window_view *view);
 static void stacking_changed(void *self, void *const *windows, size_t count);
@@ -61,6 +63,10 @@ void fake_world_init(fake_world *world)
 
 void fake_world_add_output(fake_world *world, wm_rect full, wm_rect usable)
 {
+    if (world->output_count >= FAKE_OUTPUT_MAX) {
+        CHECK(world->output_count < FAKE_OUTPUT_MAX);
+        return;
+    }
     world->outputs[world->output_count++] = (wm_output_info) {full, usable, false, NULL};
 }
 

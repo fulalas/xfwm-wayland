@@ -66,10 +66,15 @@ static void test_modifiers_keep_ask_drags(void)
     CHECK_INT_EQ(-1, narrowed(-1, WM_MOD_CTRL));
 }
 
+static uint32_t chosen_by(bool offer_sets, uint32_t offer, uint32_t preferred, int32_t source)
+{
+    drag_choice choice = {offer_sets, offer, preferred, source};
+    return drag_actions_choose(&choice);
+}
+
 static uint32_t chosen(uint32_t offer, uint32_t preferred, int32_t source)
 {
-    drag_choice choice = {true, offer, preferred, source};
-    return drag_actions_choose(&choice);
+    return chosen_by(true, offer, preferred, source);
 }
 
 static void test_choice_order(void)
@@ -78,6 +83,14 @@ static void test_choice_order(void)
     CHECK_INT_EQ(MOVE, (int32_t) chosen(COPY | MOVE, MOVE, COPY | MOVE));
     CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, 0, COPY | MOVE));
     CHECK_INT_EQ(0, (int32_t) chosen(ASK, 0, COPY | MOVE));
+}
+
+static void test_old_clients_fall_back_to_copy(void)
+{
+    CHECK_INT_EQ(COPY, (int32_t) chosen_by(false, MOVE, MOVE, COPY | MOVE));
+    CHECK_INT_EQ(0, (int32_t) chosen_by(false, MOVE, MOVE, MOVE));
+    CHECK_INT_EQ(COPY, (int32_t) chosen(COPY | MOVE, MOVE, -1));
+    CHECK_INT_EQ(0, (int32_t) chosen(MOVE, MOVE, -1));
 }
 
 int main(void)
@@ -92,6 +105,7 @@ int main(void)
         {"ctrl_copies_and_shift_moves", test_ctrl_copies_and_shift_moves},
         {"modifiers_keep_ask_drags", test_modifiers_keep_ask_drags},
         {"choice_order", test_choice_order},
+        {"old_clients_fall_back_to_copy", test_old_clients_fall_back_to_copy},
     };
     return check_run(cases, sizeof(cases) / sizeof(cases[0]));
 }

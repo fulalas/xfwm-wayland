@@ -201,7 +201,7 @@ static bool swap_in(compositor *c, const render_pair *pair, renderer_kind kind)
     destroy_pair(ok ? &old : pair);
     keep_context_current(c->renderer);
     watch_lost(c);
-    protocols_create_color(c);
+    protocols_update_color(c);
     redraw_everything(c);
     return ok;
 }

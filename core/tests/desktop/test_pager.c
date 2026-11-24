@@ -71,6 +71,9 @@ static void test_keyboard_move_starts_at_window_center(void)
     wm_request_keyboard_move(desktop, window);
     CHECK(wm_window_current_view(window).moving);
     CHECK_INT_EQ(warps + 1, world.warp_calls);
+    wm_rect frame = wm_window_current_view(window).frame;
+    CHECK_INT_EQ(frame.x + frame.width / 2, world.warp.x);
+    CHECK_INT_EQ(frame.y + frame.height / 2, world.warp.y);
     wm_desktop_destroy(desktop);
 }
 

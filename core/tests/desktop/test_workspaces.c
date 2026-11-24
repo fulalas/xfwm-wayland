@@ -254,6 +254,37 @@ static void test_add_and_delete_active_workspace(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_add_workspace_keeps_dialog_with_parent(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_desktop_switch_workspace(desktop, 2);
+    wm_window *parent = fake_map(desktop, 1, small);
+    wm_window *dialog = fake_map_dialog(desktop, 2, parent);
+    wm_desktop_switch_workspace(desktop, 0);
+    fake_key(desktop, FAKE_KEY_A, WM_MOD_SUPER | WM_MOD_SHIFT);
+    CHECK_INT_EQ(3, wm_window_current_view(parent).workspace);
+    CHECK_INT_EQ(3, wm_window_current_view(dialog).workspace);
+    wm_desktop_destroy(desktop);
+}
+
+static void test_launch_follows_inserted_workspace(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_desktop_switch_workspace(desktop, 2);
+    wm_launch_started(desktop, "token-a");
+    wm_desktop_switch_workspace(desktop, 0);
+    fake_key(desktop, FAKE_KEY_A, WM_MOD_SUPER | WM_MOD_SHIFT);
+    wm_window_desc desc = fake_desc(1, (wm_rect) {0, 0, 400, 300});
+    desc.launch_id = "token-a";
+    wm_window *window = wm_window_map(desktop, &desc);
+    CHECK_INT_EQ(3, wm_window_current_view(window).workspace);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_delete_below_current_keeps_windows_shown(void)
 {
     fake_world world;
@@ -374,6 +405,8 @@ static const check_case CASES[] = {
     {"toggle_returns_to_previous", test_toggle_returns_to_previous},
     {"switch_out_of_range_without_wrap_cycle", test_switch_out_of_range_without_wrap_cycle},
     {"add_and_delete_active_workspace", test_add_and_delete_active_workspace},
+    {"add_workspace_keeps_dialog_with_parent", test_add_workspace_keeps_dialog_with_parent},
+    {"launch_follows_inserted_workspace", test_launch_follows_inserted_workspace},
     {"delete_below_current_keeps_windows_shown", test_delete_below_current_keeps_windows_shown},
     {"added_workspace_survives_same_config", test_added_workspace_survives_same_config},
     {"workspace_names", test_workspace_names},

@@ -84,13 +84,16 @@ static cairo_surface_t *load(const icon_cache *cache, const icon_key *key)
 
 static const cached_icon *find_larger(const icon_cache *cache, const icon_key *key)
 {
+    const cached_icon *best = NULL;
+
     for (GList *link = cache->entries.head; link; link = link->next) {
         const cached_icon *entry = link->data;
-        if (entry->size > key->size && strcmp(entry->path, key->path) == 0) {
-            return entry;
+        if (entry->size > key->size && (!best || entry->size < best->size) &&
+            strcmp(entry->path, key->path) == 0) {
+            best = entry;
         }
     }
-    return NULL;
+    return best;
 }
 
 static cairo_surface_t *reuse(icon_cache *cache, GList *link)

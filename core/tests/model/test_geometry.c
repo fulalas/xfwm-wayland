@@ -37,6 +37,9 @@ static void test_equals_compares_all_fields(void)
 {
     wm_rect a = {1, 2, 3, 4};
     CHECK(wm_rect_equals(&a, &(wm_rect) {1, 2, 3, 4}));
+    CHECK(!wm_rect_equals(&a, &(wm_rect) {0, 2, 3, 4}));
+    CHECK(!wm_rect_equals(&a, &(wm_rect) {1, 0, 3, 4}));
+    CHECK(!wm_rect_equals(&a, &(wm_rect) {1, 2, 0, 4}));
     CHECK(!wm_rect_equals(&a, &(wm_rect) {1, 2, 3, 5}));
 }
 

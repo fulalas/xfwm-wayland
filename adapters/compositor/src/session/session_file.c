@@ -60,8 +60,9 @@ bool session_file_save(const char *id, const session_book *book)
                  g_file_set_contents_full(path, text->str, (gssize) text->len,
                                           G_FILE_SET_CONTENTS_CONSISTENT, 0600, &error);
     if (!saved) {
+        const char *reason = error != NULL ? error->message : g_strerror(errno);
         wlr_log(WLR_ERROR, "cannot save window session %s: %s", id,
-                error != NULL ? error->message : g_strerror(errno));
+                path == NULL ? "invalid session id" : reason);
     }
     g_clear_error(&error);
     g_string_free(text, TRUE);

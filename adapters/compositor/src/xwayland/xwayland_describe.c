@@ -121,6 +121,9 @@ static wm_size_hints size_limits(const xcb_size_hints_t *size_hints)
     }
     if ((flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) != 0) {
         hints.min = (wm_size){size_hints->min_width, size_hints->min_height};
+        if ((flags & XCB_ICCCM_SIZE_HINT_BASE_SIZE) == 0) {
+            hints.base = hints.min;
+        }
     }
     if ((flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE) != 0) {
         hints.max = (wm_size){size_hints->max_width, size_hints->max_height};

@@ -55,6 +55,20 @@ static void test_slow_clicks_do_not_maximize(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_late_press_does_not_move(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_click title = fake_on_part(window, WM_PART_TITLE, WM_MOUSE_LEFT);
+    click(&world, desktop, &title);
+    world.now_ms += (uint32_t) config.mouse.double_click_time_ms + 1;
+    fake_press(&world, desktop, &title);
+    CHECK(!wm_window_current_view(window).moving);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_close_button_acts_on_release_over_it(void)
 {
     fake_world world;
@@ -229,6 +243,7 @@ static void test_easy_click_right_resizes_nearest_edge(void)
 
 static const check_case CASES[] = {
     {"double_click_on_title_maximizes", test_double_click_on_title_maximizes},
+    {"late_press_does_not_move", test_late_press_does_not_move},
     {"slow_clicks_do_not_maximize", test_slow_clicks_do_not_maximize},
     {"close_button_acts_on_release_over_it", test_close_button_acts_on_release_over_it},
     {"close_button_release_elsewhere_cancels",

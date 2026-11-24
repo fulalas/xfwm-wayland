@@ -27,6 +27,6 @@ typedef struct launch_set {
 bool launches_take(wm_desktop *desktop, const char *id, int *workspace);
 bool launches_busy(const wm_desktop *desktop);
 void launches_on_timer(wm_desktop *desktop);
-void launches_workspace_removed(wm_desktop *desktop, int position);
+void launches_shift_workspaces(wm_desktop *desktop, int from, int delta);
 
 #endif

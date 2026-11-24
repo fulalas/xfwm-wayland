@@ -89,5 +89,5 @@ static int frame_top(const wm_decor_input *input)
     if (!wm_decor_has_frame(input)) {
         return 0;
     }
-    return wm_decor_title_height(input->theme) - decor_border_top(input);
+    return wm_max(0, wm_decor_title_height(input->theme) - decor_border_top(input));
 }

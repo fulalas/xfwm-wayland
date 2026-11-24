@@ -54,18 +54,13 @@ const char *appearance_xpm_reader_header(xpm_reader *reader)
     if (!seek_word(reader->file, "XPM") || !seek_char(reader->file, '{')) {
         return NULL;
     }
-    return appearance_xpm_reader_colormap(reader);
+    return appearance_xpm_reader_next(reader);
 }
 
-const char *appearance_xpm_reader_colormap(xpm_reader *reader)
+const char *appearance_xpm_reader_next(xpm_reader *reader)
 {
     seek_char(reader->file, '"');
     fseek(reader->file, -1, SEEK_CUR);
-    return read_string(reader);
-}
-
-const char *appearance_xpm_reader_row(xpm_reader *reader)
-{
     return read_string(reader);
 }
 

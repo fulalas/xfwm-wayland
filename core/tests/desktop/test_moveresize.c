@@ -106,7 +106,7 @@ static void test_drag_to_left_edge_tiles(void)
     drag_to(&world, &click, (wm_point) {1, 540});
     fake_release(&world, desktop, &click);
     CHECK_RECT_EQ(((wm_rect) {4, 20, 952, 1056}), fake_client_of(window));
-    drag_title(&world, desktop, window);
+    click = drag_title(&world, desktop, window);
     drag_to(&world, &click, (wm_point) {600, 540});
     fake_release(&world, desktop, &click);
     CHECK_INT_EQ(400, fake_client_of(window).width);

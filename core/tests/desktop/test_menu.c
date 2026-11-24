@@ -37,8 +37,9 @@ static void test_popup_key_builds_menu(void)
     CHECK(world.menu_visible);
     CHECK_INT_EQ(760, world.menu.main.anchor.x);
     CHECK_INT_EQ(398, world.menu.main.anchor.y);
-    CHECK_INT_EQ(17, world.menu.main.count);
-    for (size_t i = 0; i < world.menu.main.count && i < 17; i++) {
+    size_t expected = sizeof(MAIN_MENU) / sizeof(MAIN_MENU[0]);
+    CHECK_INT_EQ(expected, world.menu.main.count);
+    for (size_t i = 0; i < world.menu.main.count && i < expected; i++) {
         CHECK_INT_EQ(MAIN_MENU[i], world.menu.main.items[i].label);
     }
     CHECK_INT_EQ(WM_MENU_MARK_RADIO_ON, world.menu.main.items[7].mark);

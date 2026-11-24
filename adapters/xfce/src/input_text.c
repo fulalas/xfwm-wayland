@@ -1,6 +1,7 @@
 #include "input_text.h"
 
 #include <glib.h>
+#include <limits.h>
 #include <math.h>
 #include <stdbool.h>
 
@@ -63,4 +64,14 @@ optional_double input_double_from_text(const char *text)
         return (optional_double) { .is_set = false };
     }
     return (optional_double) { .is_set = true, .value = value };
+}
+
+optional_int input_int_from_text(const char *text)
+{
+    optional_double number = input_double_from_text(text);
+
+    if (!number.is_set || number.value < INT_MIN || number.value > INT_MAX) {
+        return (optional_int) { .is_set = false };
+    }
+    return (optional_int) { .is_set = true, .value = (int) number.value };
 }

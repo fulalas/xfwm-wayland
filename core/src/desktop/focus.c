@@ -283,8 +283,7 @@ static void keep_new_window_behind(wm_desktop *desktop, wm_window *window)
 static bool frame_contains(const wm_desktop *desktop, const wm_window *window, wm_point point)
 {
     wm_rect frame = frame_rect(desktop, window);
-    return point.x >= frame.x && point.x <= wm_rect_right(&frame) && point.y >= frame.y
-           && point.y <= wm_rect_bottom(&frame);
+    return wm_rect_contains(&frame, point);
 }
 
 static void focus_set_ignoring_modal(wm_desktop *desktop, wm_window *window)

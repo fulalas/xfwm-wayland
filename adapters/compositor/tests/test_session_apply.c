@@ -39,6 +39,10 @@ static void test_same_state_ignores_name_and_time(void)
     wm_window_view view = maximized_view();
     session_record a = session_record_from_view(&view);
     session_record b = a;
+    char one[] = "one";
+    char two[] = "two";
+    a.name = one;
+    b.name = two;
     b.seen = 99;
     CHECK(session_record_same_state(&a, &b));
     b.geometry.x++;

@@ -31,8 +31,8 @@ static void test_south_east_places_frame_far_corner(void)
 static void test_center_splits_extents(void)
 {
     wm_point client = x11_gravity_place((wm_point){10, 20}, XCB_GRAVITY_CENTER, &framed.extents);
-    CHECK_INT_EQ(10 + (4 - 6 + 1) / 2, client.x);
-    CHECK_INT_EQ(20 + (24 - 8 + 1) / 2, client.y);
+    CHECK_INT_EQ(9, client.x);
+    CHECK_INT_EQ(28, client.y);
 }
 
 static void test_move_request_uses_gravity(void)

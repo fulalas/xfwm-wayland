@@ -7,6 +7,7 @@
 
 #include "util/listener.h"
 #include "output_setting.h"
+#include "primary_rule.h"
 #include "xfce-output-private-v1-protocol.h"
 
 typedef void (*pointer_event)(struct wl_resource *resource, struct wl_resource *seat);
@@ -137,12 +138,16 @@ static bool send_workarea(output_record *record)
 static bool send_primary(output_record *record)
 {
     bool is_primary = output_display_of(record->output)->is_primary;
-    bool becomes_primary = is_primary && !record->sent_primary;
+    bool hears_loss = wl_resource_get_version(record->resource) >=
+                      XFCE_OUTPUT_V1_NOT_PRIMARY_SINCE_VERSION;
+    primary_event event = primary_rule_event(record->sent_primary, is_primary, hears_loss);
     record->sent_primary = is_primary;
-    if (becomes_primary) {
+    if (event == PRIMARY_EVENT_GAINED) {
         xfce_output_v1_send_primary(record->resource);
+    } else if (event == PRIMARY_EVENT_LOST) {
+        xfce_output_v1_send_not_primary(record->resource);
     }
-    return becomes_primary;
+    return event != PRIMARY_EVENT_NONE;
 }
 
 static wm_rect relative_workarea(const output *o)

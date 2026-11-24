@@ -25,7 +25,7 @@ static int wrapped(int value, int limit);
 static void store_count(wm_desktop *desktop, int count);
 static void assign_new_ids(workspace_state *state, int from, int to);
 static void remove_id(workspace_state *state, int position);
-static void renumber_after(wm_desktop *desktop, int position);
+static void shift_workspaces(wm_desktop *desktop, int from, int delta);
 static void insert_id(workspace_state *state, int position);
 
 void workspaces_switch(wm_desktop *desktop, int workspace, wm_window *carried)
@@ -104,12 +104,7 @@ void workspaces_insert(wm_desktop *desktop, int position)
         return;
     }
     insert_id(&desktop->workspaces, position);
-    for (size_t i = 0; i < desktop->stack.count; i++) {
-        wm_window *window = desktop->stack.items[i];
-        if (window->workspace >= position) {
-            visibility_set_workspace(desktop, window, window->workspace + 1);
-        }
-    }
+    shift_workspaces(desktop, position, 1);
 }
 
 void workspaces_delete(wm_desktop *desktop, int position)
@@ -118,8 +113,8 @@ void workspaces_delete(wm_desktop *desktop, int position)
     if (count <= 1 || position < 0 || position >= count) {
         return;
     }
-    renumber_after(desktop, position);
-    launches_workspace_removed(desktop, position);
+    shift_workspaces(desktop, position + 1, -1);
+    show_new_workspace(desktop);
     remove_id(&desktop->workspaces, position);
     workspaces_change_count(desktop, count - 1);
 }
@@ -296,23 +291,23 @@ static void remove_id(workspace_state *state, int position)
     }
 }
 
-static void renumber_after(wm_desktop *desktop, int position)
+static void shift_workspaces(wm_desktop *desktop, int from, int delta)
 {
     workspace_state *state = &desktop->workspaces;
     for (size_t i = 0; i < desktop->stack.count; i++) {
         wm_window *window = desktop->stack.items[i];
-        if (window->workspace > position) {
-            window->workspace--;
+        if (window->workspace >= from) {
+            window->workspace += delta;
             window_mark_dirty(window);
         }
     }
-    if (state->current > position) {
-        state->current--;
+    if (state->current >= from) {
+        state->current += delta;
     }
-    if (state->previous > position) {
-        state->previous--;
+    if (state->previous >= from) {
+        state->previous += delta;
     }
-    show_new_workspace(desktop);
+    launches_shift_workspaces(desktop, from, delta);
 }
 
 static void insert_id(workspace_state *state, int position)

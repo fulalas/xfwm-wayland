@@ -188,9 +188,8 @@ static wm_output_info output_at(const wm_desktop *desktop, size_t index)
 
 static long distance_squared(const wm_rect *rect, wm_point point)
 {
-    wm_point center = wm_rect_center(rect);
-    long dx = point.x - center.x;
-    long dy = point.y - center.y;
+    long dx = (long) point.x - wm_clamp(point.x, rect->x, wm_rect_right(rect) - 1);
+    long dy = (long) point.y - wm_clamp(point.y, rect->y, wm_rect_bottom(rect) - 1);
     return dx * dx + dy * dy;
 }
 

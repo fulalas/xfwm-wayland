@@ -22,13 +22,13 @@ static void test_desktop_monitors(void)
 static void test_unknown_or_aspect_only_size(void)
 {
     CHECK_DOUBLE_NEAR(1.0, guess((wm_size){3840, 2160}, (wm_size){0, 0}), 0.001);
-    CHECK_DOUBLE_NEAR(1.0, guess((wm_size){3840, 2160}, (wm_size){16, 9}), 0.001);
-    CHECK_DOUBLE_NEAR(1.0, guess((wm_size){3840, 2160}, (wm_size){1600, 900}), 0.001);
+    CHECK_DOUBLE_NEAR(1.0, guess((wm_size){1280, 800}, (wm_size){160, 100}), 0.001);
+    CHECK_DOUBLE_NEAR(1.0, guess((wm_size){1920, 1080}, (wm_size){160, 90}), 0.001);
 }
 
 static void test_televisions(void)
 {
-    CHECK_DOUBLE_NEAR(1.0, guess((wm_size){3840, 2160}, (wm_size){1594, 897}), 0.001);
+    CHECK_DOUBLE_NEAR(1.0, guess((wm_size){7680, 4320}, (wm_size){891, 501}), 0.001);
 }
 
 static void test_implausible_density(void)

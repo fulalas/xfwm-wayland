@@ -29,7 +29,7 @@ static void test_move_falls_back_to_fleur(void)
 
 static void test_every_shape_ends_with_default(void)
 {
-    for (int shape = WM_CURSOR_DEFAULT; shape <= WM_CURSOR_RESIZE_BOTTOM_RIGHT; shape++) {
+    for (int shape = WM_CURSOR_DEFAULT; shape <= WM_CURSOR_BUSY; shape++) {
         CHECK(ends_with_default(cursor_names_for_shape((wm_cursor_shape) shape)));
     }
 }

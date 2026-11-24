@@ -68,6 +68,22 @@ static void test_dialog_asking_for_origin_is_centered(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_dialog_centered_on_offset_screen_is_centered(void)
+{
+    fake_world world;
+    fake_world_init(&world);
+    world.outputs[0].full = world.outputs[0].usable = (wm_rect) {1000, 0, 1920, 1080};
+    fake_world_add_output(&world, (wm_rect) {2920, 0, 1920, 1080}, (wm_rect) {2920, 0, 1920, 1080});
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_create(&world, &config);
+    wm_window_desc desc = fake_desc_at(1, (wm_rect) {2824, 510, 200, 100});
+    desc.type = WM_TYPE_DIALOG;
+    desc.gravity_offset = (wm_point) {4, 20};
+    wm_window *dialog = wm_window_map(desktop, &desc);
+    CHECK_RECT_EQ(((wm_rect) {3780, 490, 200, 100}), fake_client_of(dialog));
+    wm_desktop_destroy(desktop);
+}
+
 static void test_given_position_is_kept_visible(void)
 {
     fake_world world;
@@ -263,7 +279,7 @@ static void test_old_window_keeps_its_workspace(void)
     fake_advance(&world, desktop, 5000);
     wm_desktop_switch_workspace(desktop, 0);
     wm_launch_started(desktop, "token-a");
-    wm_window_launched(desktop, window, "token-a");
+    CHECK(!wm_window_launched(desktop, window, "token-a"));
     CHECK_INT_EQ(1, wm_window_current_view(window).workspace);
     wm_desktop_destroy(desktop);
 }
@@ -274,6 +290,8 @@ static const check_case CASES[] = {
     {"smart_placement_avoids_overlap", test_smart_placement_avoids_overlap},
     {"transient_centered_on_parent", test_transient_centered_on_parent},
     {"dialog_asking_for_origin_is_centered", test_dialog_asking_for_origin_is_centered},
+    {"dialog_centered_on_offset_screen_is_centered",
+     test_dialog_centered_on_offset_screen_is_centered},
     {"given_position_is_kept_visible", test_given_position_is_kept_visible},
     {"large_window_is_auto_maximized", test_large_window_is_auto_maximized},
     {"margins_reduce_work_area", test_margins_reduce_work_area},

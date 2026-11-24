@@ -40,7 +40,13 @@ static void test_unknown_size(void)
 
 static void test_no_size_gives_preferred(void)
 {
-    CHECK_INT_EQ(0, pick(0, 0, 0));
+    const mode_option list[] = {
+        {{1920, 1080, 60000}, false},
+        {{3840, 2160, 60000}, true},
+    };
+    mode_options options = {list, 2};
+    display_mode wanted = {0, 0, 0};
+    CHECK_INT_EQ(1, mode_choice_pick(&options, &wanted));
 }
 
 static void test_empty_list(void)

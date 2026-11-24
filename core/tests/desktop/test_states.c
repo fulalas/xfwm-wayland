@@ -78,6 +78,22 @@ static void test_fullscreen_covers_output_without_frame(void)
     wm_desktop_destroy(desktop);
 }
 
+static void test_fullscreen_keeps_tile(void)
+{
+    fake_world world;
+    wm_config config = fake_config();
+    wm_desktop *desktop = fake_desktop_start(&world, &config);
+    wm_window *window = fake_map(desktop, 1, small);
+    fake_key(desktop, WM_KEYSYM_LEFT, WM_MOD_SUPER);
+    wm_rect tiled = view_of(window).client;
+    wm_request_state(desktop, window, &(wm_state_change) {WM_STATE_FULLSCREEN, 0});
+    wm_request_state(desktop, window, &(wm_state_change) {0, WM_STATE_FULLSCREEN});
+    CHECK_RECT_EQ(tiled, view_of(window).client);
+    fake_key(desktop, WM_KEYSYM_LEFT, WM_MOD_SUPER);
+    CHECK_RECT_EQ(((wm_rect) {760, 398, 400, 300}), view_of(window).client);
+    wm_desktop_destroy(desktop);
+}
+
 static void test_shade_keeps_only_title_and_bottom(void)
 {
     fake_world world;
@@ -242,6 +258,7 @@ static const check_case CASES[] = {
     {"dropping_border_refits_maximized_window", test_dropping_border_refits_maximized_window},
     {"vertical_maximize", test_vertical_maximize},
     {"fullscreen_covers_output_without_frame", test_fullscreen_covers_output_without_frame},
+    {"fullscreen_keeps_tile", test_fullscreen_keeps_tile},
     {"shade_keeps_only_title_and_bottom", test_shade_keeps_only_title_and_bottom},
     {"minimize_hides_transients", test_minimize_hides_transients},
     {"sticky_window_visible_everywhere", test_sticky_window_visible_everywhere},

@@ -51,6 +51,7 @@ static int handle_deadline(void *data);
 static void free_scripts(xwayland_startup *startup);
 static void finish_hold(xwayland_startup *startup);
 static void drop_child(startup_child *child);
+static void stop_unwatched(pid_t pid);
 
 xwayland_startup *xwayland_startup_create(struct wl_event_loop *loop, const char *dir,
                                           int hold_ms)
@@ -179,6 +180,7 @@ static bool watch_child(xwayland_startup *startup, pid_t pid)
     int fd = (int) syscall(SYS_pidfd_open, pid, 0);
     if (fd < 0) {
         wlr_log(WLR_ERROR, "cannot wait for X11 startup script %d", (int) pid);
+        stop_unwatched(pid);
         return false;
     }
     startup_child *child = malloc(sizeof(*child));
@@ -190,6 +192,7 @@ static bool watch_child(xwayland_startup *startup, pid_t pid)
     close(fd);
     if (child == NULL || child->exit_source == NULL) {
         free(child);
+        stop_unwatched(pid);
         return false;
     }
     wl_list_insert(&startup->children, &child->link);
@@ -249,4 +252,10 @@ static void drop_child(startup_child *child)
     wl_event_source_remove(child->exit_source);
     wl_list_remove(&child->link);
     free(child);
+}
+
+static void stop_unwatched(pid_t pid)
+{
+    kill(-pid, SIGKILL);
+    waitpid(pid, NULL, 0);
 }

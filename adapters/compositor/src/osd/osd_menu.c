@@ -151,7 +151,8 @@ static bool same_items(const menu_panel *panel, const wm_menu_level *level)
 
 static bool same_item(const wm_menu_item *held, const wm_menu_item *item)
 {
-    const char *text = item->text != NULL ? item->text : "";
+    char text[MENU_TEXT_MAX];
+    utf8_copy(text, sizeof(text), item->text);
     return held->label == item->label && held->sensitive == item->sensitive &&
            held->has_submenu == item->has_submenu && held->mark == item->mark &&
            strcmp(held->text, text) == 0;

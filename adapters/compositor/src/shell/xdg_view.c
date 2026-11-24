@@ -70,6 +70,10 @@ xdg_view *xdg_view_create(compositor *server, struct wlr_xdg_toplevel *toplevel)
     wl_list_init(&xv->waiting_children);
     wl_list_init(&xv->waiting_link);
     xv->icon = icon_slot_create(server, &(icon_listener){xv, handle_icon_changed});
+    if (xv->icon == NULL) {
+        free(xv);
+        return NULL;
+    }
     connect_surface(xv);
     output *o = outputs_at_point(server->outputs, seat_pointer_position(server->seat));
     if (o != NULL) {

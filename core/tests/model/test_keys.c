@@ -81,6 +81,10 @@ static void test_typing_keys_are_not_global(void)
     wm_key enter = {0xff0d, 0};
     wm_key escape = {0xff1b, 0};
     wm_key shift = {0xffe1, 0};
+    wm_key insert = {0xff63, 0};
+    wm_key menu = {0xff67, 0};
+    CHECK(!wm_key_is_global(&insert));
+    CHECK(!wm_key_is_global(&menu));
     CHECK(!wm_key_is_global(&letter));
     CHECK(!wm_key_is_global(&enter));
     CHECK(!wm_key_is_global(&escape));

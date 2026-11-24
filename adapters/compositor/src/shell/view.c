@@ -199,6 +199,9 @@ static int handle_handshake_timeout(void *data)
 {
     view *v = data;
     end_handshake(v);
+    if (!wm_size_equals(v->handshake.committed, v->handshake.requested)) {
+        report_committed_size(v, v->handshake.committed);
+    }
     if (v->presented) {
         view_apply_geometry(v);
     }

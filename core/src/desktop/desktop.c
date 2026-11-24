@@ -5,6 +5,7 @@
 #include "monitor_move.h"
 #include "monitors.h"
 #include "present.h"
+#include "urgency.h"
 #include "view.h"
 #include "visibility.h"
 #include "window_ops.h"
@@ -14,6 +15,7 @@
 static void apply_config(wm_desktop *desktop, const wm_config *previous);
 static bool names_changed(const wm_config *a, const wm_config *b);
 static void refit_all(wm_desktop *desktop);
+static void restart_blinking(wm_desktop *desktop);
 
 wm_desktop *wm_desktop_create(const wm_ports *ports, const wm_config *config)
 {
@@ -142,6 +144,9 @@ static void apply_config(wm_desktop *desktop, const wm_config *previous)
     if (!desktop->config.compositing.enabled) {
         zoom_reset(desktop);
     }
+    if (desktop->config.focus.urgent_blink && !previous->focus.urgent_blink) {
+        restart_blinking(desktop);
+    }
     view_invalidate_decor(desktop);
     refit_all(desktop);
 }
@@ -167,4 +172,14 @@ static void refit_all(wm_desktop *desktop)
         window_ops_refit(desktop, window);
     }
     monitors_remember(desktop);
+}
+
+static void restart_blinking(wm_desktop *desktop)
+{
+    for (size_t i = 0; i < desktop->stack.count; i++) {
+        wm_window *window = desktop->stack.items[i];
+        if (window_has_state(window, WM_STATE_URGENT)) {
+            urgency_refresh(desktop, window);
+        }
+    }
 }

@@ -35,6 +35,7 @@
 #define VAR_OPEN_PAREN 3
 #define VAR_SKIP 4
 #define CHANNEL_MAX 255
+#define VAR_DEPTH_MAX 8
 
 typedef struct
 {
@@ -48,6 +49,7 @@ typedef struct
 {
     GString *out;
     xfwmColorSymbol *color_sym;
+    guint depth;
 }
 Colorizer;
 
@@ -60,14 +62,14 @@ typedef struct
 }
 SvgSize;
 
-static gchar *apply_colors (const gchar *, xfwmColorSymbol *);
+static gchar *apply_colors (const gchar *, xfwmColorSymbol *, guint);
 static const gchar *var_end (const gchar *, const gchar **);
 static const gchar *replace_var (Colorizer *, const gchar *, const gchar *);
 static void append_var (Colorizer *, const VarRef *);
 static const gchar *var_value (const VarRef *, xfwmColorSymbol *);
 static void append_rgb (GString *, const ui_color *);
 static guint channel_byte (gdouble);
-static void append_stripped (GString *, const gchar *, const gchar *);
+static void append_fallback (Colorizer *, const VarRef *);
 static cairo_surface_t *load_colored (const gchar *, gdouble);
 static void set_scale (SvgAxisScale *, gdouble);
 static gboolean get_size (const gchar *, gdouble, SvgCanvas *, gboolean *);
@@ -89,7 +91,7 @@ xfwmSvgLoad (const gchar *filename, xfwmColorSymbol *color_sym, gdouble scale)
     {
         return NULL;
     }
-    colored = apply_colors (data, color_sym);
+    colored = apply_colors (data, color_sym, 0);
     g_free (data);
     surface = load_colored (colored, scale);
     g_free (colored);
@@ -113,13 +115,14 @@ xfwmColorSymbolFind (const gchar *name, xfwmColorSymbol *color_sym)
 }
 
 static gchar *
-apply_colors (const gchar *data, xfwmColorSymbol *color_sym)
+apply_colors (const gchar *data, xfwmColorSymbol *color_sym, guint depth)
 {
     Colorizer colorizer;
     const gchar *p, *start;
 
     colorizer.out = g_string_new (NULL);
     colorizer.color_sym = color_sym;
+    colorizer.depth = depth;
     p = data;
     while ((start = strstr (p, VAR_PREFIX)))
     {
@@ -186,7 +189,7 @@ append_var (Colorizer *colorizer, const VarRef *var)
     }
     else if (var->comma)
     {
-        append_stripped (colorizer->out, var->comma + 1, var->end);
+        append_fallback (colorizer, var);
     }
     else
     {
@@ -225,12 +228,21 @@ channel_byte (gdouble channel)
 }
 
 static void
-append_stripped (GString *out, const gchar *start, const gchar *end)
+append_fallback (Colorizer *colorizer, const VarRef *var)
 {
-    gchar *text;
+    gchar *text, *colored;
 
-    text = g_strstrip (g_strndup (start, end - start));
-    g_string_append (out, text);
+    text = g_strstrip (g_strndup (var->comma + 1, var->end - var->comma - 1));
+    if (colorizer->depth < VAR_DEPTH_MAX)
+    {
+        colored = apply_colors (text, colorizer->color_sym, colorizer->depth + 1);
+        g_string_append (colorizer->out, colored);
+        g_free (colored);
+    }
+    else
+    {
+        g_string_append (colorizer->out, text);
+    }
     g_free (text);
 }
 

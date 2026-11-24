@@ -53,6 +53,15 @@ static void test_double_from_text(void)
     CHECK(!input_double_from_text("x1").is_set);
 }
 
+static void test_int_from_text(void)
+{
+    CHECK_INT_EQ(24, input_int_from_text("24").value);
+    CHECK_INT_EQ(-90, input_int_from_text("-90.5").value);
+    CHECK(!input_int_from_text("1e12").is_set);
+    CHECK(!input_int_from_text("-1e20").is_set);
+    CHECK(!input_int_from_text(NULL).is_set);
+}
+
 static void test_keyboard_system_defaults(void)
 {
     static const fake_entry layout[] = {
@@ -348,6 +357,7 @@ int main(void)
         { "join_options", test_join_options },
         { "bool_from_text", test_bool_from_text },
         { "double_from_text", test_double_from_text },
+        { "int_from_text", test_int_from_text },
         { "keyboard_system_defaults", test_keyboard_system_defaults },
         { "system_keymap_vconsole", test_system_keymap_vconsole },
         { "system_keymap_xorg", test_system_keymap_xorg },

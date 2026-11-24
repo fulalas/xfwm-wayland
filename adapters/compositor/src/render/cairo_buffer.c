@@ -121,8 +121,16 @@ static cairo_surface_t *convert_to_argb(cairo_surface_t *surface)
     cairo_t *probe = cairo_create(surface);
     cairo_clip_extents(probe, &x1, &y1, &x2, &y2);
     cairo_destroy(probe);
-    cairo_surface_t *image =
-        cairo_image_surface_create(CAIRO_FORMAT_ARGB32, (int) (x2 - x1), (int) (y2 - y1));
+    int width = (int) (x2 - x1);
+    int height = (int) (y2 - y1);
+    if (width <= 0 || height <= 0) {
+        return NULL;
+    }
+    cairo_surface_t *image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+    if (cairo_surface_status(image) != CAIRO_STATUS_SUCCESS) {
+        cairo_surface_destroy(image);
+        return NULL;
+    }
     cairo_t *cr = cairo_create(image);
     cairo_set_source_surface(cr, surface, -x1, -y1);
     cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);

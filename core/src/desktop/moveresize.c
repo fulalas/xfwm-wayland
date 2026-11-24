@@ -201,7 +201,7 @@ static bool can_begin(const wm_desktop *desktop, const wm_window *window, sessio
     if (moveresize_is_active(desktop) || window_is_fullscreen(window)) {
         return false;
     }
-    uint32_t needed = kind == SESSION_MOVE ? WINDOW_HAS_MOVE : WINDOW_HAS_MOVE | WINDOW_HAS_RESIZE;
+    uint32_t needed = kind == SESSION_MOVE ? WINDOW_HAS_MOVE : WINDOW_HAS_RESIZE;
     return window_has_flag(window, needed);
 }
 

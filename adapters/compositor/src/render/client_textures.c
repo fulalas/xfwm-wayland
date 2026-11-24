@@ -46,7 +46,10 @@ static struct wlr_texture *texture_for(struct wlr_surface *surface,
 {
     struct wlr_client_buffer *buffer = surface->buffer;
     if (buffer->source != NULL) {
-        return wlr_texture_from_buffer(renderer, buffer->source);
+        struct wlr_texture *imported = wlr_texture_from_buffer(renderer, buffer->source);
+        if (imported != NULL) {
+            return imported;
+        }
     }
     if (buffer->texture == NULL) {
         return NULL;

@@ -1,9 +1,15 @@
 #include "check.h"
 #include "workspace_rows.h"
 
+static void value_free(gpointer data)
+{
+    g_value_unset(data);
+    g_free(data);
+}
+
 static GHashTable *plugins_new(void)
 {
-    return g_hash_table_new_full(g_str_hash, g_str_equal, NULL, (GDestroyNotify) g_free);
+    return g_hash_table_new_full(g_str_hash, g_str_equal, NULL, value_free);
 }
 
 static void add_text(GHashTable *plugins, const char *key, const char *text)

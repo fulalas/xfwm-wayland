@@ -6,6 +6,7 @@
 
 #include "util/clock.h"
 #include "util/listener.h"
+#include "util/output_commit.h"
 #include "present_sync_private.h"
 
 static void handle_new_output(struct wl_listener *listener, void *data);
@@ -120,8 +121,10 @@ static void handle_new_output(struct wl_listener *listener, void *data)
 
 static void handle_commit(struct wl_listener *listener, void *data)
 {
-    (void) data;
     output_clock *clock = wl_container_of(listener, clock, commit);
+    if (!output_commit_latched(data)) {
+        return;
+    }
     fifo_output_latched(clock->sync, clock->output);
 }
 

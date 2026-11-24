@@ -151,6 +151,25 @@ static void test_themerc_title_font_wins(void)
     CHECK(title_height(big_title_themerc) > 2 * title_height(themerc_content));
 }
 
+static void test_failed_load_keeps_the_theme_title_font(void)
+{
+    char *dir = make_theme_with_rc(big_title_themerc);
+    char *empty = fixture_dir_create();
+    appearance *appearance = appearance_create();
+    compositor_painter painter = appearance_painter(appearance);
+    ui_style style = appearance_fallback_style();
+    theme_request request = { dir, "Sans 6", 1.0, &style };
+
+    CHECK(appearance_load(appearance, &request));
+    int height = painter.measure_title(painter.self, "Title").height;
+    request.name = empty;
+    CHECK(!appearance_load(appearance, &request));
+    CHECK_INT_EQ(height, painter.measure_title(painter.self, "Title").height);
+    appearance_destroy(appearance);
+    fixture_dir_remove(empty);
+    fixture_dir_remove(dir);
+}
+
 static void test_double_scale_halves_metrics(void)
 {
     char *dir = make_theme();
@@ -195,17 +214,17 @@ static void test_absolute_name_is_the_theme_dir(void)
 
 static const char variant_theme[] = "XfwmTestVariantTheme";
 
-static char *variant_dir(const char *suffix)
+static char *variant_dir(const char *theme, const char *suffix)
 {
-    char *name = g_strconcat(variant_theme, suffix, NULL);
+    char *name = g_strconcat(theme, suffix, NULL);
     char *dir = g_build_filename(g_getenv("XDG_DATA_HOME"), "themes", name, "xfwm4", NULL);
     g_free(name);
     return dir;
 }
 
-static void add_variant(const char *suffix)
+static void add_variant(const char *theme, const char *suffix)
 {
-    char *dir = variant_dir(suffix);
+    char *dir = variant_dir(theme, suffix);
     g_mkdir_with_parents(dir, 0700);
     g_free(fixture_write(dir, "themerc", themerc_content));
     g_free(dir);
@@ -214,7 +233,7 @@ static void add_variant(const char *suffix)
 static void check_variant(double output_scale, const char *suffix, double pixmap_scale)
 {
     theme_location location = appearance_theme_locate(variant_theme, output_scale);
-    char *expected = variant_dir(suffix);
+    char *expected = variant_dir(variant_theme, suffix);
 
     CHECK(location.dir != NULL && strcmp(location.dir, expected) == 0);
     CHECK(location.pixmap_scale == pixmap_scale);
@@ -224,11 +243,29 @@ static void check_variant(double output_scale, const char *suffix, double pixmap
 
 static void test_theme_pixels_map_to_screen_pixels(void)
 {
-    add_variant("");
-    add_variant("-hdpi");
+    add_variant(variant_theme, "");
+    add_variant(variant_theme, "-hdpi");
     check_variant(1.0, "", 1.0);
     check_variant(1.5, "", 1.5);
     check_variant(2.0, "", 2.0);
+}
+
+static void check_missing_theme(double output_scale, const char *suffix)
+{
+    theme_location location = appearance_theme_locate("XfwmTestMissingTheme", output_scale);
+    char *expected = variant_dir("Default", suffix);
+
+    CHECK(location.dir != NULL && strcmp(location.dir, expected) == 0);
+    appearance_theme_location_clear(&location);
+    g_free(expected);
+}
+
+static void test_missing_theme_falls_back_to_the_scaled_default(void)
+{
+    add_variant("Default", "");
+    add_variant("Default", "-xhdpi");
+    check_missing_theme(1.0, "");
+    check_missing_theme(2.0, "-xhdpi");
 }
 
 static const char red_svg[] = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 6\">"
@@ -342,6 +379,27 @@ static const char stacked_lines_svg[] =
     "<rect y=\"3\" width=\"1\" height=\"1\" fill=\"#0000ff\" shape-rendering=\"crispEdges\"/>"
     "</svg>\n";
 
+static const char nested_var_svg[] =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 4 2\">"
+    "<rect width=\"4\" height=\"2\" style=\"fill:var(--missing, var(--active_color_1, #00ff00))\""
+    " shape-rendering=\"crispEdges\"/></svg>\n";
+
+static void test_svg_resolves_nested_fallbacks(void)
+{
+    enum { RED = 0xffff0000u };
+    static const xpm_symbol items[] = { { "active_color_1", "#ff0000" } };
+    xpm_symbols symbols = { items, G_N_ELEMENTS(items) };
+    cairo_surface_t *image = load_svg_image("left-active", nested_var_svg, &symbols, 1.0);
+
+    CHECK(image != NULL);
+    if (image != NULL) {
+        CHECK_INT_EQ(4, cairo_image_surface_get_width(image));
+        CHECK_INT_EQ(2, cairo_image_surface_get_height(image));
+        CHECK_INT_EQ(RED, fixture_pixel_at(image, 1, 1));
+        cairo_surface_destroy(image);
+    }
+}
+
 static void test_svg_stacked_lines_keep_every_line(void)
 {
     enum { BLACK = 0xff000000u, RED = 0xffff0000u, GREEN = 0xff00ff00u, BLUE = 0xff0000ffu };
@@ -394,15 +452,19 @@ static const check_case cases[] = {
     { "theme_options_are_raw_values", test_theme_options_are_raw_values },
     { "same_request_is_loaded", test_same_request_is_loaded },
     { "themerc_title_font_wins", test_themerc_title_font_wins },
+    { "failed_load_keeps_the_theme_title_font", test_failed_load_keeps_the_theme_title_font },
     { "double_scale_halves_metrics", test_double_scale_halves_metrics },
     { "half_transparent_pixels_are_cut_out", test_half_transparent_pixels_are_cut_out },
     { "absolute_name_is_the_theme_dir", test_absolute_name_is_the_theme_dir },
     { "theme_pixels_map_to_screen_pixels", test_theme_pixels_map_to_screen_pixels },
+    { "missing_theme_falls_back_to_the_scaled_default",
+      test_missing_theme_falls_back_to_the_scaled_default },
     { "thin_pixmaps_keep_one_pixel", test_thin_pixmaps_keep_one_pixel },
     { "svg_theme_draws_at_screen_scale", test_svg_theme_draws_at_screen_scale },
     { "svg_wins_over_bitmaps", test_svg_wins_over_bitmaps },
     { "svg_cuts_out_partly_clear_pixels", test_svg_cuts_out_partly_clear_pixels },
     { "svg_stacked_lines_keep_every_line", test_svg_stacked_lines_keep_every_line },
+    { "svg_resolves_nested_fallbacks", test_svg_resolves_nested_fallbacks },
     { "svg_uses_theme_colors_and_scaled_lines",
       test_svg_uses_theme_colors_and_scaled_lines },
     { "svg_theme_keeps_the_title_font_size", test_svg_theme_keeps_the_title_font_size },

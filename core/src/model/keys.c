@@ -164,7 +164,7 @@ bool wm_key_is_global(const wm_key *key)
         return true;
     }
     return (sym >= KEYSYM_F1 && sym <= KEYSYM_F35) || (sym >= KEYSYM_PAUSE && sym <= KEYSYM_SYS_REQ)
-           || (sym >= KEYSYM_PRINT && sym <= KEYSYM_BREAK) || sym >= KEYSYM_VENDOR_FIRST;
+           || sym == KEYSYM_PRINT || sym == KEYSYM_BREAK || sym >= KEYSYM_VENDOR_FIRST;
 }
 
 static bool is_digit(char character)

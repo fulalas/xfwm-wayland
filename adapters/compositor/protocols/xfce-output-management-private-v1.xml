@@ -37,32 +37,27 @@
 
       This protocol depends on the wlr_output_management_v1 protocol.
 
-      Clients that wish to use it MAY bind to both wlr_output_manager_v1 and
-      xfce_output_management_manager_private_v1, but MUST then ignore any events
-      on wlr_output_manager_v1. This allows for simplicity in the client
-      implementation. For ease of use, the client should immediately release
-      any wlr_output_head_v1 instances received from the wlr_output_manager_v1
-      global, and, if sharing the same wlr_output_head_v1 listener between the
-      two manager instances, take care to avoid confusing head instances between
-      the two managers.
-
-      Clients SHOULD still use the wlr_output_manager_v1 instance to create
-      wlr_output_configuration_v1 objects.
+      Clients that wish to use it bind to both wlr_output_manager_v1 and
+      xfce_output_management_manager_private_v1. Modes, position, scale and
+      the rest of the output state still come from wlr_output_manager_v1 and
+      its wlr_output_head_v1 objects, and configurations are still created and
+      applied through wlr_output_manager_v1. This protocol only adds extra
+      information, such as the EDID, to each head. Use the name argument of
+      the head event to attach it to the matching wlr_output_head_v1.
     </description>
 
     <request name="stop">
       <description summary="Stop sending events">
-        Asks the manager to stop sending further events. The manager may
-        continue to send events until sending the next done event, after which
-        it will not send further events.
+        Asks the manager to stop sending events. The compositor answers with
+        the finished event.
 
         The client must not send any requests after this one.
       </description>
     </request>
 
     <event name="head">
-      <description summary="Notifies the client of a new head (second event)">
-        This provides the client with the xfce_output_private_v1 instance
+      <description summary="Notifies the client of a new head">
+        This provides the client with the xfce_output_head_private_v1 instance
         associated with an output.
 
         The client can use the 'name' argument to correlate
@@ -82,15 +77,16 @@
         serial received with correlated updates from wlr_output_manager_v1.
 
         See the documentation for wlr_output_manager_v1.done and
-        wlr_output_configuration_v1.create_configuration for more information.
+        wlr_output_manager_v1.create_configuration for more information.
       </description>
       <arg name="serial" type="uint"/>
     </event>
 
     <event name="finished">
       <description summary="The manager is shutting down">
-        This event is emitted when the manager intends to stop sending events
-        permanently.
+        This event is sent in reply to the stop request. No further events are
+        sent. The compositor destroys the object right after this event, so the
+        client should destroy its proxy.
       </description>
     </event>
 

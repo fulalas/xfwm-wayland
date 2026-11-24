@@ -31,6 +31,7 @@ static bool session_load(session_data *session, const char *wanted_id);
 static void session_take_over(session_data *session);
 static void session_close(session_data *session);
 static int handle_save_timer(void *data);
+static void save_now(session_data *session);
 static void handle_view_changed(struct wl_listener *listener, void *data);
 static void session_handle_resource_destroy(struct wl_resource *resource);
 static void session_handle_remove(struct wl_client *client, struct wl_resource *resource);
@@ -229,8 +230,7 @@ static void session_close(session_data *session)
         session_toplevel_make_inert(toplevel);
     }
     if (session->save_timer != NULL) {
-        wl_event_source_remove(session->save_timer);
-        session_file_save(session->id, &session->book);
+        save_now(session);
     }
     wl_list_remove(&session->link);
     session_book_finish(&session->book);
@@ -240,12 +240,16 @@ static void session_close(session_data *session)
 
 static int handle_save_timer(void *data)
 {
-    session_data *session = data;
+    save_now(data);
+    return 0;
+}
+
+static void save_now(session_data *session)
+{
     wl_event_source_remove(session->save_timer);
     session->save_timer = NULL;
     session_book_trim(&session->book, SESSION_BOOK_MAX);
     session_file_save(session->id, &session->book);
-    return 0;
 }
 
 static void handle_view_changed(struct wl_listener *listener, void *data)

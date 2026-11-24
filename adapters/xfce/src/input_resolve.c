@@ -70,9 +70,9 @@ static bool lookup_bool(const setting_source *source, const char *key, bool fall
 
 static int lookup_int(const setting_source *source, const char *key, int fallback)
 {
-    optional_double value = input_double_from_text(setting_source_lookup(source, key));
+    optional_int value = input_int_from_text(setting_source_lookup(source, key));
 
-    return value.is_set ? (int) value.value : fallback;
+    return value.is_set ? value.value : fallback;
 }
 
 static void copy_text(const setting_source *source, const char *key, char *target)

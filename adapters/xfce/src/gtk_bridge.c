@@ -77,7 +77,11 @@ void gtk_bridge_lookup_icon(gtk_bridge *bridge, const icon_request *request)
     }
     line = helper_icon_request_format(id, request);
     g_hash_table_insert(bridge->icon_lines, GUINT_TO_POINTER(id), line);
-    helper_client_send(bridge->client, line);
+    if (bridge->helper_restarted) {
+        helper_client_start(bridge->client);
+    } else {
+        helper_client_send(bridge->client, line);
+    }
 }
 
 void gtk_bridge_cancel_icons(gtk_bridge *bridge, void *context)

@@ -64,6 +64,9 @@ static void handle_frame_done(struct wl_listener *listener, void *data)
 {
     osd_find_cursor *find = wl_container_of(listener, find, frame_done);
     const struct wlr_scene_frame_done_event *event = data;
+    if (find->node->primary_output != NULL && event->output != find->node->primary_output) {
+        return;
+    }
     uint32_t elapsed = elapsed_ms(&find->start, &event->when);
     if (find_cursor_is_running(elapsed)) {
         draw(find, elapsed);

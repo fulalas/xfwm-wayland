@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <wlr/backend.h>
+#include <wlr/backend/session.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_switch.h>
 
@@ -10,6 +11,7 @@
 
 typedef struct lid_device {
     lid_switch *owner;
+    bool closed;
     struct wl_list link;
     struct wl_listener toggle;
     struct wl_listener destroy;
@@ -18,6 +20,7 @@ typedef struct lid_device {
 struct lid_switch {
     compositor *server;
     struct wl_list devices;
+    struct wl_event_source *recheck;
     struct wl_listener new_input;
 };
 
@@ -25,6 +28,10 @@ static void handle_new_input(struct wl_listener *listener, void *data);
 static void handle_toggle(struct wl_listener *listener, void *data);
 static void handle_device_destroy(struct wl_listener *listener, void *data);
 static void device_destroy(lid_device *device);
+static bool any_lid_closed(const lid_switch *lid);
+static void publish(lid_switch *lid);
+static void handle_recheck(void *data);
+static bool session_active(const lid_switch *lid);
 
 lid_switch *lid_switch_create(compositor *server)
 {
@@ -44,6 +51,9 @@ void lid_switch_destroy(lid_switch *lid)
     lid_device *tmp;
     wl_list_for_each_safe(device, tmp, &lid->devices, link) {
         device_destroy(device);
+    }
+    if (lid->recheck != NULL) {
+        wl_event_source_remove(lid->recheck);
     }
     listener_disconnect(&lid->new_input);
     free(lid);
@@ -65,6 +75,9 @@ static void handle_new_input(struct wl_listener *listener, void *data)
     listener_connect(&device->toggle, &wlr_switch->events.toggle, handle_toggle);
     listener_connect(&device->destroy, &input->events.destroy, handle_device_destroy);
     wl_list_insert(&lid->devices, &device->link);
+    if (lid->recheck == NULL) {
+        lid->recheck = wl_event_loop_add_idle(lid->server->loop, handle_recheck, lid);
+    }
 }
 
 static void handle_toggle(struct wl_listener *listener, void *data)
@@ -74,15 +87,19 @@ static void handle_toggle(struct wl_listener *listener, void *data)
     if (event->switch_type != WLR_SWITCH_TYPE_LID) {
         return;
     }
-    bool closed = event->switch_state == WLR_SWITCH_STATE_ON;
-    displays_set_lid_closed(device->owner->server->displays, closed);
+    device->closed = event->switch_state == WLR_SWITCH_STATE_ON;
+    publish(device->owner);
 }
 
 static void handle_device_destroy(struct wl_listener *listener, void *data)
 {
     (void) data;
     lid_device *device = wl_container_of(listener, device, destroy);
+    lid_switch *lid = device->owner;
     device_destroy(device);
+    if (session_active(lid)) {
+        publish(lid);
+    }
 }
 
 static void device_destroy(lid_device *device)
@@ -91,4 +108,32 @@ static void device_destroy(lid_device *device)
     listener_disconnect(&device->destroy);
     wl_list_remove(&device->link);
     free(device);
+}
+
+static bool any_lid_closed(const lid_switch *lid)
+{
+    const lid_device *device;
+    wl_list_for_each(device, &lid->devices, link) {
+        if (device->closed) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void publish(lid_switch *lid)
+{
+    displays_set_lid_closed(lid->server->displays, any_lid_closed(lid));
+}
+
+static void handle_recheck(void *data)
+{
+    lid_switch *lid = data;
+    lid->recheck = NULL;
+    publish(lid);
+}
+
+static bool session_active(const lid_switch *lid)
+{
+    return lid->server->session == NULL || lid->server->session->active;
 }

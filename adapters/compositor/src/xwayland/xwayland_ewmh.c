@@ -174,7 +174,7 @@ static void publish_workareas(xwayland_ewmh *ewmh, const screen_state *state)
     uint32_t geometry[] = {(uint32_t) root->width, (uint32_t) root->height};
     x11_property property = root_property(ewmh, ATOM_NET_DESKTOP_GEOMETRY, XCB_ATOM_CARDINAL);
     x11_link_set_cardinals(ewmh->link, &property, (x11_values){geometry, 2});
-    uint32_t origin[] = {(uint32_t) root->x, (uint32_t) root->y};
+    uint32_t origin[] = {0, 0};
     set_repeated(ewmh, ATOM_NET_DESKTOP_VIEWPORT, (x11_values){origin, 2});
     wm_rect area = ewmh_workarea(&state->screen);
     uint32_t workarea[RECT_FIELDS] = {(uint32_t) area.x, (uint32_t) area.y,

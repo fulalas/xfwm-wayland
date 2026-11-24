@@ -20,7 +20,9 @@ static void test_hdr_with_ten_bit_keeps_ten_bit_sdr_fallback(void)
 {
     color_plan plan = color_plan_for((color_mode){.hdr = true, .ten_bit = true});
     CHECK_INT_EQ(3, (int) plan.count);
+    CHECK(plan.attempts[0].hdr && plan.attempts[0].ten_bit);
     CHECK(!plan.attempts[1].hdr && plan.attempts[1].ten_bit);
+    CHECK(!plan.attempts[2].hdr && !plan.attempts[2].ten_bit);
 }
 
 static void test_ten_bit_alone_falls_back_to_eight_bit(void)
@@ -28,6 +30,7 @@ static void test_ten_bit_alone_falls_back_to_eight_bit(void)
     color_plan plan = color_plan_for((color_mode){.ten_bit = true});
     CHECK_INT_EQ(2, (int) plan.count);
     CHECK(!plan.attempts[0].hdr && plan.attempts[0].ten_bit);
+    CHECK(!plan.attempts[1].hdr && !plan.attempts[1].ten_bit);
 }
 
 int main(void)

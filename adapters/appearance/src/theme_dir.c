@@ -16,7 +16,7 @@ enum {
 };
 
 static const char *scaled_name(const char *name, double max_output_scale);
-static char *find_dir(const char *name);
+static char *find_dir(const char *name, double max_output_scale);
 static char *lookup_relative(const char *name);
 static char *lookup_in(const char *themes_dir, const char *name);
 static char *system_default_dir(void);
@@ -24,7 +24,7 @@ static char *system_default_dir(void);
 theme_location appearance_theme_locate(const char *name, double max_output_scale)
 {
     double scale = max_output_scale > 0.0 ? max_output_scale : 1.0;
-    return (theme_location) { find_dir(scaled_name(name, scale)), scale };
+    return (theme_location) { find_dir(scaled_name(name, scale), scale), scale };
 }
 
 void appearance_theme_location_clear(theme_location *location)
@@ -40,14 +40,14 @@ static const char *scaled_name(const char *name, double max_output_scale)
     return name;
 }
 
-static char *find_dir(const char *name)
+static char *find_dir(const char *name, double max_output_scale)
 {
     if (g_path_is_absolute(name)) {
         return g_file_test(name, G_FILE_TEST_IS_DIR) ? g_strdup(name) : system_default_dir();
     }
     char *dir = lookup_relative(name);
     if (dir == NULL) {
-        dir = lookup_relative(default_theme);
+        dir = lookup_relative(scaled_name(NULL, max_output_scale));
     }
     return dir != NULL ? dir : system_default_dir();
 }

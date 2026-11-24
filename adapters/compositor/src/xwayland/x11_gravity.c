@@ -72,7 +72,7 @@ static int frame_offset(axis_anchor anchor, int before, int after)
     case ANCHOR_START:
         return before;
     case ANCHOR_CENTER:
-        return (before - after + 1) / 2;
+        return before >= after ? (before - after + 1) / 2 : (before - after) / 2;
     case ANCHOR_END:
         return -after;
     default:

@@ -1,6 +1,7 @@
 #include <ftw.h>
 #include <glib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <wayland-server-core.h>
@@ -22,13 +23,23 @@ typedef struct fixture {
     int done_count;
 } fixture;
 
+static void require(bool ok, const char *what)
+{
+    if (!ok) {
+        fprintf(stderr, "cannot create %s\n", what);
+        abort();
+    }
+}
+
 static void setup_in(fixture *f, const char *dir)
 {
     f->dir = g_dir_make_tmp("xwayland-startup-XXXXXX", NULL);
-    CHECK(f->dir != NULL);
+    require(f->dir != NULL, "test folder");
     f->log = g_build_filename(f->dir, ".log", NULL);
     f->loop = wl_event_loop_create();
+    require(f->loop != NULL, "event loop");
     f->startup = xwayland_startup_create(f->loop, dir != NULL ? dir : f->dir, HOLD_MS);
+    require(f->startup != NULL, "startup runner");
     f->done_count = 0;
 }
 
