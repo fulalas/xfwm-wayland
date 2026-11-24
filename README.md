@@ -205,9 +205,31 @@ similar font DPI. That's expected.
   `xdg-session-management`; X11 programs never get them back.
 * Ctrl+Shift drag doesn't create symlinks (Wayland limitation).
 * No keyboard layout plugin in the panel (Xfce plugin is currently X11 only).
-* Window screenshots (Alt+Print) and correct area offsets need the 2 patches [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter).
-* Multimedia keys need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin).
-* Power manager shortcuts need the patch [here](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager).
+* Some things need patches to other projects:
+  * [libxfce4windowing](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/libxfce4windowing):
+    Xfce programs notice when no display is primary anymore.
+  * [xfce4-settings](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-settings):
+    no display dialog when a screen comes back after a VT switch.
+  * [xfce4-panel](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-panel):
+    auto-hide clicks that get lost, plugin menus at the click point, and
+    menus opened by shortcuts while the panel is hidden.
+  * [xfce4-session](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-session):
+    fade behind the logout dialog.
+  * [thunar](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/thunar)
+    and [xfdesktop](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfdesktop):
+    dropping images from browsers.
+  * [xfce4-screenshooter](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-screenshooter):
+    window screenshots (Alt+Print) and correct area offsets.
+  * [xfce4-pulseaudio-plugin](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-pulseaudio-plugin):
+    multimedia keys.
+  * [xfce4-power-manager](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-power-manager):
+    power manager shortcuts.
+  * [xfce4-xkb-plugin](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-xkb-plugin):
+    hides the keyboard layout plugin instead of showing a broken one.
+  * [wlroots](https://github.com/porteux/porteux/tree/3.0/002-gui/deps/wlroots):
+    X11 windows that show up late, X11 programs held until the startup
+    scripts finish, right colors after turning HDR off, and workspaces that
+    don't rely on wlroots internals.
 
 ## Window rules
 
