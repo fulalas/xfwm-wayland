@@ -211,7 +211,8 @@ similar font DPI. That's expected.
   * [xfce4-settings](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-settings):
     no display dialog when a screen comes back after a VT switch.
   * [xfce4-panel](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-panel):
-    auto-hide clicks that get lost, plugin menus at the click point, and
+    auto-hide clicks that get lost, an auto-hidden panel that never comes back
+    after a fullscreen window covered it, plugin menus at the click point, and
     menus opened by shortcuts while the panel is hidden.
   * [xfce4-session](https://github.com/porteux/porteux/tree/3.0/003-xfce/xfce/xfce4-session):
     fade behind the logout dialog.
